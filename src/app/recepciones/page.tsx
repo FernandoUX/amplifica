@@ -7,6 +7,7 @@ import {
   Download01, Sliders01, LayoutGrid01, SearchLg,
   DotsVertical, CheckCircle, X,
   SwitchVertical01, ArrowUp, ArrowDown, Plus,
+  CalendarPlus01, PackageCheck, Play, ClipboardCheck, FastForward,
 } from "@untitled-ui/icons-react";
 import StatusBadge, { Status } from "@/components/recepciones/StatusBadge";
 
@@ -148,13 +149,17 @@ function fechaExtraClass(label: string): string {
 
 // ─── Feature 1 · Feature Antigua — Contextual actions per status ──────────────
 type MenuItem = { label: string; danger?: boolean };
-type ActionConfig = { primary?: string; menu: MenuItem[] };
+type PrimaryAction = {
+  tooltip: string;                                         // 1-2 words shown on hover
+  icon: React.ComponentType<{ className?: string }>;
+};
+type ActionConfig = { primary?: PrimaryAction; menu: MenuItem[] };
 
 function getActions(estado: Status): ActionConfig {
   switch (estado) {
     case "Creado":
       return {
-        primary: "Agendar recepción",
+        primary: { tooltip: "Agendar", icon: CalendarPlus01 },
         menu: [
           { label: "Ver" },
           { label: "Editar" },
@@ -163,7 +168,7 @@ function getActions(estado: Status): ActionConfig {
       };
     case "Programado":
       return {
-        primary: "Recibir",
+        primary: { tooltip: "Recibir", icon: PackageCheck },
         menu: [
           { label: "Ver" },
           { label: "Editar" },
@@ -173,7 +178,7 @@ function getActions(estado: Status): ActionConfig {
       };
     case "Recepcionado en bodega":
       return {
-        primary: "Empezar picking",
+        primary: { tooltip: "Empezar", icon: Play },
         menu: [
           { label: "Ver" },
           { label: "Editar" },
@@ -182,12 +187,12 @@ function getActions(estado: Status): ActionConfig {
       };
     case "En proceso de conteo":
       return {
-        primary: "Resumir picking",
+        primary: { tooltip: "Resumir", icon: ClipboardCheck },
         menu: [{ label: "Ver" }],
       };
     case "Parcialmente recepcionada":
       return {
-        primary: "Continuar picking",
+        primary: { tooltip: "Continuar", icon: FastForward },
         menu: [
           { label: "Resumir picking" },
           { label: "Liberar picking" },
@@ -199,13 +204,15 @@ function getActions(estado: Status): ActionConfig {
   }
 }
 
-// ─── Actions cell with fixed-position dropdown ────────────────────────────────
+// ─── Actions cell ─────────────────────────────────────────────────────────────
+// • Primary → secondary style, icon-only, tooltip with 1-2 words on hover
+// • Dots   → tertiary style, opens a fixed-position popover BELOW the button
 function ActionsCell({ orden }: { orden: Orden }) {
   const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
-  const btnRef = useRef<HTMLButtonElement>(null);
+  const dotsRef = useRef<HTMLButtonElement>(null);
   const { primary, menu } = getActions(orden.estado);
 
-  // Close dropdown on outside click
+  // Close popover on outside click
   useEffect(() => {
     if (!menuPos) return;
     function onDocClick() { setMenuPos(null); }
@@ -216,48 +223,68 @@ function ActionsCell({ orden }: { orden: Orden }) {
   const toggleMenu = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (menuPos) { setMenuPos(null); return; }
-    if (btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    if (dotsRef.current) {
+      const rect = dotsRef.current.getBoundingClientRect();
+      // Open BELOW the button, right-aligned
+      setMenuPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
     }
   };
 
+  const Icon = primary?.icon;
+
   return (
-    <div className="flex items-center gap-1.5">
-      {primary && (
-        <button
-          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg transition-colors"
-          style={NW}
-        >
-          {primary}
-        </button>
+    <div className="flex items-center gap-1">
+
+      {/* ── Primary: secondary style, icon only, tooltip ── */}
+      {primary && Icon && (
+        <div className="relative group/ptip">
+          <button
+            className="p-1.5 border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-gray-600 rounded-lg transition-colors"
+          >
+            <Icon className="w-4 h-4" />
+          </button>
+          {/* Tooltip — appears above, centered */}
+          <div
+            className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover/ptip:opacity-100 transition-opacity duration-150 z-50"
+          >
+            <div className="bg-gray-900 text-white text-xs font-medium px-2 py-1 rounded-lg" style={NW}>
+              {primary.tooltip}
+            </div>
+            {/* Arrow */}
+            <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-gray-900" />
+          </div>
+        </div>
       )}
 
-      {/* Dots menu button */}
+      {/* ── Tertiary: dots → opens popover below ── */}
       <button
-        ref={btnRef}
+        ref={dotsRef}
         onClick={toggleMenu}
         className={`p-1.5 rounded-lg transition-colors ${
-          menuPos ? "bg-gray-100 text-gray-700" : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+          menuPos
+            ? "bg-gray-100 text-gray-700"
+            : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
         }`}
       >
         <DotsVertical className="w-4 h-4" />
       </button>
 
-      {/* Fixed-position dropdown — avoids overflow-x-auto clipping */}
+      {/* ── Popover — fixed, opens BELOW the dots button ── */}
       {menuPos && (
         <div
           style={{ position: "fixed", top: menuPos.top, right: menuPos.right, zIndex: 9999 }}
-          className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[176px]"
+          className="bg-white border border-gray-200 rounded-xl shadow-xl py-1.5 min-w-[176px]"
           onMouseDown={e => e.stopPropagation()}
         >
-          {menu.map(item => (
+          {menu.map((item, i) => (
             <button
               key={item.label}
               onClick={() => setMenuPos(null)}
-              className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-gray-50 ${
-                item.danger ? "text-red-500 hover:bg-red-50" : "text-gray-700"
-              }`}
+              className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                item.danger
+                  ? "text-red-500 hover:bg-red-50"
+                  : "text-gray-700 hover:bg-gray-50"
+              } ${i > 0 && menu[i - 1]?.danger !== item.danger ? "border-t border-gray-100 mt-1 pt-2" : ""}`}
             >
               {item.label}
             </button>
@@ -347,11 +374,17 @@ function OrdenesPageInner() {
           <span className="text-gray-400 text-base cursor-default select-none">ⓘ</span>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <Download01 className="w-4 h-4 text-gray-600" />
+          <button
+            className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm text-gray-600 font-medium transition-colors"
+            style={NW}
+          >
+            <Download01 className="w-4 h-4" /> Exportar
           </button>
-          <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <Sliders01 className="w-4 h-4 text-gray-600" />
+          <button
+            className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm text-gray-600 font-medium transition-colors"
+            style={NW}
+          >
+            <Sliders01 className="w-4 h-4" /> Filtros
           </button>
           <Link
             href="/recepciones/crear"
