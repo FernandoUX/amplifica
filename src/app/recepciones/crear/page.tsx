@@ -25,69 +25,9 @@ type FormData = {
   // Step 3
   fechaReserva: string;
   horaReserva: string;
-  anden: string;
 };
 
-const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-
-// ─── Calendar simple ──────────────────────────────────────────────────────────
-function MiniCalendar({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const today = new Date();
-  const [viewMonth, setViewMonth] = useState(today.getMonth());
-  const [viewYear, setViewYear] = useState(today.getFullYear());
-
-  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const cells = Array.from({ length: firstDay + daysInMonth }, (_, i) => i < firstDay ? null : i - firstDay + 1);
-
-  const selected = value ? new Date(value + "T00:00:00") : null;
-
-  const pick = (day: number) => {
-    const d = new Date(viewYear, viewMonth, day);
-    onChange(d.toISOString().split("T")[0]);
-  };
-
-  return (
-    <div className="border border-gray-200 rounded-xl p-4 select-none">
-      <div className="flex items-center justify-between mb-3">
-        <button onClick={() => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); } else setViewMonth(m => m - 1); }}
-          className="p-1 hover:bg-gray-100 rounded">
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-        <span className="font-medium text-sm text-gray-800">{MONTHS[viewMonth]} {viewYear}</span>
-        <button onClick={() => { if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); } else setViewMonth(m => m + 1); }}
-          className="p-1 hover:bg-gray-100 rounded">
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
-      <div className="grid grid-cols-7 gap-1 mb-1">
-        {["Do","Lu","Ma","Mi","Ju","Vi","Sá"].map(d => (
-          <span key={d} className="text-center text-xs text-gray-400 font-medium">{d}</span>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-1">
-        {cells.map((day, i) => {
-          if (!day) return <div key={i} />;
-          const date = new Date(viewYear, viewMonth, day);
-          const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-          const isSel = selected && date.toDateString() === selected.toDateString();
-          return (
-            <button key={i} disabled={isPast}
-              onClick={() => pick(day)}
-              className={`w-8 h-8 text-xs rounded-full mx-auto flex items-center justify-center transition-colors
-                ${isSel ? "bg-indigo-600 text-white font-semibold" : ""}
-                ${!isSel && !isPast ? "hover:bg-indigo-50 text-gray-700" : ""}
-                ${isPast ? "text-gray-300 cursor-not-allowed" : ""}
-              `}
-            >
-              {day}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
+// (MiniCalendar removed — calendar is now inlined in Step3)
 
 // ─── Step 1 ───────────────────────────────────────────────────────────────────
 function Step1({ form, setForm }: { form: FormData; setForm: React.Dispatch<React.SetStateAction<FormData>> }) {
@@ -393,68 +333,215 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
 
 // ─── Step 3 ───────────────────────────────────────────────────────────────────
 function Step3({ form, setForm }: { form: FormData; setForm: React.Dispatch<React.SetStateAction<FormData>> }) {
-  const TIME_SLOTS = ["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00"];
-  const ANDENES = ["Andén 1","Andén 2","Andén 3","Andén 4","Andén 5"];
+  const today = new Date();
+  const [viewMonth, setViewMonth] = useState(today.getMonth());
+  const [viewYear,  setViewYear]  = useState(today.getFullYear());
+
+  // All time slots flat — rendered in a 2-column grid
+  const ALL_SLOTS = [
+    "08:00","08:30","09:00","09:30","10:00","10:30",
+    "11:00","11:30","12:00","12:30","13:00","13:30",
+    "14:00","14:30","15:00","15:30","16:00","16:30",
+    "17:00","17:30",
+  ];
+  const DISABLED_SLOTS = new Set(["10:00","10:30"]); // mock: agenda completa
+
+  // Calendar data
+  const MONTH_NAMES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  const MONTH_ES    = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  const DAY_NAMES   = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+  const DAY_HEADERS = ["Do","Lu","Ma","Mi","Ju","Vi","Sá"];
+
+  const firstDay    = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const cells       = Array.from({ length: firstDay + daysInMonth }, (_, i) =>
+    i < firstDay ? null : i - firstDay + 1
+  );
+
+  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const selected       = form.fechaReserva ? new Date(form.fechaReserva + "T00:00:00") : null;
+
+  const pickDay = (day: number) => {
+    const yy = String(viewYear);
+    const mm = String(viewMonth + 1).padStart(2, "0");
+    const dd = String(day).padStart(2, "0");
+    setForm(f => ({ ...f, fechaReserva: `${yy}-${mm}-${dd}`, horaReserva: "" }));
+  };
+
+  // Mock: days 17–19 are "agenda completa"
+  const AGENDA_COMPLETA = new Set([17, 18, 19]);
+
+  const selectedLabel = selected
+    ? `${DAY_NAMES[selected.getDay()]} ${selected.getDate()} de ${MONTH_ES[selected.getMonth()]}`
+    : "";
+
+  // Detalle summary
+  const totalQty = form.products.reduce((s, p) => s + p.qty, 0);
 
   return (
     <div className="space-y-5">
-      <div className="flex gap-3 bg-blue-50 border border-blue-200 rounded-xl p-4">
-        <AlertCircle className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+
+      {/* ── Alert ────────────────────────────────────────────────────────── */}
+      <div className="flex gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+        <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-semibold text-blue-800">Reserva tu andén de descarga</p>
-          <p className="text-xs text-blue-600 mt-0.5">
-            Selecciona el día, horario y andén disponible para que el operador esté preparado para la llegada de tu orden.
+          <p className="text-sm font-semibold text-amber-800">La puntualidad es clave</p>
+          <p className="text-xs text-amber-600 mt-0.5">
+            Para garantizar una descarga rápida, llega en el bloque asignado. Si no se respeta el horario, no podremos asegurar la recepción de tus artículos debido a la planificación de andenes y personal.
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-2">Fecha de llegada</label>
-          <MiniCalendar value={form.fechaReserva} onChange={v => setForm(f => ({ ...f, fechaReserva: v }))} />
-        </div>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-2">Hora estimada de llegada</label>
-            <div className="grid grid-cols-3 gap-2">
-              {TIME_SLOTS.map(t => (
-                <button
-                  key={t}
-                  onClick={() => setForm(f => ({ ...f, horaReserva: t }))}
-                  className={`py-2 rounded-lg text-sm font-medium border transition-colors
-                    ${form.horaReserva === t ? "bg-indigo-600 text-white border-indigo-600" : "border-gray-200 text-gray-600 hover:border-indigo-300 hover:bg-indigo-50"}`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
+      <h3 className="text-base font-semibold text-gray-800">Seleccione día y bloque horario</h3>
+
+      {/* ── 3-column layout ───────────────────────────────────────────────── */}
+      <div className="flex gap-4 items-start">
+
+        {/* ── Detalle de la Orden ────────────────────────────────────────── */}
+        <div className="w-44 flex-shrink-0 border border-gray-200 rounded-xl p-4 space-y-3 text-xs">
+          <p className="text-sm font-semibold text-gray-800">Detalle de la Orden</p>
+
+          <div className="space-y-0.5">
+            <p className="font-semibold text-gray-700">Sucursal de {form.sucursal}</p>
+            {!form.desconoceFormato && form.pallets && <p className="text-gray-500">Pallets: {form.pallets}</p>}
+            {!form.desconoceFormato && form.bultos  && <p className="text-gray-500">Bultos: {form.bultos}</p>}
           </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-2">Andén asignado</label>
-            <div className="relative">
-              <select
-                value={form.anden}
-                onChange={e => setForm(f => ({ ...f, anden: e.target.value }))}
-                className="w-full appearance-none border border-gray-200 rounded-lg px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 pr-10"
+
+          <div className="space-y-0.5">
+            <p className="font-semibold text-gray-700">Comentario</p>
+            <p className="text-gray-500">{form.comentarios || "Sin comentarios."}</p>
+          </div>
+
+          <div className="space-y-0.5">
+            <p className="font-semibold text-gray-700">Guía de despacho</p>
+            {form.guiaDespacho
+              ? <p className="text-green-600">✓ Cargada correctamente</p>
+              : <p className="text-gray-400">No adjuntada</p>
+            }
+          </div>
+
+          <div className="space-y-0.5">
+            <p className="font-semibold text-gray-700">Productos</p>
+            <p className="text-gray-500">SKUs: {form.products.length}</p>
+            <p className="text-gray-500">Cantidad: {totalQty.toLocaleString("es-CL")}</p>
+          </div>
+        </div>
+
+        {/* ── Calendario + Simbología ────────────────────────────────────── */}
+        <div className="flex-1 border border-gray-200 rounded-xl p-4 select-none">
+
+          {/* Month header */}
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold text-gray-800">
+              {MONTH_NAMES[viewMonth]} {viewYear}
+            </span>
+            <div className="flex gap-0.5">
+              <button
+                onClick={() => {
+                  if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+                  else setViewMonth(m => m - 1);
+                }}
+                className="p-1 hover:bg-gray-100 rounded text-gray-500"
               >
-                <option value="">Seleccione un andén</option>
-                {ANDENES.map(a => <option key={a}>{a}</option>)}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => {
+                  if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+                  else setViewMonth(m => m + 1);
+                }}
+                className="p-1 hover:bg-gray-100 rounded text-gray-500"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
-          {/* Resumen */}
-          {form.fechaReserva && form.horaReserva && form.anden && (
-            <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-              <p className="text-xs font-semibold text-green-700 mb-1">✓ Reserva confirmada</p>
-              <p className="text-sm text-green-800">{form.anden}</p>
-              <p className="text-xs text-green-600 mt-0.5">
-                {new Date(form.fechaReserva + "T00:00:00").toLocaleDateString("es-CL", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} · {form.horaReserva} hrs
-              </p>
-            </div>
-          )}
+          {/* Day header row */}
+          <div className="grid grid-cols-7 mb-1">
+            {DAY_HEADERS.map(d => (
+              <span key={d} className="text-center text-xs text-gray-400 font-medium py-1">{d}</span>
+            ))}
+          </div>
+
+          {/* Day cells */}
+          <div className="grid grid-cols-7">
+            {cells.map((day, i) => {
+              if (!day) return <div key={i} className="h-10" />;
+
+              const date      = new Date(viewYear, viewMonth, day);
+              const isPast    = date < todayMidnight;
+              const isToday   = date.getTime() === todayMidnight.getTime();
+              const isSel     = selected ? date.toDateString() === selected.toDateString() : false;
+              const isAgenda  = AGENDA_COMPLETA.has(day) && !isPast;
+              const dotColor  = isSel     ? "bg-indigo-600"
+                              : isAgenda  ? "bg-gray-400"
+                              : !isPast   ? "bg-green-500"
+                              : "";
+
+              return (
+                <div key={i} className="flex flex-col items-center py-0.5">
+                  <button
+                    disabled={isPast}
+                    onClick={() => { if (!isPast) pickDay(day); }}
+                    className={`w-8 h-8 text-xs rounded-full flex items-center justify-center transition-colors font-medium
+                      ${isSel                           ? "bg-indigo-600 text-white" : ""}
+                      ${!isSel && isToday               ? "border border-indigo-500 text-indigo-600" : ""}
+                      ${!isSel && !isToday && !isPast   ? "hover:bg-indigo-50 text-gray-700" : ""}
+                      ${isPast                          ? "text-gray-300 cursor-not-allowed" : ""}
+                    `}
+                  >
+                    {day}
+                  </button>
+                  {dotColor && <span className={`w-1 h-1 rounded-full mt-0.5 ${dotColor}`} />}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Simbología */}
+          <div className="mt-4 pt-3 border-t border-gray-100 space-y-1.5">
+            <p className="text-xs font-semibold text-gray-600 mb-1">Simbología</p>
+            {[
+              { color: "bg-indigo-600", label: "Fecha y hora seleccionada" },
+              { color: "bg-gray-400",   label: "Agenda completa" },
+              { color: "bg-green-500",  label: "Bloques disponibles" },
+            ].map(({ color, label }) => (
+              <div key={label} className="flex items-center gap-2">
+                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${color}`} />
+                <span className="text-xs text-gray-500">{label}</span>
+              </div>
+            ))}
+          </div>
         </div>
+
+        {/* ── Bloques horarios (aparece al seleccionar fecha) ───────────── */}
+        {selected && (
+          <div className="w-44 flex-shrink-0 border border-gray-200 rounded-xl p-4">
+            <p className="text-sm font-semibold text-gray-800 mb-3 capitalize">{selectedLabel}</p>
+            <div className="grid grid-cols-2 gap-2">
+              {ALL_SLOTS.map((slot) => {
+                const isDisabled = DISABLED_SLOTS.has(slot);
+                const isSlotSel  = form.horaReserva === slot;
+                return (
+                  <button
+                    key={slot}
+                    disabled={isDisabled}
+                    onClick={() => { if (!isDisabled) setForm(f => ({ ...f, horaReserva: slot })); }}
+                    className={`py-2 rounded-lg text-sm font-medium transition-colors text-center
+                      ${isSlotSel                       ? "bg-indigo-600 text-white" : ""}
+                      ${!isSlotSel && !isDisabled       ? "border border-gray-200 text-gray-700 hover:border-indigo-300 hover:bg-indigo-50" : ""}
+                      ${isDisabled                      ? "bg-gray-50 text-gray-300 border border-gray-100 cursor-not-allowed" : ""}
+                    `}
+                  >
+                    {slot}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
@@ -468,13 +555,13 @@ export default function CrearORPage() {
     sucursal: "Quilicura", tienda: "100 Aventuras",
     pallets: "", bultos: "", desconoceFormato: false,
     comentarios: "", guiaDespacho: null, products: [],
-    fechaReserva: "", horaReserva: "", anden: "",
+    fechaReserva: "", horaReserva: "",
   });
 
   const canContinue = () => {
     if (step === 1) return form.sucursal && form.tienda && (form.desconoceFormato || (form.pallets && form.bultos));
     if (step === 2) return form.products.length > 0;
-    if (step === 3) return form.fechaReserva && form.horaReserva && form.anden;
+    if (step === 3) return !!form.fechaReserva && !!form.horaReserva;
     return false;
   };
 
@@ -485,8 +572,8 @@ export default function CrearORPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Breadcrumb */}
-      <div className="bg-white border-b border-gray-100 px-6 py-3">
-        <nav className="flex items-center gap-2 text-sm text-gray-500">
+      <div className="bg-white border-b border-gray-100">
+        <nav className="max-w-3xl mx-auto px-6 py-3 flex items-center gap-2 text-sm text-gray-500">
           <Link href="/recepciones" className="hover:text-indigo-600">Recepciones</Link>
           <ChevronRight className="w-3.5 h-3.5" />
           <span className="text-gray-800 font-medium">Nueva Orden de Recepción</span>
