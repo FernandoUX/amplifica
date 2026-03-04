@@ -5,16 +5,18 @@ import { useState, useMemo, useEffect, Suspense, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   Download01, Sliders01, LayoutGrid01, SearchLg,
-  DotsVertical, CheckCircle, X,
+  DotsVertical, CheckCircle, AlertTriangle, XCircle, ClockRefresh, InfoCircle, X,
   SwitchVertical01, ArrowUp, ArrowDown, Plus,
   CalendarPlus01, PackageCheck, Play, ClipboardCheck, FastForward,
+  Eye, Edit01, SlashCircle01, LockUnlocked01,
 } from "@untitled-ui/icons-react";
 import StatusBadge, { Status } from "@/components/recepciones/StatusBadge";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 /** Feature 4: multi-label resultado tags (aparecen solo en "Completada") */
 type ResultTag = {
-  emoji: string;
+  Icon: React.ComponentType<{ className?: string }>;
+  iconClass: string;
   label: string;
   className: string;
 };
@@ -45,13 +47,13 @@ function makeTags(opts: {
 }): ResultTag[] {
   const tags: ResultTag[] = [];
   if (opts.sinDiferencias)
-    tags.push({ emoji: "✅", label: `${opts.sinDiferencias.toLocaleString("es-CL")} sin diferencias`, className: "bg-green-50 text-green-700 border border-green-200" });
+    tags.push({ Icon: CheckCircle,    iconClass: "text-green-600",  label: `${opts.sinDiferencias.toLocaleString("es-CL")} sin diferencias`, className: "bg-green-50 text-green-700 border border-green-200" });
   if (opts.conDiferencias)
-    tags.push({ emoji: "⚠️", label: `${opts.conDiferencias} con diferencias`, className: "bg-amber-50 text-amber-700 border border-amber-200" });
+    tags.push({ Icon: AlertTriangle,  iconClass: "text-amber-500",  label: `${opts.conDiferencias} con diferencias`,      className: "bg-amber-50 text-amber-700 border border-amber-200" });
   if (opts.noPickeables)
-    tags.push({ emoji: "🚫", label: `${opts.noPickeables} no pickeables`, className: "bg-red-50 text-red-600 border border-red-200" });
+    tags.push({ Icon: XCircle,        iconClass: "text-red-500",    label: `${opts.noPickeables} no pickeables`,          className: "bg-red-50 text-red-600 border border-red-200" });
   if (opts.pendiente)
-    tags.push({ emoji: "🔎", label: "Pendiente de aprobación", className: "bg-orange-50 text-orange-600 border border-orange-200" });
+    tags.push({ Icon: ClockRefresh,   iconClass: "text-orange-500", label: "Pendiente de aprobación",                     className: "bg-orange-50 text-orange-600 border border-orange-200" });
   return tags;
 }
 
@@ -148,10 +150,15 @@ function fechaExtraClass(label: string): string {
 }
 
 // ─── Feature 1 · Feature Antigua — Contextual actions per status ──────────────
-type MenuItem = { label: string; danger?: boolean };
+type MenuItem = {
+  label: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  danger?: boolean;
+};
 type PrimaryAction = {
   tooltip: string;                                         // 1-2 words shown on hover
   icon: React.ComponentType<{ className?: string }>;
+  href?: string;                                           // navigation target (uses Link)
 };
 type ActionConfig = { primary?: PrimaryAction; menu: MenuItem[] };
 
@@ -159,60 +166,65 @@ function getActions(estado: Status): ActionConfig {
   switch (estado) {
     case "Creado":
       return {
-        primary: { tooltip: "Agendar", icon: CalendarPlus01 },
+        primary: { tooltip: "Agendar", icon: CalendarPlus01, href: "/recepciones/crear?startStep=2" },
         menu: [
-          { label: "Ver" },
-          { label: "Editar" },
-          { label: "Cancelar", danger: true },
+          { label: "Ver",      icon: Eye },
+          { label: "Editar",   icon: Edit01 },
+          { label: "Cancelar", icon: SlashCircle01, danger: true },
         ],
       };
     case "Programado":
       return {
         primary: { tooltip: "Recibir", icon: PackageCheck },
         menu: [
-          { label: "Ver" },
-          { label: "Editar" },
-          { label: "Editar cita" },
-          { label: "Cancelar", danger: true },
+          { label: "Ver",       icon: Eye },
+          { label: "Editar",    icon: Edit01 },
+          { label: "Reagendar", icon: CalendarPlus01 },
+          { label: "Cancelar",  icon: SlashCircle01, danger: true },
         ],
       };
     case "Recepcionado en bodega":
       return {
         primary: { tooltip: "Empezar", icon: Play },
         menu: [
-          { label: "Ver" },
-          { label: "Editar" },
-          { label: "Cancelar", danger: true },
+          { label: "Ver",      icon: Eye },
+          { label: "Editar",   icon: Edit01 },
+          { label: "Cancelar", icon: SlashCircle01, danger: true },
         ],
       };
     case "En proceso de conteo":
       return {
         primary: { tooltip: "Resumir", icon: ClipboardCheck },
-        menu: [{ label: "Ver" }],
+        menu: [
+          { label: "Ver", icon: Eye },
+        ],
       };
     case "Parcialmente recepcionada":
       return {
         primary: { tooltip: "Continuar", icon: FastForward },
         menu: [
-          { label: "Resumir picking" },
-          { label: "Liberar picking" },
-          { label: "Ver" },
+          { label: "Resumir picking",  icon: ClipboardCheck },
+          { label: "Liberar picking",  icon: LockUnlocked01 },
+          { label: "Ver",              icon: Eye },
         ],
       };
     default: // Completada, Cancelada
-      return { menu: [{ label: "Ver" }] };
+      return { menu: [{ label: "Ver", icon: Eye }] };
   }
 }
 
 // ─── Actions cell ─────────────────────────────────────────────────────────────
-// • Primary → secondary style, icon-only, tooltip with 1-2 words on hover
-// • Dots   → tertiary style, opens a fixed-position popover BELOW the button
+// • Primary → secondary style, icon-only; tooltip uses position:fixed to escape overflow clipping
+// • Dots    → opens a fixed-position popover BELOW the button
 function ActionsCell({ orden }: { orden: Orden }) {
-  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
-  const dotsRef = useRef<HTMLButtonElement>(null);
+  const [menuPos,    setMenuPos]    = useState<{ top: number; right: number } | null>(null);
+  const [tipVisible, setTipVisible] = useState(false);
+  const dotsRef       = useRef<HTMLButtonElement>(null);
+  const primaryWrap   = useRef<HTMLDivElement>(null);
   const { primary, menu } = getActions(orden.estado);
+  const Icon = primary?.icon;
 
-  // Close popover on outside click
+  // Close dropdown on outside click
   useEffect(() => {
     if (!menuPos) return;
     function onDocClick() { setMenuPos(null); }
@@ -225,70 +237,97 @@ function ActionsCell({ orden }: { orden: Orden }) {
     if (menuPos) { setMenuPos(null); return; }
     if (dotsRef.current) {
       const rect = dotsRef.current.getBoundingClientRect();
-      // Open BELOW the button, right-aligned
       setMenuPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
     }
   };
 
-  const Icon = primary?.icon;
+  // Compute tooltip position on each render — fixed so it escapes overflow:auto
+  const tipPos = tipVisible && primaryWrap.current
+    ? (() => {
+        const r = primaryWrap.current!.getBoundingClientRect();
+        return { top: r.top - 34, left: r.left + r.width / 2 };
+      })()
+    : null;
+
+  const btnCls = "flex items-center justify-center p-1.5 border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-gray-600 rounded-lg transition-colors";
 
   return (
     <div className="flex items-center gap-1">
 
-      {/* ── Primary: secondary style, icon only, tooltip ── */}
+      {/* ── Primary: icon-only button (Link when href, otherwise button) ── */}
       {primary && Icon && (
-        <div className="relative group/ptip">
-          <button
-            className="p-1.5 border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-gray-600 rounded-lg transition-colors"
-          >
-            <Icon className="w-4 h-4" />
-          </button>
-          {/* Tooltip — appears above, centered */}
-          <div
-            className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover/ptip:opacity-100 transition-opacity duration-150 z-50"
-          >
-            <div className="bg-gray-900 text-white text-xs font-medium px-2 py-1 rounded-lg" style={NW}>
-              {primary.tooltip}
-            </div>
-            {/* Arrow */}
-            <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-gray-900" />
-          </div>
+        <div
+          ref={primaryWrap}
+          onMouseEnter={() => setTipVisible(true)}
+          onMouseLeave={() => setTipVisible(false)}
+        >
+          {primary.href ? (
+            <Link href={primary.href} className={btnCls}>
+              <Icon className="w-4 h-4" />
+            </Link>
+          ) : (
+            <button className={btnCls}>
+              <Icon className="w-4 h-4" />
+            </button>
+          )}
         </div>
       )}
 
-      {/* ── Tertiary: dots → opens popover below ── */}
+      {/* ── Dots: opens dropdown ── */}
       <button
         ref={dotsRef}
         onClick={toggleMenu}
         className={`p-1.5 rounded-lg transition-colors ${
-          menuPos
-            ? "bg-gray-100 text-gray-700"
-            : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+          menuPos ? "bg-gray-100 text-gray-700" : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
         }`}
       >
         <DotsVertical className="w-4 h-4" />
       </button>
 
-      {/* ── Popover — fixed, opens BELOW the dots button ── */}
+      {/* ── Tooltip — fixed position to escape overflow clipping ── */}
+      {tipPos && primary && (
+        <div
+          style={{
+            position: "fixed",
+            top:  tipPos.top,
+            left: tipPos.left,
+            transform: "translateX(-50%)",
+            zIndex: 9999,
+            pointerEvents: "none",
+          }}
+        >
+          <div className="bg-gray-900 text-white text-xs font-medium px-2 py-1 rounded-lg" style={NW}>
+            {primary.tooltip}
+          </div>
+          <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-gray-900" />
+        </div>
+      )}
+
+      {/* ── Dropdown — fixed, opens BELOW the dots button ── */}
       {menuPos && (
         <div
           style={{ position: "fixed", top: menuPos.top, right: menuPos.right, zIndex: 9999 }}
-          className="bg-white border border-gray-200 rounded-xl shadow-xl py-1.5 min-w-[176px]"
+          className="bg-white border border-gray-200 rounded-xl shadow-xl py-1.5 min-w-[192px]"
           onMouseDown={e => e.stopPropagation()}
         >
-          {menu.map((item, i) => (
-            <button
-              key={item.label}
-              onClick={() => setMenuPos(null)}
-              className={`w-full text-left px-4 py-2 text-sm transition-colors ${
-                item.danger
-                  ? "text-red-500 hover:bg-red-50"
-                  : "text-gray-700 hover:bg-gray-50"
-              } ${i > 0 && menu[i - 1]?.danger !== item.danger ? "border-t border-gray-100 mt-1 pt-2" : ""}`}
-            >
-              {item.label}
-            </button>
-          ))}
+          {menu.map((item, i) => {
+            const ItemIcon = item.icon;
+            const hasSeparator = i > 0 && menu[i - 1]?.danger !== item.danger;
+            return (
+              <button
+                key={item.label}
+                onClick={() => setMenuPos(null)}
+                className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-colors ${
+                  item.danger ? "text-red-500 hover:bg-red-50" : "text-gray-700 hover:bg-gray-50"
+                } ${hasSeparator ? "border-t border-gray-100 mt-1 pt-2.5" : ""}`}
+              >
+                {ItemIcon && (
+                  <ItemIcon className={`w-4 h-4 flex-shrink-0 ${item.danger ? "text-red-400" : "text-gray-400"}`} />
+                )}
+                {item.label}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
@@ -302,6 +341,7 @@ function OrdenesPageInner() {
 
   const [activeTab, setActiveTab] = useState<string>("Todas");
   const [showToast, setShowToast] = useState(false);
+  const [showInfo,  setShowInfo]  = useState(false);
   const [search,    setSearch]    = useState("");
 
   // Mostrar toast solo cuando viene de crear una OR
@@ -367,11 +407,50 @@ function OrdenesPageInner() {
         </div>
       )}
 
+      {/* ── Info modal ── */}
+      {showInfo && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.35)" }}
+          onMouseDown={() => setShowInfo(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4"
+            onMouseDown={e => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <InfoCircle className="w-5 h-5 text-indigo-600" />
+                </div>
+                <h2 className="text-base font-semibold text-gray-900">Órdenes de Recepción</h2>
+              </div>
+              <button onClick={() => setShowInfo(false)} className="text-gray-400 hover:text-gray-600 flex-shrink-0 mt-0.5">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Las <strong>Órdenes de Recepción (OR)</strong> gestionan la entrada de mercancía al centro de distribución. Cada OR registra el proceso completo: desde la programación de fecha de entrega hasta la verificación del inventario recibido.
+            </p>
+            <ul className="mt-3 space-y-1.5 text-sm text-gray-500">
+              <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" /> Programa citas de descarga con horario</li>
+              <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" /> Declara SKUs y unidades antes de la recepción</li>
+              <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" /> Rastrea diferencias y productos no pickeables</li>
+            </ul>
+          </div>
+        </div>
+      )}
+
       {/* Page header */}
       <div className="flex items-center justify-between mb-5 gap-4">
         <div className="flex items-center gap-2 min-w-0">
           <h1 className="text-2xl font-bold text-gray-900" style={NW}>Órdenes de Recepción</h1>
-          <span className="text-gray-400 text-base cursor-default select-none">ⓘ</span>
+          <button
+            onClick={() => setShowInfo(true)}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <InfoCircle className="w-5 h-5" />
+          </button>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
@@ -381,10 +460,10 @@ function OrdenesPageInner() {
             <Download01 className="w-4 h-4" /> Exportar
           </button>
           <button
-            className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm text-gray-600 font-medium transition-colors"
+            className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm text-gray-600 font-medium transition-colors"
             style={NW}
           >
-            <Sliders01 className="w-4 h-4" /> Filtros
+            Recepción sin agenda
           </button>
           <Link
             href="/recepciones/crear"
@@ -568,15 +647,19 @@ function OrdenesPageInner() {
                     <td className="py-3 px-4">
                       {orden.tags && orden.tags.length > 0 ? (
                         <div className="flex flex-col gap-1">
-                          {orden.tags.map(tag => (
-                            <span
-                              key={tag.label}
-                              className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded font-medium ${tag.className}`}
-                              style={NW}
-                            >
-                              {tag.emoji} {tag.label}
-                            </span>
-                          ))}
+                          {orden.tags.map(tag => {
+                            const TagIcon = tag.Icon;
+                            return (
+                              <span
+                                key={tag.label}
+                                className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded font-medium ${tag.className}`}
+                                style={NW}
+                              >
+                                <TagIcon className={`w-3 h-3 flex-shrink-0 ${tag.iconClass}`} />
+                                {tag.label}
+                              </span>
+                            );
+                          })}
                         </div>
                       ) : (
                         <span className="text-gray-300 text-xs">—</span>

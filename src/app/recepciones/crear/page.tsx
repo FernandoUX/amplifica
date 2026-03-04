@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useRef, Suspense } from "react";
 import {
   AlertCircle, ChevronDown, Upload, Trash2, MoreVertical,
   Package, ArrowRight, ChevronLeft, ChevronRight, Check
@@ -548,9 +548,11 @@ function Step3({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-export default function CrearORPage() {
+function CrearORPageInner() {
   const router = useRouter();
-  const [step, setStep] = useState(1);
+  const searchParams = useSearchParams();
+  const initialStep = Math.max(1, Math.min(3, parseInt(searchParams.get("startStep") ?? "1") || 1));
+  const [step, setStep] = useState(initialStep);
   const [form, setForm] = useState<FormData>({
     sucursal: "Quilicura", tienda: "100 Aventuras",
     pallets: "", bultos: "", desconoceFormato: false,
@@ -628,5 +630,14 @@ export default function CrearORPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── Default export — wraps inner component in Suspense (required for useSearchParams) ─
+export default function CrearORPage() {
+  return (
+    <Suspense fallback={null}>
+      <CrearORPageInner />
+    </Suspense>
   );
 }
