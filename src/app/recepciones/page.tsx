@@ -272,7 +272,14 @@ export default function OrdenesPage() {
                 filtered.map((orden, i) => (
                   <tr key={`${orden.id}-${i}`} className="hover:bg-gray-50/60 transition-colors group">
 
-                    <td className="py-3 px-4 font-medium text-gray-800" style={NW}>{orden.id}</td>
+                    <td className="py-3 px-4" style={NW}>
+                      <span
+                        className="inline-block bg-gray-100 text-gray-700 rounded px-2 py-0.5"
+                        style={{ fontFamily: "var(--font-atkinson)", fontSize: "12px" }}
+                      >
+                        {orden.id}
+                      </span>
+                    </td>
                     <td className="py-3 px-4 text-gray-600" style={NW}>{orden.creacion}</td>
 
                     {/* Fecha agendada — fecha en línea 1, badge en línea 2 */}
