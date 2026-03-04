@@ -253,7 +253,7 @@ export default function OrdenesPage() {
 
                 {/* Sticky Acciones header */}
                 <th
-                  className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide bg-white"
+                  className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide bg-gray-50"
                   style={{ ...NW, ...stickyRight }}
                 >
                   Acciones
