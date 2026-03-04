@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   Download01, Sliders01, LayoutGrid01, SearchLg,
@@ -83,8 +83,19 @@ const stickyRight: React.CSSProperties = {
   boxShadow: "-4px 0 8px -2px rgba(0,0,0,0.07)",
 };
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-export default function OrdenesPage() {
+// ─── Badge helper for fechaExtra ──────────────────────────────────────────────
+function fechaExtraClass(label: string): string {
+  const lower = label.toLowerCase();
+  if (lower.startsWith("expirado")) {
+    // Ya expiró → rojo suave
+    return "bg-red-50 text-red-500";
+  }
+  // Expira en X → advertencia naranja
+  return "bg-orange-50 text-orange-500";
+}
+
+// ─── Inner page (needs useSearchParams → must be inside Suspense) ─────────────
+function OrdenesPageInner() {
   const searchParams = useSearchParams();
   const router       = useRouter();
 
@@ -99,6 +110,7 @@ export default function OrdenesPage() {
       router.replace("/recepciones"); // limpia el query param de la URL
     }
   }, [searchParams, router]);
+
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDir,   setSortDir]   = useState<SortDir>("asc");
 
@@ -287,11 +299,7 @@ export default function OrdenesPage() {
                       <p className="text-gray-700" style={NW}>{orden.fechaAgendada}</p>
                       {orden.fechaExtra && (
                         <p className="mt-0.5" style={NW}>
-                          <span className={`inline text-xs font-medium px-1.5 py-0.5 rounded ${
-                            orden.fechaExtra.toLowerCase().startsWith("expira")
-                              ? "bg-orange-50 text-orange-500"
-                              : "bg-orange-50 text-orange-400"
-                          }`}>
+                          <span className={`inline text-xs font-medium px-1.5 py-0.5 rounded ${fechaExtraClass(orden.fechaExtra)}`}>
                             {orden.fechaExtra}
                           </span>
                         </p>
@@ -351,5 +359,16 @@ export default function OrdenesPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── Default export — wraps inner component in Suspense ───────────────────────
+// Next.js 15 requires useSearchParams() to be inside a <Suspense> boundary
+// for static prerendering to work (fixes the Vercel build error).
+export default function OrdenesPage() {
+  return (
+    <Suspense fallback={null}>
+      <OrdenesPageInner />
+    </Suspense>
   );
 }
