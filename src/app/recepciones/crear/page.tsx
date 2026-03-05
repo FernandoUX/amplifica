@@ -309,7 +309,7 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
                         type="number"
                         value={product.qty}
                         onChange={e => updateQty(product.sku, parseInt(e.target.value) || 1)}
-                        className="w-14 border border-gray-200 rounded px-2 py-1 text-center text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                        className="w-14 border border-gray-200 rounded px-2 py-1 text-center text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-600"
                       />
                       <button onClick={() => updateQty(product.sku, product.qty + 1)}
                         className="w-7 h-7 border border-gray-200 rounded flex items-center justify-center hover:bg-gray-100 font-medium text-gray-600">+</button>
