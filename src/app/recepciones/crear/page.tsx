@@ -554,14 +554,28 @@ function Step3({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
   );
 }
 
+// ─── Steps config ─────────────────────────────────────────────────────────────
+const STEPS_FULL      = [
+  { number: 1, label: "Definición de Destino" },
+  { number: 2, label: "Detalle de Artículos" },
+  { number: 3, label: "Reserva de andén" },
+];
+const STEPS_SIN_AGENDA = [
+  { number: 1, label: "Definición de Destino" },
+  { number: 2, label: "Detalle de Artículos" },
+];
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 function CrearORPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialStep = Math.max(1, Math.min(3, parseInt(searchParams.get("startStep") ?? "1") || 1));
+  const initialStep   = Math.max(1, Math.min(3, parseInt(searchParams.get("startStep") ?? "1") || 1));
   const isReagendar   = searchParams.get("mode") === "reagendar";
-  const [step,        setStep]        = useState(initialStep);
-  const [maxReached,  setMaxReached]  = useState(initialStep);
+  const isSinAgenda   = searchParams.get("mode") === "sin-agenda";
+  const totalSteps    = isSinAgenda ? 2 : 3;
+
+  const [step,       setStep]       = useState(initialStep);
+  const [maxReached, setMaxReached] = useState(initialStep);
   const [form, setForm] = useState<FormData>({
     sucursal: "Quilicura", tienda: "Extra Life",
     pallets: "", bultos: "", desconoceFormato: false,
@@ -580,6 +594,24 @@ function CrearORPageInner() {
     router.push(isReagendar ? "/recepciones?rescheduled=1" : "/recepciones?created=1");
   };
 
+  // "Recepción sin agenda": auto-assign current date & time, then submit
+  const handleSubmitSinAgenda = () => {
+    const now  = new Date();
+    const yyyy = now.getFullYear();
+    const mm   = String(now.getMonth() + 1).padStart(2, "0");
+    const dd   = String(now.getDate()).padStart(2, "0");
+    const hh   = String(now.getHours()).padStart(2, "0");
+    const min  = String(now.getMinutes()).padStart(2, "0");
+    setForm(f => ({ ...f, fechaReserva: `${yyyy}-${mm}-${dd}`, horaReserva: `${hh}:${min}` }));
+    router.push("/recepciones?created=1");
+  };
+
+  const pageTitle = isSinAgenda
+    ? "Nueva OR sin Agenda"
+    : isReagendar
+    ? "Reagendar Orden de Recepción"
+    : "Nueva Orden de Recepción";
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Breadcrumb */}
@@ -587,18 +619,14 @@ function CrearORPageInner() {
         <nav className="max-w-3xl mx-auto px-6 py-3 flex items-center gap-2 text-sm text-gray-500">
           <Link href="/recepciones" className="hover:text-indigo-600">Recepciones</Link>
           <ChevronRight className="w-3.5 h-3.5" />
-          <span className="text-gray-800 font-medium">
-            {isReagendar ? "Reagendar Orden de Recepción" : "Nueva Orden de Recepción"}
-          </span>
+          <span className="text-gray-800 font-medium">{pageTitle}</span>
         </nav>
       </div>
 
       <div className="max-w-3xl mx-auto px-6 py-8">
         {/* Title */}
         <div className="flex items-center gap-2 mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">
-            {isReagendar ? "Reagendar Orden de Recepción" : "Nueva Orden de Recepción"}
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900">{pageTitle}</h1>
           <button className="text-gray-400 hover:text-gray-600 text-base">ⓘ</button>
         </div>
 
@@ -608,6 +636,7 @@ function CrearORPageInner() {
             current={step}
             maxReached={maxReached}
             onStepClick={n => setStep(n)}
+            steps={isSinAgenda ? STEPS_SIN_AGENDA : STEPS_FULL}
           />
         </div>
 
@@ -615,7 +644,7 @@ function CrearORPageInner() {
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
           {step === 1 && <Step1 form={form} setForm={setForm} />}
           {step === 2 && <Step2 form={form} setForm={setForm} />}
-          {step === 3 && <Step3 form={form} setForm={setForm} />}
+          {step === 3 && !isSinAgenda && <Step3 form={form} setForm={setForm} />}
         </div>
 
         {/* Footer actions */}
@@ -627,7 +656,17 @@ function CrearORPageInner() {
             Volver
           </button>
 
-          {step < 3 ? (
+          {/* sin-agenda: step 2 → submit directly */}
+          {isSinAgenda && step === 2 ? (
+            <button
+              onClick={handleSubmitSinAgenda}
+              disabled={!canContinue()}
+              className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-200 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              <Check className="w-4 h-4" />
+              Crear OR sin agenda
+            </button>
+          ) : step < totalSteps ? (
             <button
               onClick={() => {
                 setStep(s => s + 1);

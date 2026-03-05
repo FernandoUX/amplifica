@@ -11,14 +11,16 @@ interface StepIndicatorProps {
   current: number;
   maxReached?: number;           // highest step the user has visited
   onStepClick?: (step: number) => void;
+  steps?: Step[];                // optional override (e.g. only 2 steps)
 }
 
-export default function StepIndicator({ current, maxReached, onStepClick }: StepIndicatorProps) {
+export default function StepIndicator({ current, maxReached, onStepClick, steps }: StepIndicatorProps) {
+  const activeSteps = steps ?? STEPS;
   const max = maxReached ?? current;
 
   return (
     <div className="flex items-center gap-0">
-      {STEPS.map((step, i) => {
+      {activeSteps.map((step, i) => {
         const done      = step.number < current;
         const active    = step.number === current;
         const reachable = step.number <= max;
@@ -55,7 +57,7 @@ export default function StepIndicator({ current, maxReached, onStepClick }: Step
               </span>
             </button>
 
-            {i < STEPS.length - 1 && (
+            {i < activeSteps.length - 1 && (
               <div className={`h-px w-12 mx-3 flex-shrink-0 ${done ? "bg-green-400" : "bg-gray-200"}`} />
             )}
           </div>
