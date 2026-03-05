@@ -1,0 +1,309 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ChevronLeft, Check } from "@untitled-ui/icons-react";
+import {
+  MOVABLE_COLS,
+  DEFAULT_ORDER,
+  readColStorage,
+  STORAGE_KEY,
+  CHANGE_EVENT,
+  type ColumnKey,
+} from "@/hooks/useColumnConfig";
+
+// ─── Drag handle SVG ──────────────────────────────────────────────────────────
+function DragHandle() {
+  return (
+    <svg width="12" height="16" viewBox="0 0 12 16" fill="none" className="text-gray-300 flex-shrink-0">
+      <circle cx="3"  cy="3"  r="1.5" fill="currentColor" />
+      <circle cx="9"  cy="3"  r="1.5" fill="currentColor" />
+      <circle cx="3"  cy="8"  r="1.5" fill="currentColor" />
+      <circle cx="9"  cy="8"  r="1.5" fill="currentColor" />
+      <circle cx="3"  cy="13" r="1.5" fill="currentColor" />
+      <circle cx="9"  cy="13" r="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+// ─── Lock icon (fixed columns) ────────────────────────────────────────────────
+function LockIcon() {
+  return (
+    <svg width="12" height="14" viewBox="0 0 12 14" fill="none" className="text-gray-300 flex-shrink-0">
+      <rect x="1" y="6" width="10" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M3 6V4a3 3 0 0 1 6 0v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+export default function ColumnEditorPage() {
+  const router = useRouter();
+
+  // Init from localStorage
+  const initial = readColStorage();
+  const [order,   setOrder]   = useState<ColumnKey[]>(initial.order);
+  const [visible, setVisible] = useState<Set<ColumnKey>>(new Set(initial.visible));
+
+  // DnD state
+  const [dragging,   setDragging]   = useState<ColumnKey | null>(null);
+  const [dragOverKey, setDragOverKey] = useState<ColumnKey | null>(null);
+  const [dropBefore, setDropBefore] = useState(true);
+
+  // ── Visibility toggle ──
+  const toggleVisible = (key: ColumnKey) => {
+    setVisible(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        if (next.size <= 1) return prev; // at least 1 visible
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const selectAll = () => setVisible(new Set(DEFAULT_ORDER));
+  const clearAll  = () => {
+    const first = order[0] ?? DEFAULT_ORDER[0];
+    setVisible(new Set([first]));
+  };
+
+  // ── Drag handlers ──
+  const handleDragStart = (e: React.DragEvent, key: ColumnKey) => {
+    e.dataTransfer.effectAllowed = "move";
+    setDragging(key);
+  };
+
+  const handleDragOver = (e: React.DragEvent, key: ColumnKey) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverKey(key);
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDropBefore(e.clientX < rect.left + rect.width / 2);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetKey: ColumnKey) => {
+    e.preventDefault();
+    if (!dragging || dragging === targetKey) {
+      setDragging(null);
+      setDragOverKey(null);
+      return;
+    }
+    const newOrder = [...order];
+    const fromIdx  = newOrder.indexOf(dragging);
+    const toIdx    = newOrder.indexOf(targetKey);
+    // Remove from original position
+    newOrder.splice(fromIdx, 1);
+    // Re-calculate target index after removal
+    const adjustedTo = newOrder.indexOf(targetKey);
+    const insertAt   = dropBefore ? adjustedTo : adjustedTo + 1;
+    newOrder.splice(insertAt, 0, dragging);
+    setOrder(newOrder);
+    setDragging(null);
+    setDragOverKey(null);
+  };
+
+  const handleDragEnd = () => {
+    setDragging(null);
+    setDragOverKey(null);
+  };
+
+  // ── Save ──
+  const handleSave = () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      order,
+      visible: [...visible],
+    }));
+    window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
+    router.push("/recepciones");
+  };
+
+  const handleReset = () => {
+    setOrder(DEFAULT_ORDER);
+    setVisible(new Set(DEFAULT_ORDER));
+  };
+
+  const visibleCount = visible.size;
+
+  return (
+    <div className="p-6 max-w-3xl">
+
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between mb-7 gap-4">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/recepciones"
+            className="flex items-center justify-center w-8 h-8 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors flex-shrink-0"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Link>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Editor de columnas</h1>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Personaliza las columnas de la tabla de Órdenes de Recepción
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={handleReset}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 font-medium transition-colors"
+          >
+            Restablecer
+          </button>
+          <button
+            onClick={handleSave}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+          >
+            <Check className="w-4 h-4" />
+            Guardar cambios
+          </button>
+        </div>
+      </div>
+
+      {/* ── Section 1: Visible columns (checkboxes) ── */}
+      <div className="bg-white border border-gray-200 rounded-xl p-5 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900">Columnas visibles</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {visibleCount} de {MOVABLE_COLS.length} columnas activas
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={clearAll}  className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Ninguna</button>
+            <span className="text-gray-200">|</span>
+            <button onClick={selectAll} className="text-xs text-indigo-500 hover:text-indigo-700 font-medium transition-colors">Todas</button>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {/* Fixed: ID — always visible */}
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-100 bg-gray-50 text-sm text-gray-400 select-none">
+            <span className="w-4 h-4 rounded border border-gray-200 bg-gray-100 flex items-center justify-center flex-shrink-0">
+              <Check className="w-2.5 h-2.5 text-gray-400" />
+            </span>
+            ID
+            <LockIcon />
+          </div>
+
+          {/* Movable columns */}
+          {MOVABLE_COLS.map(col => {
+            const isVis = visible.has(col.key);
+            return (
+              <button
+                key={col.key}
+                onClick={() => toggleVisible(col.key)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                  isVis
+                    ? "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100"
+                    : "bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600"
+                }`}
+              >
+                <span
+                  className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${
+                    isVis ? "bg-indigo-600 border-indigo-600" : "border-gray-300"
+                  }`}
+                >
+                  {isVis && <Check className="w-2.5 h-2.5 text-white" />}
+                </span>
+                {col.label}
+              </button>
+            );
+          })}
+
+          {/* Fixed: Acciones — always visible */}
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-100 bg-gray-50 text-sm text-gray-400 select-none">
+            <span className="w-4 h-4 rounded border border-gray-200 bg-gray-100 flex items-center justify-center flex-shrink-0">
+              <Check className="w-2.5 h-2.5 text-gray-400" />
+            </span>
+            Acciones
+            <LockIcon />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Section 2: Column order (DnD) ── */}
+      <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <div className="mb-4">
+          <h2 className="text-sm font-semibold text-gray-900">Orden de columnas</h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Arrastra para reordenar. Las columnas ID y Acciones son fijas.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+
+          {/* Fixed: ID */}
+          <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border border-dashed border-gray-200 rounded-xl text-sm text-gray-400">
+            <LockIcon />
+            <span>ID</span>
+          </div>
+
+          {/* Draggable columns */}
+          {order.map(key => {
+            const col       = MOVABLE_COLS.find(c => c.key === key);
+            if (!col) return null;
+            const isVis     = visible.has(key);
+            const isDragging = dragging === key;
+            const isOver    = dragOverKey === key;
+
+            return (
+              <div
+                key={key}
+                draggable
+                onDragStart={e => handleDragStart(e, key)}
+                onDragOver={e  => handleDragOver(e, key)}
+                onDragLeave={() => setDragOverKey(null)}
+                onDrop={e      => handleDrop(e, key)}
+                onDragEnd={handleDragEnd}
+                className={`relative flex items-center gap-2 px-3 py-2.5 border rounded-xl text-sm font-medium transition-all select-none
+                  cursor-grab active:cursor-grabbing
+                  ${isDragging ? "opacity-30 scale-95 shadow-none" : ""}
+                  ${isVis
+                    ? "bg-white border-gray-200 text-gray-700 shadow-sm hover:border-gray-300 hover:shadow-md"
+                    : "bg-gray-50 border-dashed border-gray-200 text-gray-400"
+                  }
+                  ${isOver && dropBefore  ? "border-l-[3px] border-l-indigo-500 pl-2.5" : ""}
+                  ${isOver && !dropBefore ? "border-r-[3px] border-r-indigo-500 pr-2.5" : ""}
+                `}
+              >
+                <DragHandle />
+                <span>{col.label}</span>
+                {!isVis && (
+                  <span className="text-[10px] font-normal text-gray-300 ml-0.5">oculta</span>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Fixed: Acciones */}
+          <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border border-dashed border-gray-200 rounded-xl text-sm text-gray-400">
+            <LockIcon />
+            <span>Acciones</span>
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center gap-4 mt-5 pt-4 border-t border-gray-100">
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <span className="inline-block w-3 h-3 rounded bg-white border border-gray-200 shadow-sm" />
+            Columna visible
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <span className="inline-block w-3 h-3 rounded border border-dashed border-gray-300 bg-gray-50" />
+            Columna oculta
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <LockIcon />
+            Columna fija (no movible)
+          </div>
+        </div>
+      </div>
+
+    </div>
+  );
+}

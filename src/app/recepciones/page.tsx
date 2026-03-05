@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { useState, useMemo, useEffect, Suspense, useRef } from "react";
+import { useColumnConfig, type ColumnKey } from "@/hooks/useColumnConfig";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   Download01, Sliders01, LayoutGrid01, SearchLg,
@@ -391,6 +392,10 @@ function OrdenesPageInner() {
   const searchParams = useSearchParams();
   const router       = useRouter();
 
+  // ── Column config (from localStorage, updated by editor page) ──
+  const { colOrder, colVisible } = useColumnConfig();
+  const activeColumns = colOrder.filter(k => colVisible.includes(k));
+
   const [activeTab,   setActiveTab]   = useState<string>("Todas");
   const [showToast,   setShowToast]   = useState(false);
   const [showInfo,    setShowInfo]    = useState(false);
@@ -707,9 +712,13 @@ function OrdenesPageInner() {
             )}
           </button>
 
-          <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+          <Link
+            href="/recepciones/columnas"
+            className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center justify-center transition-colors"
+            title="Editor de columnas"
+          >
             <LayoutGrid01 className="w-4 h-4 text-gray-500" />
-          </button>
+          </Link>
 
           <div className="relative">
             <SearchLg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -775,33 +784,35 @@ function OrdenesPageInner() {
 
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
+                {/* Fixed: ID */}
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide" style={NW}>ID</th>
-                <th
-                  className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:text-gray-700 select-none"
-                  style={NW}
-                  onClick={() => toggleSort("creacion")}
-                >
-                  Creación
-                  <SortIcon field="creacion" sortField={sortField} sortDir={sortDir} />
-                </th>
-                <th
-                  className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:text-gray-700 select-none"
-                  style={NW}
-                  onClick={() => toggleSort("fechaAgendada")}
-                >
-                  F. Agendada
-                  <SortIcon field="fechaAgendada" sortField={sortField} sortDir={sortDir} />
-                </th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide" style={NW}>Seller</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide" style={NW}>Sucursal</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide" style={NW}>Estado</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide" style={NW}>SKUs</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide" style={NW}>Unidades</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide" style={NW}>Tags de Resultado</th>
-                <th
-                  className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide bg-gray-50"
-                  style={{ ...NW, ...stickyRight }}
-                >
+
+                {/* Dynamic columns */}
+                {activeColumns.map(key => {
+                  if (key === "creacion") return (
+                    <th key="creacion" className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:text-gray-700 select-none" style={NW} onClick={() => toggleSort("creacion")}>
+                      Creación <SortIcon field="creacion" sortField={sortField} sortDir={sortDir} />
+                    </th>
+                  );
+                  if (key === "fechaAgendada") return (
+                    <th key="fechaAgendada" className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:text-gray-700 select-none" style={NW} onClick={() => toggleSort("fechaAgendada")}>
+                      F. Agendada <SortIcon field="fechaAgendada" sortField={sortField} sortDir={sortDir} />
+                    </th>
+                  );
+                  const LABELS: Record<ColumnKey, string> = {
+                    creacion: "Creación", fechaAgendada: "F. Agendada",
+                    seller: "Seller", sucursal: "Sucursal", estado: "Estado",
+                    skus: "SKUs", uTotales: "Unidades", tags: "Tags de Resultado",
+                  };
+                  return (
+                    <th key={key} className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide" style={NW}>
+                      {LABELS[key]}
+                    </th>
+                  );
+                })}
+
+                {/* Fixed: Acciones */}
+                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide bg-gray-50" style={{ ...NW, ...stickyRight }}>
                   Acciones
                 </th>
               </tr>
@@ -810,7 +821,7 @@ function OrdenesPageInner() {
             <tbody className="divide-y divide-gray-50">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-14 text-center text-sm text-gray-400" style={NW}>
+                  <td colSpan={activeColumns.length + 2} className="py-14 text-center text-sm text-gray-400" style={NW}>
                     No se encontraron órdenes{search ? ` para "${search}"` : ""}.
                   </td>
                 </tr>
@@ -822,6 +833,7 @@ function OrdenesPageInner() {
                       orden.isSubId ? "bg-gray-50/40" : ""
                     }`}
                   >
+                    {/* Fixed: ID */}
                     <td className="py-3 px-4" style={NW}>
                       {orden.isSubId ? (
                         <span className="flex items-center gap-1">
@@ -843,52 +855,93 @@ function OrdenesPageInner() {
                       )}
                     </td>
 
-                    <td className="py-3 px-4 text-gray-600" style={NW}>{orden.creacion}</td>
+                    {/* Dynamic columns */}
+                    {activeColumns.map(key => {
+                      switch (key) {
+                        case "creacion":
+                          return (
+                            <td key="creacion" className="py-3 px-4 text-gray-600" style={NW}>
+                              {orden.creacion}
+                            </td>
+                          );
+                        case "fechaAgendada":
+                          return (
+                            <td key="fechaAgendada" className="py-3 px-4">
+                              <p className="text-gray-700" style={NW}>
+                                {orden.fechaAgendada === "—"
+                                  ? <span className="text-gray-400">Sin agendar</span>
+                                  : orden.fechaAgendada
+                                }
+                              </p>
+                              {orden.fechaExtra && (
+                                <p className="mt-0.5" style={NW}>
+                                  <span className={`inline text-xs font-medium px-1.5 py-0.5 rounded ${fechaExtraClass(orden.fechaExtra)}`}>
+                                    {orden.fechaExtra}
+                                  </span>
+                                </p>
+                              )}
+                            </td>
+                          );
+                        case "seller":
+                          return (
+                            <td key="seller" className="py-3 px-4 text-gray-600" style={NW}>
+                              {orden.seller}
+                            </td>
+                          );
+                        case "sucursal":
+                          return (
+                            <td key="sucursal" className="py-3 px-4 text-gray-600" style={NW}>
+                              {orden.sucursal}
+                            </td>
+                          );
+                        case "estado":
+                          return (
+                            <td key="estado" className="py-3 px-4" style={NW}>
+                              <StatusBadge status={orden.estado} />
+                            </td>
+                          );
+                        case "skus":
+                          return (
+                            <td key="skus" className="py-3 px-4 text-gray-700 tabular-nums" style={NW}>
+                              {orden.skus}
+                            </td>
+                          );
+                        case "uTotales":
+                          return (
+                            <td key="uTotales" className="py-3 px-4 text-gray-700 tabular-nums" style={NW}>
+                              {orden.uTotales}
+                            </td>
+                          );
+                        case "tags":
+                          return (
+                            <td key="tags" className="py-3 px-4">
+                              {orden.tags && orden.tags.length > 0 ? (
+                                <div className="flex flex-col gap-1">
+                                  {orden.tags.map(tag => {
+                                    const TagIcon = tag.Icon;
+                                    return (
+                                      <span
+                                        key={tag.label}
+                                        className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded font-medium ${tag.className}`}
+                                        style={NW}
+                                      >
+                                        <TagIcon className={`w-3 h-3 flex-shrink-0 ${tag.iconClass}`} />
+                                        {tag.label}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <span className="text-gray-300 text-xs">—</span>
+                              )}
+                            </td>
+                          );
+                        default:
+                          return null;
+                      }
+                    })}
 
-                    <td className="py-3 px-4">
-                      <p className="text-gray-700" style={NW}>
-                        {orden.fechaAgendada === "—"
-                          ? <span className="text-gray-400">Sin agendar</span>
-                          : orden.fechaAgendada
-                        }
-                      </p>
-                      {orden.fechaExtra && (
-                        <p className="mt-0.5" style={NW}>
-                          <span className={`inline text-xs font-medium px-1.5 py-0.5 rounded ${fechaExtraClass(orden.fechaExtra)}`}>
-                            {orden.fechaExtra}
-                          </span>
-                        </p>
-                      )}
-                    </td>
-
-                    <td className="py-3 px-4 text-gray-600" style={NW}>{orden.seller}</td>
-                    <td className="py-3 px-4 text-gray-600" style={NW}>{orden.sucursal}</td>
-                    <td className="py-3 px-4" style={NW}><StatusBadge status={orden.estado} /></td>
-                    <td className="py-3 px-4 text-gray-700 tabular-nums" style={NW}>{orden.skus}</td>
-                    <td className="py-3 px-4 text-gray-700 tabular-nums" style={NW}>{orden.uTotales}</td>
-
-                    <td className="py-3 px-4">
-                      {orden.tags && orden.tags.length > 0 ? (
-                        <div className="flex flex-col gap-1">
-                          {orden.tags.map(tag => {
-                            const TagIcon = tag.Icon;
-                            return (
-                              <span
-                                key={tag.label}
-                                className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded font-medium ${tag.className}`}
-                                style={NW}
-                              >
-                                <TagIcon className={`w-3 h-3 flex-shrink-0 ${tag.iconClass}`} />
-                                {tag.label}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <span className="text-gray-300 text-xs">—</span>
-                      )}
-                    </td>
-
+                    {/* Fixed: Acciones */}
                     <td
                       className="py-3 px-4 bg-white group-hover:bg-gray-50/60"
                       style={{ ...NW, ...stickyRight }}
