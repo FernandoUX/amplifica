@@ -100,11 +100,11 @@ export default function Sidebar() {
       {/* ── Quick actions ─────────────────────────────────────────────────── */}
       {!collapsed && (
         <div className="px-2.5 py-2 space-y-0.5 border-b border-white/10">
-          <button className="w-full flex items-center gap-2.5 text-white/50 hover:text-white text-xs px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors">
+          <button className="w-full flex items-center gap-2.5 text-white/70 hover:text-white text-xs px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors">
             <SearchLg className="w-4 h-4 flex-shrink-0" />
             <span>Buscar</span>
           </button>
-          <button className="w-full flex items-center gap-2.5 text-white/50 hover:text-white text-xs px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors">
+          <button className="w-full flex items-center gap-2.5 text-white/70 hover:text-white text-xs px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors">
             <Calendar className="w-4 h-4 flex-shrink-0" />
             <span>Filtrar por fecha</span>
           </button>
@@ -131,14 +131,14 @@ export default function Sidebar() {
                     <button
                       onClick={() => toggleMenu(item.label)}
                       className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs transition-colors
-                        ${isActive ? "text-white bg-white/8" : "text-white/60 hover:text-white hover:bg-white/5"}`}
+                        ${isActive ? "text-white bg-white/8" : "text-white/70 hover:text-white hover:bg-white/5"}`}
                     >
                       <Icon className="w-4 h-4 flex-shrink-0" />
                       {!collapsed && (
                         <>
                           <span className="flex-1 text-left">{item.label}</span>
                           {item.badge && (
-                            <span className="bg-[#F5A623] text-black text-[8px] font-bold px-1.5 py-0.5 rounded-sm leading-none">
+                            <span className="bg-indigo-600 text-white text-[9px] font-semibold px-2 py-0.5 rounded-full leading-none">
                               {item.badge}
                             </span>
                           )}
@@ -174,7 +174,7 @@ export default function Sidebar() {
                     className={`flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs transition-colors ${
                       pathname === item.href
                         ? "text-white bg-white/10"
-                        : "text-white/60 hover:text-white hover:bg-white/5"
+                        : "text-white/70 hover:text-white hover:bg-white/5"
                     }`}
                   >
                     <Icon className="w-4 h-4 flex-shrink-0" />
@@ -191,7 +191,7 @@ export default function Sidebar() {
       <div className="border-t border-white/10 px-2 py-2 space-y-0.5">
         <Link
           href="/configuracion"
-          className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+          className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs text-white/70 hover:text-white hover:bg-white/5 transition-colors"
         >
           <Settings01 className="w-4 h-4 flex-shrink-0" />
           {!collapsed && <span>Configuración</span>}
