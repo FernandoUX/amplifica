@@ -241,7 +241,7 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Busca por SKU, nombre o código de barras"
-            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-600"
           />
         </div>
         <button className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-2">
