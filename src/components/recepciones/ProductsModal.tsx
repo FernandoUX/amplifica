@@ -19,17 +19,20 @@ export type AddProduct = {
   qty: number;
 };
 
-// ─── Mock data (matching Figma design) ────────────────────────────────────────
+// ─── Mock data ────────────────────────────────────────────────────────────────
 const MOCK_PRODUCTS: ModalProduct[] = [
-  { sku: "PAREJAS",  nombre: "100 Aventuras en Parejas", barcode: "04569432", qty: 20500, checked: true  },
-  { sku: "FAMILIA",  nombre: "100 Aventuras en Familia", barcode: "04569432", qty: 20,    checked: false },
-  { sku: "AMIGAS",   nombre: "100 Aventuras en amigos",  barcode: "04569432", qty: 500,   checked: true  },
-  { sku: "MAMA",     nombre: "100 Aventuras Mamá",       barcode: "04569432", qty: 500,   checked: false },
-  { sku: "PAPA",     nombre: "100 Aventuras Papá",       barcode: "04569432", qty: 500,   checked: false },
-  { sku: "ABUELO",   nombre: "100 Aventuras Abuelo",     barcode: "04569432", qty: 500,   checked: true  },
-  { sku: "ABUELA",   nombre: "100 Aventuras Abuela",     barcode: "04569432", qty: 500,   checked: false },
-  { sku: "CARTAS-1", nombre: "100 Aventuras en Cartas",  barcode: "04569432", qty: 500,   checked: true  },
-  { sku: "AMIGAS-2", nombre: "100 Aventuras en amigos",  barcode: "04569432", qty: 500,   checked: false },
+  { sku: "TD-10",    nombre: "Tropical Delight 10 Sachets",                    barcode: "07810001", qty: 100, checked: false },
+  { sku: "TD-20",    nombre: "Tropical Delight 20 Sachets",                    barcode: "07810002", qty: 60,  checked: false },
+  { sku: "TD-40",    nombre: "Tropical Delight 40 Sachets",                    barcode: "07810003", qty: 30,  checked: false },
+  { sku: "BB-10",    nombre: "Berry Blast 10 Sachets",                         barcode: "07810011", qty: 100, checked: false },
+  { sku: "BB-20",    nombre: "Berry Blast 20 Sachets",                         barcode: "07810012", qty: 60,  checked: false },
+  { sku: "BB-40",    nombre: "Berry Blast 40 Sachets",                         barcode: "07810013", qty: 30,  checked: false },
+  { sku: "LS-10",    nombre: "Lime Sensation 10 Sachets",                      barcode: "07810021", qty: 100, checked: false },
+  { sku: "LS-20",    nombre: "Lime Sensation 20 Sachets",                      barcode: "07810022", qty: 60,  checked: false },
+  { sku: "LS-40",    nombre: "Lime Sensation 40 Sachets",                      barcode: "07810023", qty: 30,  checked: false },
+  { sku: "OMFVP-10", nombre: "Orange Mango Fusion Variety Pack 10 Sachets",    barcode: "07810031", qty: 100, checked: false },
+  { sku: "OMFVP-20", nombre: "Orange Mango Fusion Variety Pack 20 Sachets",    barcode: "07810032", qty: 60,  checked: false },
+  { sku: "OMFVP-40", nombre: "Orange Mango Fusion Variety Pack 40 Sachets",    barcode: "07810033", qty: 30,  checked: false },
 ];
 
 // ─── Checkbox component ───────────────────────────────────────────────────────
