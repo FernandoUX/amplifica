@@ -37,6 +37,7 @@ type Orden = {
   isSubId?: boolean;      // Feature 2: sub-ID (RO-XXX-P1)
   pallets?: number;       // Seller-declared pallets (for "Programado" ORs)
   bultos?: number;        // Seller-declared bultos (for "Programado" ORs)
+  comentarios?: string;   // Optional comment entered when creating the OR (read-only in modals)
 };
 
 type SortField = "creacion" | "fechaAgendada" | null;
@@ -80,9 +81,9 @@ const ORDENES: Orden[] = [
   { id: "RO-BARRA-191", creacion: "01/03/2026", fechaAgendada: "—", seller: "Extra Life", sucursal: "Quilicura", estado: "Creado", skus: 5, uTotales: "100" },
 
   // Programado
-  { id: "RO-BARRA-183", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "Extra Life", sucursal: "Quilicura", estado: "Programado", skus: 320, uTotales: "2.550", pallets: 10, bultos: 32 },
+  { id: "RO-BARRA-183", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "Extra Life", sucursal: "Quilicura", estado: "Programado", skus: 320, uTotales: "2.550", pallets: 10, bultos: 32, comentarios: "Llegará en un camión blanco patente XXNN33, preguntar por Carlos." },
   { id: "RO-BARRA-182", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", fechaExtra: "Expirado hace 4 horas", seller: "Extra Life", sucursal: "La Reina", estado: "Programado", skus: 320, uTotales: "2.550", pallets: 8, bultos: 28 },
-  { id: "RO-BARRA-190", creacion: "17/02/2026", fechaAgendada: "21/02/2026 09:00", fechaExtra: "Expira en 28 minutos", seller: "Le Vice", sucursal: "Lo Barnechea", estado: "Programado", skus: 15, uTotales: "450", pallets: 3, bultos: 15 },
+  { id: "RO-BARRA-190", creacion: "17/02/2026", fechaAgendada: "21/02/2026 09:00", fechaExtra: "Expira en 28 minutos", seller: "Le Vice", sucursal: "Lo Barnechea", estado: "Programado", skus: 15, uTotales: "450", pallets: 3, bultos: 15, comentarios: "Entrega parcial, solo 2 pallets llegarán hoy. El resto el miércoles." },
 
   // Recepcionado en bodega
   { id: "RO-BARRA-180", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Recepcionado en bodega", skus: 2, uTotales: "200" },
@@ -241,7 +242,6 @@ function RecebirModal({ orden, onCancel, onConfirm }: {
 }) {
   const [palletsRecibidos, setPalletsRecibidos] = useState<string>("");
   const [bultosRecibidos,  setBultosRecibidos]  = useState<string>("");
-  const [comentarios,      setComentarios]      = useState<string>("");
 
   const declaredPallets = orden.pallets ?? 0;
   const declaredBultos  = orden.bultos  ?? 0;
@@ -297,19 +297,17 @@ function RecebirModal({ orden, onCancel, onConfirm }: {
             </div>
           </div>
 
-          {/* Textarea */}
-          <div>
-            <label className="block text-xs text-gray-400 font-medium mb-1.5">
-              Comentarios adicionales (opcional)
-            </label>
-            <textarea
-              value={comentarios}
-              onChange={e => setComentarios(e.target.value)}
-              placeholder="Llegará en un camión blanco patente XXNN33"
-              rows={3}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"
-            />
-          </div>
+          {/* Comentarios (read-only, from OR creation) */}
+          {orden.comentarios && (
+            <div>
+              <label className="block text-xs text-gray-400 font-medium mb-1.5">
+                Comentarios adicionales
+              </label>
+              <div className="w-full px-3 py-2.5 border border-gray-100 rounded-lg text-sm text-gray-600 bg-gray-50 min-h-[72px]">
+                {orden.comentarios}
+              </div>
+            </div>
+          )}
 
           {/* Dropdowns */}
           <div className="grid grid-cols-2 gap-3">
