@@ -14,14 +14,14 @@ export type ColumnKey =
   | "tags";
 
 export const MOVABLE_COLS: { key: ColumnKey; label: string }[] = [
-  { key: "creacion",      label: "Creación"          },
-  { key: "fechaAgendada", label: "F. Agendada"       },
-  { key: "seller",        label: "Seller"            },
-  { key: "sucursal",      label: "Sucursal"          },
-  { key: "estado",        label: "Estado"            },
-  { key: "skus",          label: "SKUs"              },
-  { key: "uTotales",      label: "Unidades"          },
-  { key: "tags",          label: "Tags de Resultado" },
+  { key: "creacion",      label: "Creación"         },
+  { key: "fechaAgendada", label: "F. Agendada"      },
+  { key: "seller",        label: "Tienda"           },
+  { key: "sucursal",      label: "Sucursal"         },
+  { key: "estado",        label: "Estado"           },
+  { key: "skus",          label: "SKUs"             },
+  { key: "uTotales",      label: "U. Totales"       },
+  { key: "tags",          label: "Estado Productos" },
 ];
 
 export const DEFAULT_ORDER: ColumnKey[] = MOVABLE_COLS.map(c => c.key);
