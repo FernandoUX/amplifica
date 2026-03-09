@@ -615,13 +615,20 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
 }
 
 // ─── IncidenciasSKUModal — per-SKU incidencias form ───────────────────────────
-function IncidenciasSKUModal({ product, initialRows, onClose, onSave }: {
+function IncidenciasSKUModal({ product, initialRows, onClose, onSave, onLiveUpdate }: {
   product: ProductConteo;
   initialRows: IncidenciaRow[];
   onClose: () => void;
   onSave: (rows: IncidenciaRow[]) => void;
+  onLiveUpdate?: (rows: IncidenciaRow[]) => void;
 }) {
   const [rows, setRows] = useState<IncidenciaRow[]>(initialRows);
+
+  // Propagate live changes to parent so progress bars update in real-time
+  useEffect(() => {
+    onLiveUpdate?.(rows);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows]);
 
   const addRow = () =>
     setRows(prev => [...prev, {
@@ -931,7 +938,17 @@ export default function ConteoORPage() {
   const [orEstado,       setOrEstado]       = useState<OrOutcome | null>(null);
   const [incidencias,      setIncidencias]      = useState<Record<string, IncidenciaRow[]>>({});
   const [incidenciaTarget, setIncidenciaTarget] = useState<string | null>(null);
+  // Snapshot of incidencias[target] at the moment the modal opens (to revert on cancel)
+  const incidenciaSnapshotRef = useRef<IncidenciaRow[]>([]);
   const [showAddProduct,   setShowAddProduct]   = useState(false);
+
+  // Capture snapshot of incidencias for a SKU when the modal opens (to revert on cancel)
+  useEffect(() => {
+    if (incidenciaTarget !== null) {
+      incidenciaSnapshotRef.current = incidencias[incidenciaTarget] ?? [];
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incidenciaTarget]); // intentionally only re-run when target changes, not incidencias
 
   // Restore closed state from localStorage (e.g. after back-navigation)
   useEffect(() => {
@@ -992,6 +1009,17 @@ export default function ConteoORPage() {
     const pendientes = products.filter(p => getProductStatus(totalPP[p.id] ?? 0, p.esperadas) === "pendiente").length;
     return { totalEsperadas, totalContadas, totalSesionAct, pct, sinDiferencias, conDiferencias, pendientes };
   }, [products, acumulado, totalPP, incidencias]);
+
+  // ── Incidencias breakdown by tag (for progress bar chips) ───────────────
+  const incidenciasPorTag = useMemo(() => {
+    const map: Partial<Record<IncidenciaTagKey, number>> = {};
+    for (const rows of Object.values(incidencias)) {
+      for (const row of rows) {
+        if (row.tag) map[row.tag] = (map[row.tag] ?? 0) + row.cantidad;
+      }
+    }
+    return map;
+  }, [incidencias]);
 
   // ── Session actions ──────────────────────────────────────────────────────
   const iniciarSesion = () => {
@@ -1060,11 +1088,21 @@ export default function ConteoORPage() {
         return prod ? (
           <IncidenciasSKUModal
             product={prod}
-            initialRows={incidencias[incidenciaTarget] ?? []}
-            onClose={() => setIncidenciaTarget(null)}
+            initialRows={incidenciaSnapshotRef.current}
+            onClose={() => {
+              // Revert live changes on cancel
+              setIncidencias(prev => ({
+                ...prev,
+                [incidenciaTarget]: incidenciaSnapshotRef.current,
+              }));
+              setIncidenciaTarget(null);
+            }}
             onSave={(rows) => {
               setIncidencias(prev => ({ ...prev, [incidenciaTarget]: rows }));
               setIncidenciaTarget(null);
+            }}
+            onLiveUpdate={(rows) => {
+              setIncidencias(prev => ({ ...prev, [incidenciaTarget]: rows }));
             }}
           />
         ) : null;
@@ -1257,6 +1295,22 @@ export default function ConteoORPage() {
                 {stats.pendientes} pendientes
               </span>
             )}
+            {/* Incidencia category chips */}
+            {(Object.entries(incidenciasPorTag) as [IncidenciaTagKey, number][]).map(([tagKey, total]) => {
+              const tag = INCIDENCIA_TAGS.find(t => t.key === tagKey);
+              if (!tag || total === 0) return null;
+              return (
+                <span key={tagKey} className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border ${
+                  tag.color === "amber"  ? "bg-amber-50  text-amber-700  border-amber-200"  :
+                  tag.color === "orange" ? "bg-orange-50 text-orange-700 border-orange-200" :
+                  tag.color === "purple" ? "bg-purple-50 text-purple-700 border-purple-200" :
+                                           "bg-red-50    text-red-700    border-red-200"
+                }`}>
+                  {tag.label}
+                  <span className="opacity-60 font-normal tabular-nums ml-0.5">· {total} uds</span>
+                </span>
+              );
+            })}
           </div>
         </div>
 
