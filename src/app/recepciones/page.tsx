@@ -8,7 +8,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import {
   Download01, Sliders01, LayoutGrid01, SearchLg,
   DotsVertical, CheckCircle, AlertTriangle, XCircle, ClockRefresh, InfoCircle, X,
-  SwitchVertical01, ArrowUp, ArrowDown, Plus, ChevronDown,
+  SwitchVertical01, ArrowUp, ArrowDown, Plus, ChevronDown, ChevronRight,
   CalendarPlus01, PackageCheck, Play, ClipboardCheck, FastForward,
   Eye, Edit01, SlashCircle01, LockUnlocked01,
 } from "@untitled-ui/icons-react";
@@ -552,6 +552,9 @@ function OrdenesPageInner() {
   const { colOrder, colVisible } = useColumnConfig();
   const activeColumns = colOrder.filter(k => colVisible.includes(k));
 
+  const tabsScrollRef = useRef<HTMLDivElement>(null);
+  const [showTabsChevron, setShowTabsChevron] = useState(false);
+
   const [activeTab,         setActiveTab]         = useState<string>("Todas");
   const [showToast,         setShowToast]         = useState(false);
   const [toastMsg,          setToastMsg]          = useState({ title: "", subtitle: "" });
@@ -707,6 +710,22 @@ function OrdenesPageInner() {
 
   // Reset to page 1 whenever filters/tabs/search change
   useEffect(() => { setPage(1); }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes, pageSize]);
+
+  // Detect tabs overflow → show/hide chevron
+  useEffect(() => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    const checkOverflow = () =>
+      setShowTabsChevron(el.scrollWidth > el.clientWidth + 4);
+    checkOverflow();
+    el.addEventListener("scroll", checkOverflow);
+    const ro = new ResizeObserver(checkOverflow);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", checkOverflow);
+      ro.disconnect();
+    };
+  }, []);
 
   // ── Paginated slice ──
   const totalPages   = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -918,19 +937,38 @@ function OrdenesPageInner() {
       {/* Toolbar */}
       <div className="flex items-center gap-3 mb-4 min-w-0">
         {/* ── Tabs with horizontal scroll ── */}
-        <div className="tabs-scroll flex items-center gap-1 flex-1 min-w-0 overflow-x-auto pb-0.5">
-          {TABS.map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              style={NW}
-              className={`px-3 py-1.5 rounded-lg text-sm transition-colors flex-shrink-0 ${
-                activeTab === tab ? "bg-gray-900 text-white font-medium" : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+        <div className="relative flex-1 min-w-0">
+          <div
+            ref={tabsScrollRef}
+            className="tabs-scroll flex items-center gap-1 overflow-x-auto pb-0.5"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+          >
+            {TABS.map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                style={NW}
+                className={`px-3 py-1.5 rounded-lg text-sm transition-colors flex-shrink-0 ${
+                  activeTab === tab ? "bg-gray-900 text-white font-medium" : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+          {/* Gradient + chevron when overflowing */}
+          {showTabsChevron && (
+            <>
+              <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-white via-white/80 to-transparent" />
+              <button
+                onClick={() => tabsScrollRef.current?.scrollBy({ left: 9999, behavior: "smooth" })}
+                className="absolute inset-y-0 right-0 flex items-center justify-center w-8 text-gray-500 hover:text-gray-900 transition-colors"
+                aria-label="Ver más tabs"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </>
+          )}
         </div>
 
         {/* Right controls */}
