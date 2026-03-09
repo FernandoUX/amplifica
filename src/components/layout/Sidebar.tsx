@@ -44,6 +44,7 @@ const MENU: MenuItem[] = [
     children: [
       { label: "Órdenes de recepción", href: "/recepciones" },
       { label: "Crear Recepción",       href: "/recepciones/crear" },
+      { label: "Configuración",         href: "/recepciones/configuracion" },
     ],
   },
   { label: "Productos",         icon: LayersThree01, href: "/productos",   hasChildren: true },
