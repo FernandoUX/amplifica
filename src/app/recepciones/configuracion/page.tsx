@@ -381,14 +381,14 @@ export default function ConfiguracionPage() {
 
       {/* ── Breadcrumb ── */}
       <div className="bg-white border-b border-gray-100">
-        <nav className="max-w-2xl mx-auto px-6 py-3 flex items-center gap-1.5 text-sm text-gray-500">
+        <nav className="max-w-5xl mx-auto px-6 py-3 flex items-center gap-1.5 text-sm text-gray-500">
           <Link href="/recepciones" className="hover:text-indigo-600 transition-colors">Recepciones</Link>
           <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
           <span className="text-gray-700 font-medium">Configuración</span>
         </nav>
       </div>
 
-      <div className="max-w-2xl mx-auto px-6 py-6 space-y-6">
+      <div className="max-w-5xl mx-auto px-6 py-6 space-y-6">
 
         {/* ── Title ── */}
         <div className="flex items-center justify-between">
