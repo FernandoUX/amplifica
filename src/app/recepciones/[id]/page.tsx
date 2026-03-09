@@ -367,12 +367,19 @@ function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove, inc
 }
 
 // ─── Session history row ──────────────────────────────────────────────────────
-function SesionRow({ sesion, incidencias }: {
+function SesionRow({ sesion, incidencias, products, acumulado }: {
   sesion: Sesion;
   incidencias: Record<string, IncidenciaRow[]>;
+  products: ProductConteo[];
+  acumulado: Record<string, number>;
 }) {
   const [open, setOpen] = useState(false);
-  const totalUds = sesion.items.reduce((s, i) => s + i.cantidad, 0);
+
+  // Total uds = session counted + incidencias for this session's SKUs
+  const totalUds = sesion.items.reduce((s, i) => {
+    const incTotal = (incidencias[i.pid] ?? []).reduce((rs, r) => rs + r.cantidad, 0);
+    return s + i.cantidad + incTotal;
+  }, 0);
 
   return (
     <div className="border-b border-gray-100 last:border-0">
@@ -407,12 +414,18 @@ function SesionRow({ sesion, incidencias }: {
                 <th className="text-left py-2 font-semibold">SKU</th>
                 <th className="text-left py-2 font-semibold">Producto</th>
                 <th className="text-left py-2 font-semibold">Incidencias</th>
+                <th className="text-left py-2 font-semibold">Estado</th>
                 <th className="text-right py-2 font-semibold">Contadas</th>
               </tr>
             </thead>
             <tbody>
               {sesion.items.map(item => {
-                const rows = incidencias[item.pid] ?? [];
+                const rows      = incidencias[item.pid] ?? [];
+                const incTotal  = rows.reduce((s, r) => s + r.cantidad, 0);
+                const esperadas = products.find(p => p.id === item.pid)?.esperadas ?? 0;
+                // Overall status: total across ALL sessions + incidencias vs expected
+                const overallTotal = (acumulado[item.pid] ?? 0) + incTotal;
+                const status = getProductStatus(overallTotal, esperadas);
                 return (
                   <tr key={item.pid} className="border-b border-gray-50 last:border-0">
                     <td className="py-2 font-mono text-gray-500 text-xs align-top">{item.sku}</td>
@@ -440,7 +453,24 @@ function SesionRow({ sesion, incidencias }: {
                         </div>
                       )}
                     </td>
-                    <td className="py-2 text-right font-semibold text-gray-800 tabular-nums align-top">{item.cantidad.toLocaleString("es-CL")}</td>
+                    <td className="py-2 align-top">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+                        status === "completo"   ? "bg-green-50  text-green-700  border-green-200"  :
+                        status === "diferencia" ? "bg-amber-50  text-amber-700  border-amber-200"  :
+                        status === "exceso"     ? "bg-red-50    text-red-600    border-red-200"    :
+                                                  "bg-gray-100  text-gray-500   border-gray-200"
+                      }`}>
+                        {status === "completo"   ? "Completo"          :
+                         status === "diferencia" ? "Con diferencias"   :
+                         status === "exceso"     ? "Exceso"            : "Pendiente"}
+                        <span className="ml-1 font-normal opacity-70 tabular-nums">
+                          {overallTotal}/{esperadas}
+                        </span>
+                      </span>
+                    </td>
+                    <td className="py-2 text-right font-semibold text-gray-800 tabular-nums align-top">
+                      {(item.cantidad + incTotal).toLocaleString("es-CL")}
+                    </td>
                   </tr>
                 );
               })}
@@ -946,10 +976,13 @@ export default function ConteoORPage() {
 
   // ── Stats ─────────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
-    const totalEsperadas = products.reduce((s, p) => s + p.esperadas, 0);
-    const totalAcum      = Object.values(acumulado).reduce((s, v) => s + v, 0);
-    const totalSesionAct = products.reduce((s, p) => s + p.contadasSesion, 0);
-    const totalContadas  = totalAcum + totalSesionAct;
+    const totalEsperadas   = products.reduce((s, p) => s + p.esperadas, 0);
+    const totalAcum        = Object.values(acumulado).reduce((s, v) => s + v, 0);
+    const totalSesionAct   = products.reduce((s, p) => s + p.contadasSesion, 0);
+    const totalIncidencias = Object.values(incidencias).reduce(
+      (s, rows) => s + rows.reduce((rs, r) => rs + r.cantidad, 0), 0
+    );
+    const totalContadas  = totalAcum + totalSesionAct + totalIncidencias;
     const pct            = totalEsperadas > 0 ? Math.round((totalContadas / totalEsperadas) * 100) : 0;
     const sinDiferencias = products.filter(p => getProductStatus(totalPP[p.id] ?? 0, p.esperadas) === "completo").length;
     const conDiferencias = products.filter(p => {
@@ -958,7 +991,7 @@ export default function ConteoORPage() {
     }).length;
     const pendientes = products.filter(p => getProductStatus(totalPP[p.id] ?? 0, p.esperadas) === "pendiente").length;
     return { totalEsperadas, totalContadas, totalSesionAct, pct, sinDiferencias, conDiferencias, pendientes };
-  }, [products, acumulado, totalPP]);
+  }, [products, acumulado, totalPP, incidencias]);
 
   // ── Session actions ──────────────────────────────────────────────────────
   const iniciarSesion = () => {
@@ -979,13 +1012,16 @@ export default function ConteoORPage() {
     ]);
     setSesionActiva(false);
     setProducts(ps => ps.map(p => ({ ...p, contadasSesion: 0 })));
+    // Reflect "En proceso de conteo" in the recepciones list (≥1 session completed)
+    try {
+      localStorage.setItem(`amplifica_or_${id}`, JSON.stringify({ estado: "En proceso de conteo" }));
+    } catch { /* ignore */ }
   };
 
   // Liberar: discard current session without saving
   const liberarSesion = () => {
     setSesionActiva(false);
     setProducts(ps => ps.map(p => ({ ...p, contadasSesion: 0 })));
-    setShowDotsMenu(false);
   };
 
   const updateContadas = (pid: string, val: number) =>
@@ -1097,41 +1133,26 @@ export default function ConteoORPage() {
 
           <div className="flex items-center gap-2 flex-shrink-0">
 
-            {/* ── Three-dot menu ── */}
-            <div className="relative" ref={dotsRef}>
-              <button
-                onClick={() => setShowDotsMenu(o => !o)}
-                className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-gray-500"
-              >
-                <MoreHorizontal className="w-5 h-5" />
-              </button>
-
-              {showDotsMenu && !orCerrada && (
-                <div className="absolute right-0 top-full mt-1 z-30 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 w-48">
-                  <button
-                    onClick={liberarSesion}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    <LockUnlocked01 className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    Liberar conteo
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* ── Terminar recepción ── */}
-            <button
-              onClick={() => !terminarDisabled && setConfirmClose(true)}
-              disabled={terminarDisabled}
-              title={
-                sesiones.length === 0 ? "Registra al menos una sesión antes de terminar" :
-                sesionActiva ? "Finaliza la sesión activa antes de terminar" : undefined
-              }
-              className={`flex items-center gap-2 px-4 py-2 border text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${terminarClass}`}
-            >
-              <ClipboardCheck className="w-4 h-4" />
-              Terminar recepción
-            </button>
+            {/* ── Session control button: Iniciar (indigo) or Finalizar (outline) ── */}
+            {!orCerrada && (
+              sesionActiva ? (
+                <button
+                  onClick={finalizarSesion}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+                >
+                  <StopCircle className="w-4 h-4 text-gray-500" />
+                  Finalizar sesión
+                </button>
+              ) : (
+                <button
+                  onClick={iniciarSesion}
+                  className="flex items-center gap-2.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap"
+                >
+                  <PlayCircle className="w-4 h-4" />
+                  Iniciar sesión de conteo
+                </button>
+              )
+            )}
           </div>
         </div>
 
@@ -1151,6 +1172,56 @@ export default function ConteoORPage() {
             ))}
           </div>
         </div>
+
+        {/* ── Active session banner ── */}
+        {sesionActiva && (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 flex items-center gap-3">
+            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse flex-shrink-0" />
+            <div className="flex-1 min-w-0 text-sm">
+              <span className="font-bold text-indigo-700">{sesionId(sesionNumActual)}</span>
+              <span className="text-indigo-400 ml-2 text-xs">
+                Iniciada {fmtDT(sesionInicio)}
+              </span>
+            </div>
+            <span className="text-sm font-bold text-indigo-600 tabular-nums flex-shrink-0">
+              {stats.totalSesionAct.toLocaleString("es-CL")} uds esta sesión
+            </span>
+          </div>
+        )}
+
+        {/* ── Scanner (active session only) ── */}
+        {sesionActiva && (
+          <div className="bg-white border border-gray-200 rounded-xl p-5">
+            <p className="text-base font-semibold text-gray-800 mb-3">
+              Escanear código de barras
+            </p>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Scan className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={scanner}
+                  onChange={e => setScanner(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleScan()}
+                  placeholder="Ingresa o escanea  SKU / Código de barras"
+                  className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-400"
+                  autoFocus
+                />
+              </div>
+              <button
+                onClick={handleScan}
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors"
+              >
+                Registrar
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-2">
+              Presiona{" "}
+              <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[11px] font-mono border border-gray-200">Enter</kbd>{" "}
+              o haz clic en <span className="font-semibold text-gray-600">Registrar</span> para escanear una unidad.
+            </p>
+          </div>
+        )}
 
         {/* ── Progreso de conteo ── */}
         <div className="bg-white border border-gray-200 rounded-xl p-5">
@@ -1218,69 +1289,6 @@ export default function ConteoORPage() {
           );
         })()}
 
-        {/* ── Active session banner ── */}
-        {sesionActiva && (
-          <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse flex-shrink-0" />
-            <div className="flex-1 min-w-0 text-sm">
-              <span className="font-bold text-indigo-700">{sesionId(sesionNumActual)}</span>
-              <span className="text-indigo-400 ml-2 text-xs">
-                Iniciada {fmtDT(sesionInicio)}
-              </span>
-            </div>
-            <span className="text-sm font-bold text-indigo-600 tabular-nums flex-shrink-0">
-              {stats.totalSesionAct.toLocaleString("es-CL")} uds esta sesión
-            </span>
-          </div>
-        )}
-
-        {/* ── Start session button (when no active session and OR still open) ── */}
-        {!sesionActiva && !orCerrada && (
-          <div className="flex justify-center py-1">
-            <button
-              onClick={iniciarSesion}
-              className="flex items-center gap-2.5 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors"
-            >
-              <PlayCircle className="w-5 h-5" />
-              Iniciar sesión de conteo
-            </button>
-          </div>
-        )}
-
-        {/* ── Scanner (active session only) ── */}
-        {sesionActiva && (
-          <div className="bg-white border border-gray-200 rounded-xl p-5">
-            <p className="text-base font-semibold text-gray-800 mb-3">
-              Escanear código de barras
-            </p>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Scan className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                <input
-                  type="text"
-                  value={scanner}
-                  onChange={e => setScanner(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && handleScan()}
-                  placeholder="Ingresa o escanea  SKU / Código de barras"
-                  className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-400"
-                  autoFocus
-                />
-              </div>
-              <button
-                onClick={handleScan}
-                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors"
-              >
-                Registrar
-              </button>
-            </div>
-            <p className="text-xs text-gray-400 mt-2">
-              Presiona{" "}
-              <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[11px] font-mono border border-gray-200">Enter</kbd>{" "}
-              o haz clic en <span className="font-semibold text-gray-600">Registrar</span> para escanear una unidad.
-            </p>
-          </div>
-        )}
-
         {/* ── Products container ── */}
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           {products.length === 0 ? (
@@ -1328,27 +1336,45 @@ export default function ConteoORPage() {
                 {totalAcumUds.toLocaleString("es-CL")} uds acumuladas
               </span>
             </div>
-            {sesiones.map(ses => <SesionRow key={ses.id} sesion={ses} incidencias={incidencias} />)}
+            {sesiones.map(ses => (
+              <SesionRow
+                key={ses.id}
+                sesion={ses}
+                incidencias={incidencias}
+                products={products}
+                acumulado={acumulado}
+              />
+            ))}
           </div>
         )}
 
-        {/* ── Footer: Liberar + Finalizar sesión (active session only, OR still open) ── */}
-        {sesionActiva && !orCerrada && (
+        {/* ── Footer: Liberar + Terminar recepción (always visible when OR open) ── */}
+        {!orCerrada && (
           <div className="flex items-center justify-between pt-2 pb-8">
             <button
               onClick={liberarSesion}
-              className="flex items-center gap-2 px-5 py-2.5 border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-sm font-medium rounded-lg transition-colors"
+              disabled={!sesionActiva}
+              className={`flex items-center gap-2 px-5 py-2.5 border text-sm font-medium rounded-lg transition-colors ${
+                !sesionActiva
+                  ? "border-gray-200 bg-white text-gray-300 cursor-not-allowed"
+                  : "border-gray-200 bg-white hover:bg-gray-50 text-gray-600"
+              }`}
             >
-              <LockUnlocked01 className="w-4 h-4 text-gray-400" />
+              <LockUnlocked01 className="w-4 h-4" />
               Liberar
             </button>
 
             <button
-              onClick={finalizarSesion}
-              className="flex items-center gap-2 px-5 py-2.5 border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-sm font-medium rounded-lg transition-colors"
+              onClick={() => !terminarDisabled && setConfirmClose(true)}
+              disabled={terminarDisabled}
+              title={
+                sesiones.length === 0 ? "Registra al menos una sesión antes de terminar" :
+                sesionActiva ? "Finaliza la sesión activa antes de terminar" : undefined
+              }
+              className={`flex items-center gap-2 px-5 py-2.5 border text-sm font-medium rounded-lg transition-colors ${terminarClass}`}
             >
-              <StopCircle className="w-4 h-4 text-gray-400" />
-              Finalizar sesión
+              <ClipboardCheck className="w-4 h-4" />
+              Terminar recepción
             </button>
           </div>
         )}
