@@ -12,11 +12,13 @@ import {
 } from "@untitled-ui/icons-react";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const SUCURSALES = [
-  { id: "quilicura",        label: "Quilicura",       address: "El Juncal 901, Quilicura" },
-  { id: "la-reina",         label: "La Reina",         address: "La Reina, Santiago" },
-  { id: "lo-barnechea",     label: "Lo Barnechea",     address: "Lo Barnechea, Santiago" },
-  { id: "santiago-centro",  label: "Santiago Centro",  address: "Santiago Centro" },
+type Sucursal = { id: string; label: string; address: string; active: boolean };
+
+const DEFAULT_SUCURSALES: Sucursal[] = [
+  { id: "quilicura",        label: "Quilicura",       address: "El Juncal 901, Quilicura", active: true },
+  { id: "la-reina",         label: "La Reina",         address: "La Reina, Santiago",       active: true },
+  { id: "lo-barnechea",     label: "Lo Barnechea",     address: "Lo Barnechea, Santiago",   active: true },
+  { id: "santiago-centro",  label: "Santiago Centro",  address: "Santiago Centro",          active: true },
 ];
 
 const DIAS: { key: DiaSemana; label: string; short: string }[] = [
@@ -47,9 +49,10 @@ const FERIADOS_2026_SEED = [
   { fecha: "2026-12-25", nombre: "Navidad" },
 ];
 
-const LS_CONFIG   = "amplifica_recepciones_config";
-const LS_FERIADOS = "amplifica_recepciones_feriados";
-const LS_BLOQUEOS = "amplifica_recepciones_bloqueos";
+const LS_CONFIG     = "amplifica_recepciones_config";
+const LS_FERIADOS   = "amplifica_recepciones_feriados";
+const LS_BLOQUEOS   = "amplifica_recepciones_bloqueos";
+const LS_SUCURSALES = "amplifica_recepciones_sucursales";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type DiaSemana = "lun" | "mar" | "mie" | "jue" | "vie" | "sab" | "dom";
@@ -204,6 +207,12 @@ export default function ConfiguracionPage() {
   });
   const [deleteBloqueo,  setDeleteBloqueo]  = useState<string | null>(null);
 
+  // ── Sucursales state ──────────────────────────────────────────────────────
+  const [sucursales,       setSucursales]       = useState<Sucursal[]>(DEFAULT_SUCURSALES);
+  const [showAddSucursal,  setShowAddSucursal]  = useState(false);
+  const [newSucursalForm,  setNewSucursalForm]  = useState({ label: "", address: "" });
+  const [deactivateTarget, setDeactivateTarget] = useState<string | null>(null);
+
   // ── Calendar view state ───────────────────────────────────────────────────
   const [calViewMode,    setCalViewMode]    = useState<"week" | "month">("week");
   const [calViewDate,    setCalViewDate]    = useState(new Date());
@@ -219,6 +228,8 @@ export default function ConfiguracionPage() {
       if (f) setFeriados(JSON.parse(f));
       const b = localStorage.getItem(LS_BLOQUEOS);
       if (b) setBloqueos(JSON.parse(b));
+      const s = localStorage.getItem(LS_SUCURSALES);
+      if (s) setSucursales(JSON.parse(s));
     } catch { /* ignore */ }
   }, []);
 
@@ -238,6 +249,40 @@ export default function ConfiguracionPage() {
     } catch { /* ignore */ }
     setSavedToast(true);
     setTimeout(() => setSavedToast(false), 2500);
+  };
+
+  // ── Sucursales helpers ────────────────────────────────────────────────────
+  const saveSucursales = (next: Sucursal[]) => {
+    setSucursales(next);
+    try { localStorage.setItem(LS_SUCURSALES, JSON.stringify(next)); } catch { /* ignore */ }
+  };
+
+  const addSucursal = () => {
+    const label = newSucursalForm.label.trim();
+    if (!label) return;
+    const id = label
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
+    saveSucursales([...sucursales, { id, label, address: newSucursalForm.address.trim(), active: true }]);
+    setShowAddSucursal(false);
+    setNewSucursalForm({ label: "", address: "" });
+  };
+
+  const confirmDeactivate = (id: string) => {
+    const next = sucursales.map(s => s.id === id ? { ...s, active: false } : s);
+    saveSucursales(next);
+    setDeactivateTarget(null);
+    if (activeSucursal === id) {
+      const first = next.find(s => s.active);
+      if (first) setActiveSucursal(first.id);
+    }
+  };
+
+  const reactivateSucursal = (id: string) => {
+    saveSucursales(sucursales.map(s => s.id === id ? { ...s, active: true } : s));
   };
 
   // ── Feriados helpers ──────────────────────────────────────────────────────
@@ -336,14 +381,14 @@ export default function ConfiguracionPage() {
 
       {/* ── Breadcrumb ── */}
       <div className="bg-white border-b border-gray-100">
-        <nav className="max-w-5xl mx-auto px-6 py-3 flex items-center gap-1.5 text-sm text-gray-500">
+        <nav className="max-w-2xl mx-auto px-6 py-3 flex items-center gap-1.5 text-sm text-gray-500">
           <Link href="/recepciones" className="hover:text-indigo-600 transition-colors">Recepciones</Link>
           <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
           <span className="text-gray-700 font-medium">Configuración</span>
         </nav>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-6 space-y-6">
+      <div className="max-w-2xl mx-auto px-6 py-6 space-y-6">
 
         {/* ── Title ── */}
         <div className="flex items-center justify-between">
@@ -388,21 +433,108 @@ export default function ConfiguracionPage() {
           <div className="space-y-5">
 
             {/* Sucursal selector */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {SUCURSALES.map(s => (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {sucursales.filter(s => s.active).map(s => (
+                  <div key={s.id} className="relative group">
+                    <button
+                      onClick={() => setActiveSucursal(s.id)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                        activeSucursal === s.id
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600"
+                      }`}
+                    >
+                      <Building01 className="w-3.5 h-3.5" />
+                      {s.label}
+                    </button>
+                    {/* Deactivate button (visible on hover) */}
+                    <button
+                      onClick={() => setDeactivateTarget(s.id)}
+                      title="Desactivar sucursal"
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:border-red-300 opacity-0 group-hover:opacity-100 transition-all shadow-sm z-10"
+                    >
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
+                ))}
+                {/* Add new sucursal */}
                 <button
-                  key={s.id}
-                  onClick={() => setActiveSucursal(s.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                    activeSucursal === s.id
-                      ? "bg-indigo-600 text-white border-indigo-600"
-                      : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600"
-                  }`}
+                  onClick={() => setShowAddSucursal(v => !v)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-dashed border-gray-300 text-gray-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
                 >
-                  <Building01 className="w-3.5 h-3.5" />
-                  {s.label}
+                  <Plus className="w-3.5 h-3.5" />
+                  Nueva sucursal
                 </button>
-              ))}
+              </div>
+
+              {/* Inactive sucursales — click to reactivate */}
+              {sucursales.some(s => !s.active) && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs text-gray-400 font-medium">Inactivas:</span>
+                  {sucursales.filter(s => !s.active).map(s => (
+                    <button
+                      key={s.id}
+                      onClick={() => reactivateSucursal(s.id)}
+                      title="Reactivar sucursal"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border border-dashed border-gray-200 text-gray-400 hover:border-green-300 hover:text-green-600 transition-colors"
+                    >
+                      <Check className="w-3 h-3" />
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Add sucursal inline form */}
+              {showAddSucursal && (
+                <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-indigo-800">Nueva sucursal</p>
+                    <button onClick={() => setShowAddSucursal(false)} className="text-indigo-400 hover:text-indigo-600">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1.5">Nombre *</label>
+                      <input
+                        type="text"
+                        value={newSucursalForm.label}
+                        onChange={e => setNewSucursalForm(f => ({ ...f, label: e.target.value }))}
+                        placeholder="Ej: Maipú, Las Condes..."
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-300"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1.5">Dirección</label>
+                      <input
+                        type="text"
+                        value={newSucursalForm.address}
+                        onChange={e => setNewSucursalForm(f => ({ ...f, address: e.target.value }))}
+                        placeholder="Ej: Av. Pajaritos 123, Maipú"
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-300"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => setShowAddSucursal(false)}
+                      className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-white transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={addSucursal}
+                      disabled={!newSucursalForm.label.trim()}
+                      className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+                    >
+                      <Check className="w-4 h-4" />
+                      Agregar
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* ── Horario operativo ── */}
@@ -649,7 +781,7 @@ export default function ConfiguracionPage() {
                             <td className="px-4 py-3 text-gray-800">{f.nombre}</td>
                             <td className="px-4 py-3">
                               <div className="flex flex-wrap gap-1.5">
-                                {SUCURSALES.map(s => {
+                                {sucursales.map(s => {
                                   const opera = f.sucursalesExcluidas.includes(s.id);
                                   return (
                                     <button
@@ -719,7 +851,7 @@ export default function ConfiguracionPage() {
                             onChange={e => setBloqueoForm(f => ({ ...f, sucursalId: e.target.value }))}
                             className="w-full appearance-none pl-3 pr-8 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
                           >
-                            {SUCURSALES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                            {sucursales.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                           </select>
                           <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                         </div>
@@ -847,7 +979,7 @@ export default function ConfiguracionPage() {
                       </thead>
                       <tbody>
                         {bloqueos.map(b => {
-                          const suc = SUCURSALES.find(s => s.id === b.sucursalId);
+                          const suc = sucursales.find(s => s.id === b.sucursalId);
                           return (
                             <tr key={b.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
                               <td className="px-4 py-3 font-medium text-gray-800">{suc?.label ?? b.sucursalId}</td>
@@ -924,7 +1056,7 @@ export default function ConfiguracionPage() {
                     onChange={e => { setCalSucursal(e.target.value); setSelectedSlot(null); }}
                     className="appearance-none pl-3 pr-8 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white font-medium text-gray-700"
                   >
-                    {SUCURSALES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                    {sucursales.filter(s => s.active).map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                   </select>
                   <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
                 </div>
@@ -1234,6 +1366,51 @@ export default function ConfiguracionPage() {
         )}
 
       </div>
+
+      {/* ── Deactivate confirmation modal ─────────────────────────────────── */}
+      {deactivateTarget !== null && (() => {
+        const suc = sucursales.find(s => s.id === deactivateTarget);
+        if (!suc) return null;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+              <div className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
+                    <AlertTriangle className="w-6 h-6 text-red-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-gray-900">Desactivar {suc.label}</h3>
+                    <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+                      Desactivar esta sucursal ocultará sus slots del calendario y bloqueará nuevos
+                      agendamientos. Los agendamientos existentes{" "}
+                      <strong className="text-gray-700">no se verán afectados</strong>.
+                    </p>
+                    <p className="text-sm text-gray-400 mt-1.5">
+                      Puedes reactivarla en cualquier momento desde este panel.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3">
+                <button
+                  onClick={() => setDeactivateTarget(null)}
+                  className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-white transition-colors font-medium"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => confirmDeactivate(deactivateTarget)}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                >
+                  <SlashCircle01 className="w-4 h-4" />
+                  Desactivar sucursal
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
