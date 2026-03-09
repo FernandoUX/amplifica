@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import {
   AlertCircle, ChevronDown, Upload, Trash2, MoreVertical,
   Package, ArrowRight, ChevronLeft, ChevronRight, Check
@@ -344,6 +344,24 @@ function Step3({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [viewYear,  setViewYear]  = useState(today.getFullYear());
 
+  // Anticipation hours from sucursal config (0 = no minimum advance)
+  const [tiempoAnticipado, setTiempoAnticipado] = useState(0);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("amplifica_recepciones_config");
+      if (!raw) return;
+      const allConfigs = JSON.parse(raw) as Record<string, { tiempoAnticipado?: number }>;
+      const sucId = (form.sucursal ?? "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, "");
+      const cfg = allConfigs[sucId];
+      if (cfg?.tiempoAnticipado) setTiempoAnticipado(cfg.tiempoAnticipado);
+    } catch { /* ignore */ }
+  }, [form.sucursal]);
+
   // All time slots flat — rendered in a 2-column grid
   const ALL_SLOTS = [
     "08:00","08:30","09:00","09:30","10:00","10:30",
@@ -365,8 +383,12 @@ function Step3({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
     i < firstDay ? null : i - firstDay + 1
   );
 
-  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const selected       = form.fechaReserva ? new Date(form.fechaReserva + "T00:00:00") : null;
+  const todayMidnight    = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const selected         = form.fechaReserva ? new Date(form.fechaReserva + "T00:00:00") : null;
+  const isSelectedToday  = selected !== null &&
+    selected.getFullYear() === today.getFullYear() &&
+    selected.getMonth()    === today.getMonth()    &&
+    selected.getDate()     === today.getDate();
 
   const pickDay = (day: number) => {
     const yy = String(viewYear);
@@ -528,6 +550,13 @@ function Step3({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
             <p className="text-sm font-semibold text-gray-800 mb-3 capitalize">{selectedLabel}</p>
             <div className="grid grid-cols-2 gap-2">
               {ALL_SLOTS.map((slot) => {
+                // Hide slots already in the past (+ anticipation buffer) when today is selected
+                if (isSelectedToday) {
+                  const [h, m] = slot.split(":").map(Number);
+                  const slotMs = new Date(today.getFullYear(), today.getMonth(), today.getDate(), h, m).getTime();
+                  const cutoff = today.getTime() + tiempoAnticipado * 3_600_000;
+                  if (slotMs <= cutoff) return null;
+                }
                 const isDisabled = DISABLED_SLOTS.has(slot);
                 const isSlotSel  = form.horaReserva === slot;
                 return (
