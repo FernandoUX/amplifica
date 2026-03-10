@@ -7,11 +7,18 @@ import {
   ChevronRight, Trash2, Scan, ImageOff,
   Clock, User, PlayCircle, StopCircle,
   ChevronDown, ChevronUp, MoreHorizontal, Package,
-  X, Check, Upload,
+  X, Check, Upload, Search, HelpCircle,
 } from "lucide-react";
 import {
   Plus, ClipboardCheck, LockUnlocked01, AlertTriangle,
 } from "@untitled-ui/icons-react";
+import {
+  QuarantineRecord, QuarantineStatus, QuarantineResolution, QuarantineCategory,
+  QR_STORAGE_KEY, SEED_QUARANTINE,
+} from "../_data";
+import FormField from "@/components/ui/FormField";
+import ProductsModal, { type AddProduct } from "@/components/recepciones/ProductsModal";
+import QrDisplaySection from "@/components/recepciones/QrDisplaySection";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ProductConteo = {
@@ -85,7 +92,113 @@ const MOCK_ORDENES: Record<string, OrdenData> = {
       { id: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",      barcode: "8500942860625", esperadas: 150, contadasSesion: 0 },
     ],
   },
+  "RO-BARRA-184": {
+    id: "RO-BARRA-184",
+    seller: "Extra Life",
+    sucursal: "Quilicura",
+    fechaAgendada: "19/02/2026 10:00",
+    products: [
+      { id: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 4 Sachets Tropical Delight",  barcode: "8500942860946", esperadas: 100, contadasSesion: 0 },
+      { id: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",      barcode: "8500942860625", esperadas: 150, contadasSesion: 0 },
+    ],
+  },
+  "RO-BARRA-179": {
+    id: "RO-BARRA-179",
+    seller: "Gohard",
+    sucursal: "La Reina",
+    fechaAgendada: "18/02/2026 09:00",
+    products: [
+      { id: "p1", sku: "GH-001", nombre: "Gohard Proteína Whey 1kg Chocolate",  barcode: "7891234560001", esperadas: 80,  contadasSesion: 0 },
+      { id: "p2", sku: "GH-002", nombre: "Gohard Creatina Monohidratada 300g",   barcode: "7891234560002", esperadas: 60,  contadasSesion: 0 },
+    ],
+  },
+  "RO-BARRA-185": {
+    id: "RO-BARRA-185",
+    seller: "Gohard",
+    sucursal: "Lo Barnechea",
+    fechaAgendada: "17/02/2026 14:00",
+    products: [
+      { id: "p1", sku: "GH-001", nombre: "Gohard Proteína Whey 1kg Chocolate",  barcode: "7891234560001", esperadas: 60,  contadasSesion: 0 },
+      { id: "p2", sku: "GH-003", nombre: "Gohard Pre-Workout Energy 300g",       barcode: "7891234560003", esperadas: 45,  contadasSesion: 0 },
+    ],
+  },
 };
+
+// ─── Seed sessions for ORs already "En proceso de conteo" ─────────────────────
+const SEED_SESIONES: Record<string, Sesion[]> = {
+  "RO-BARRA-184": [
+    {
+      id: "SES-001", operador: "Fernando Roblero",
+      inicio: "2026-02-19T10:05:00", fin: "2026-02-19T10:48:00",
+      items: [
+        { pid: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 4 Sachets Tropical Delight", cantidad: 58 },
+        { pid: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",     cantidad: 72 },
+      ],
+    },
+  ],
+  "RO-BARRA-179": [
+    {
+      id: "SES-001", operador: "Catalina Mora",
+      inicio: "2026-02-18T09:05:00", fin: "2026-02-18T09:52:00",
+      items: [
+        { pid: "p1", sku: "GH-001", nombre: "Gohard Proteína Whey 1kg Chocolate", cantidad: 40 },
+        { pid: "p2", sku: "GH-002", nombre: "Gohard Creatina Monohidratada 300g",  cantidad: 25 },
+      ],
+    },
+  ],
+  "RO-BARRA-185": [
+    {
+      id: "SES-001", operador: "Catalina Mora",
+      inicio: "2026-02-17T14:05:00", fin: "2026-02-17T14:58:00",
+      items: [
+        { pid: "p1", sku: "GH-001", nombre: "Gohard Proteína Whey 1kg Chocolate", cantidad: 30 },
+        { pid: "p2", sku: "GH-003", nombre: "Gohard Pre-Workout Energy 300g",      cantidad: 18 },
+      ],
+    },
+  ],
+};
+
+// ─── Quarantine helpers ────────────────────────────────────────────────────────
+function categoryFromTag(tag: IncidenciaTagKey): QuarantineCategory {
+  if (tag === "sin-nutricional" || tag === "sin-vencimiento") return "devolucion_seller";
+  if (tag === "danio-parcial"   || tag === "danio-total")     return "decision_seller";
+  return "interna";
+}
+
+function loadAllQuarantine(): QuarantineRecord[] {
+  try {
+    const s = localStorage.getItem(QR_STORAGE_KEY);
+    return s ? JSON.parse(s) : SEED_QUARANTINE;
+  } catch { return SEED_QUARANTINE; }
+}
+
+function saveAllQuarantine(records: QuarantineRecord[]) {
+  try { localStorage.setItem(QR_STORAGE_KEY, JSON.stringify(records)); } catch { /* ignore */ }
+}
+
+function buildQuarantineRecords(
+  orId: string, seller: string, sucursal: string,
+  products: ProductConteo[], incidencias: Record<string, IncidenciaRow[]>,
+): QuarantineRecord[] {
+  return products.flatMap(p =>
+    (incidencias[p.id] ?? [])
+      .filter(r => r.tag !== "")
+      .map(r => ({
+        id:          `QR-${orId}-${p.id}-${r.rowId.slice(-6)}`,
+        orId, seller, sucursal,
+        sku:         p.sku,
+        skuId:       p.id,
+        productName: p.nombre,
+        cantidad:    r.cantidad,
+        tag:         r.tag as string,
+        categoria:   categoryFromTag(r.tag as IncidenciaTagKey),
+        estado:      "pendiente" as QuarantineStatus,
+        resolucion:  null,
+        creadoEn:    new Date().toISOString(),
+        notas:       r.nota || undefined,
+      }))
+  );
+}
 
 function getFallbackOrden(id: string): OrdenData {
   return {
@@ -145,12 +258,12 @@ function CategorizarBtn({ incidencias, onOpen, disabled }: {
       onClick={disabled ? undefined : onOpen}
       disabled={disabled}
       title={disabled ? "Inicia una sesión de conteo para registrar incidencias" : undefined}
-      className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+      className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-sm font-medium transition-colors duration-300 whitespace-nowrap ${
         disabled
-          ? "border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed"
+          ? "border-neutral-100 bg-neutral-50 text-neutral-300 cursor-not-allowed"
           : count > 0
           ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
-          : "border-gray-200 text-gray-600 hover:bg-gray-50"
+          : "border-neutral-200 text-neutral-600 hover:bg-neutral-50"
       }`}
     >
       {count > 0 && !disabled && (
@@ -175,22 +288,22 @@ function ConfirmRemoveModal({ nombre, onCancel, onConfirm }: {
             <Trash2 className="w-5 h-5 text-red-500" />
           </div>
           <div>
-            <p className="text-sm font-bold text-gray-900">Eliminar producto</p>
-            <p className="text-xs text-gray-500">Esta acción no puede deshacerse.</p>
+            <p className="text-sm font-bold text-neutral-900">Eliminar producto</p>
+            <p className="text-xs text-neutral-500">Esta acción no puede deshacerse.</p>
           </div>
         </div>
-        <p className="text-sm text-gray-600 leading-relaxed">
+        <p className="text-sm text-neutral-600 leading-relaxed">
           ¿Confirmas que deseas eliminar{" "}
-          <span className="font-semibold text-gray-800">{nombre}</span>{" "}
+          <span className="font-semibold text-neutral-800">{nombre}</span>{" "}
           de esta orden?
         </p>
         <div className="flex gap-3 pt-1">
           <button onClick={onCancel}
-            className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 font-medium transition-colors">
+            className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 font-medium transition-colors duration-300">
             Cancelar
           </button>
           <button onClick={onConfirm}
-            className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors">
+            className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors duration-300">
             Sí, eliminar
           </button>
         </div>
@@ -215,7 +328,7 @@ function ConfirmCloseModal({ id, sesiones, totalContadas, totalEsperadas, onCanc
 
         {/* Close button */}
         <div className="flex justify-end mb-2">
-          <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 transition-colors">
+          <button onClick={onCancel} className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -226,19 +339,19 @@ function ConfirmCloseModal({ id, sesiones, totalContadas, totalEsperadas, onCanc
         </div>
 
         {/* Title + subtitle */}
-        <h3 className="text-lg font-bold text-gray-900 mb-1">Terminar recepción</h3>
-        <p className="text-sm text-gray-500 mb-5">Esta acción es definitiva y no puede deshacerse</p>
+        <h3 className="text-lg font-bold text-neutral-900 mb-1">Terminar recepción</h3>
+        <p className="text-sm text-neutral-500 mb-5">Esta acción es definitiva y no puede deshacerse</p>
 
         {/* Body */}
-        <p className="text-sm text-gray-700 mb-7 leading-relaxed">
+        <p className="text-sm text-neutral-700 mb-7 leading-relaxed">
           ¿Confirmas el cierre de la orden{" "}
-          <span className="font-bold text-gray-900">{id}</span>?{" "}
+          <span className="font-bold text-neutral-900">{id}</span>?{" "}
           Se registrarán{" "}
-          <span className="font-bold text-gray-900">
+          <span className="font-bold text-neutral-900">
             {totalContadas.toLocaleString("es-CL")} Unidades
           </span>{" "}
           en{" "}
-          <span className="font-bold text-gray-900">
+          <span className="font-bold text-neutral-900">
             {sesiones.length} Sesión{sesiones.length !== 1 ? "es" : ""}
           </span>
         </p>
@@ -246,11 +359,11 @@ function ConfirmCloseModal({ id, sesiones, totalContadas, totalEsperadas, onCanc
         {/* Buttons */}
         <div className="flex gap-3">
           <button onClick={onCancel}
-            className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 font-medium transition-colors">
+            className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 font-medium transition-colors duration-300">
             Cancelar
           </button>
           <button onClick={() => onConfirm(outcome)}
-            className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
+            className="flex-1 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300 flex items-center justify-center gap-2">
             <Check className="w-4 h-4" />
             Sí, terminar
           </button>
@@ -278,20 +391,20 @@ function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove, inc
   const barColor =
     status === "completo"   ? "bg-green-500" :
     status === "diferencia" ? "bg-amber-400" :
-    status === "exceso"     ? "bg-red-400"   : "bg-gray-200";
+    status === "exceso"     ? "bg-red-400"   : "bg-neutral-200";
 
   // Display: editing active session counts; or accumulated total when idle
   const displayVal = sesionActiva ? product.contadasSesion : total;
 
   return (
-    <div className="p-4 border-b border-gray-100 last:border-0">
+    <div className="p-4 border-b border-neutral-100 last:border-0">
       <div className="flex items-start gap-4">
 
         {/* Image */}
-        <div className="w-20 h-20 flex-shrink-0 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
+        <div className="flex-shrink-0 bg-neutral-100 rounded-lg flex items-center justify-center overflow-hidden" style={{ width: 120, height: 120 }}>
           {product.imagen
             ? <img src={product.imagen} alt={product.nombre} className="w-full h-full object-cover" />
-            : <ImageOff className="w-7 h-7 text-gray-300" />}
+            : <ImageOff className="w-7 h-7 text-neutral-300" />}
         </div>
 
         {/* Body */}
@@ -299,20 +412,20 @@ function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove, inc
 
           {/* Name + trash */}
           <div className="flex items-start justify-between gap-2">
-            <p className="text-sm font-semibold text-gray-900 leading-tight">{product.nombre}</p>
+            <p className="text-sm font-semibold text-neutral-900 leading-tight">{product.nombre}</p>
             <button
               onClick={() => onRemove(product.id)}
-              className="p-1.5 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+              className="p-1.5 text-neutral-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors duration-300 flex-shrink-0"
             >
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
 
           {/* SKU + barcode */}
-          <p className="text-xs text-gray-400 mt-0.5">
-            <span className="font-semibold text-gray-500">SKU:</span> {product.sku}
-            <span className="mx-2 text-gray-200">|</span>
-            <span className="font-semibold text-gray-500">C. DE BARRA:</span> {product.barcode}
+          <p className="text-xs text-neutral-400 mt-0.5">
+            <span className="font-semibold text-neutral-500">SKU:</span> {product.sku}
+            <span className="mx-2 text-neutral-200">|</span>
+            <span className="font-semibold text-neutral-500">C. DE BARRA:</span> {product.barcode}
           </p>
 
           {/* Counter row */}
@@ -320,7 +433,7 @@ function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove, inc
             <button
               onClick={() => sesionActiva && onChange(product.id, Math.max(0, product.contadasSesion - 1))}
               disabled={!sesionActiva}
-              className="w-8 h-8 border border-gray-200 rounded-lg flex items-center justify-center text-gray-600 font-bold text-lg transition-colors hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-8 h-8 border border-neutral-200 rounded-lg flex items-center justify-center text-neutral-600 font-bold text-lg transition-colors duration-300 hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed"
             >−</button>
 
             <input
@@ -328,23 +441,23 @@ function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove, inc
               value={displayVal}
               readOnly={!sesionActiva}
               onChange={e => sesionActiva && onChange(product.id, Math.max(0, parseInt(e.target.value) || 0))}
-              className={`w-16 border border-gray-200 rounded-lg text-center text-sm font-semibold py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300 tabular-nums transition-colors
-                ${sesionActiva ? "text-gray-800 bg-white" : "text-gray-600 bg-gray-50 cursor-default"}`}
+              className={`w-16 border border-neutral-200 rounded-lg text-center text-sm font-semibold py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-200 tabular-nums transition-colors duration-300
+                ${sesionActiva ? "text-neutral-800 bg-white" : "text-neutral-600 bg-neutral-50 cursor-default"}`}
             />
 
             <button
               onClick={() => sesionActiva && onChange(product.id, product.contadasSesion + 1)}
               disabled={!sesionActiva}
-              className="w-8 h-8 border border-gray-200 rounded-lg flex items-center justify-center text-gray-600 font-bold text-lg transition-colors hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-8 h-8 border border-neutral-200 rounded-lg flex items-center justify-center text-neutral-600 font-bold text-lg transition-colors duration-300 hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed"
             >+</button>
 
             {/* Esperadas */}
-            <span className="flex items-center gap-1.5 text-sm text-gray-500 ml-1">
-              <Package className="w-4 h-4 text-gray-400" />
-              <span className="tabular-nums font-medium text-gray-700">
+            <span className="flex items-center gap-1.5 text-sm text-neutral-500 ml-1">
+              <Package className="w-4 h-4 text-neutral-400" />
+              <span className="tabular-nums font-medium text-neutral-700">
                 {total.toLocaleString("es-CL")}/{product.esperadas.toLocaleString("es-CL")}
               </span>
-              <span className="text-gray-400">esperadas</span>
+              <span className="text-neutral-400">esperadas</span>
             </span>
 
             {/* Categorizar */}
@@ -355,7 +468,7 @@ function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove, inc
 
           {/* Progress bar */}
           {product.esperadas > 0 && (
-            <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div className="mt-3 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
               <div className={`h-full rounded-full transition-all duration-300 ${barColor}`}
                 style={{ width: `${pct}%` }} />
             </div>
@@ -382,35 +495,35 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
   }, 0);
 
   return (
-    <div className="border-b border-gray-100 last:border-0">
+    <div className="border-b border-neutral-100 last:border-0">
       <button onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left">
-        <span className="text-sm font-bold text-indigo-600 w-20 flex-shrink-0">{sesion.id}</span>
-        <span className="flex items-center gap-1.5 text-sm text-gray-600 flex-shrink-0">
-          <User className="w-3.5 h-3.5 text-gray-400" />
+        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-colors duration-300 text-left">
+        <span className="text-sm font-bold text-primary-500 w-20 flex-shrink-0">{sesion.id}</span>
+        <span className="flex items-center gap-1.5 text-sm text-neutral-600 flex-shrink-0">
+          <User className="w-3.5 h-3.5 text-neutral-400" />
           {sesion.operador}
         </span>
-        <span className="flex items-center gap-1.5 text-sm text-gray-400 flex-1 min-w-0 truncate">
+        <span className="flex items-center gap-1.5 text-sm text-neutral-400 flex-1 min-w-0 truncate">
           <Clock className="w-3.5 h-3.5 flex-shrink-0" />
           {fmtDT(sesion.inicio)}
-          <span className="text-gray-300 mx-0.5">→</span>
+          <span className="text-neutral-300 mx-0.5">→</span>
           {fmtDT(sesion.fin)}
         </span>
-        <span className="text-sm text-gray-500 flex-shrink-0">
+        <span className="text-sm text-neutral-500 flex-shrink-0">
           {sesion.items.length} SKU{sesion.items.length !== 1 ? "s" : ""}
         </span>
-        <span className="text-sm font-bold text-gray-800 tabular-nums w-14 text-right flex-shrink-0">
+        <span className="text-sm font-bold text-neutral-800 tabular-nums w-14 text-right flex-shrink-0">
           {totalUds.toLocaleString("es-CL")} uds
         </span>
-        {open ? <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" />
-               : <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+        {open ? <ChevronUp className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+               : <ChevronDown className="w-4 h-4 text-neutral-400 flex-shrink-0" />}
       </button>
 
       {open && sesion.items.length > 0 && (
-        <div className="px-4 pb-3 bg-gray-50/50">
+        <div className="px-4 pb-3 bg-neutral-50/50">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-gray-400 border-b border-gray-100">
+              <tr className="text-neutral-400 border-b border-neutral-100">
                 <th className="text-left py-2 font-semibold">SKU</th>
                 <th className="text-left py-2 font-semibold">Producto</th>
                 <th className="text-left py-2 font-semibold">Incidencias</th>
@@ -427,12 +540,12 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
                 const overallTotal = (acumulado[item.pid] ?? 0) + incTotal;
                 const status = getProductStatus(overallTotal, esperadas);
                 return (
-                  <tr key={item.pid} className="border-b border-gray-50 last:border-0">
-                    <td className="py-2 font-mono text-gray-500 text-xs align-top">{item.sku}</td>
-                    <td className="py-2 text-gray-700 align-top">{item.nombre}</td>
+                  <tr key={item.pid} className="border-b border-neutral-50 last:border-0">
+                    <td className="py-2 font-mono text-neutral-500 text-xs align-top">{item.sku}</td>
+                    <td className="py-2 text-neutral-700 align-top">{item.nombre}</td>
                     <td className="py-2 align-top">
                       {rows.length === 0 ? (
-                        <span className="text-xs text-gray-300">—</span>
+                        <span className="text-xs text-neutral-300">—</span>
                       ) : (
                         <div className="flex flex-wrap gap-1">
                           {rows.map(r => {
@@ -458,7 +571,7 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
                         status === "completo"   ? "bg-green-50  text-green-700  border-green-200"  :
                         status === "diferencia" ? "bg-amber-50  text-amber-700  border-amber-200"  :
                         status === "exceso"     ? "bg-red-50    text-red-600    border-red-200"    :
-                                                  "bg-gray-100  text-gray-500   border-gray-200"
+                                                  "bg-neutral-100  text-neutral-500   border-neutral-200"
                       }`}>
                         {status === "completo"   ? "Completo"          :
                          status === "diferencia" ? "Con diferencias"   :
@@ -468,7 +581,7 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
                         </span>
                       </span>
                     </td>
-                    <td className="py-2 text-right font-semibold text-gray-800 tabular-nums align-top">
+                    <td className="py-2 text-right font-semibold text-neutral-800 tabular-nums align-top">
                       {(item.cantidad + incTotal).toLocaleString("es-CL")}
                     </td>
                   </tr>
@@ -496,60 +609,50 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
   const tag = INCIDENCIA_TAGS.find(t => t.key === row.tag);
 
   return (
-    <div className="px-4 py-4 border-t border-gray-100 space-y-3 bg-gray-50/50">
+    <div className="px-4 py-4 border-t border-neutral-100 space-y-3 bg-neutral-50/50">
       {/* Row header */}
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Incidencia #{index + 1}</span>
-        <button onClick={() => onRemove(row.rowId)} className="p-1 text-gray-300 hover:text-red-400 transition-colors rounded">
+        <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Incidencia #{index + 1}</span>
+        <button onClick={() => onRemove(row.rowId)} className="p-1 text-neutral-300 hover:text-red-400 transition-colors duration-300 rounded">
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
 
       {/* Tag + Cantidad */}
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs text-gray-400 font-medium mb-1.5">Tipo de incidencia *</label>
-          <div className="relative">
-            <select
-              value={row.tag}
-              onChange={e => onUpdate(row.rowId, { tag: e.target.value as IncidenciaTagKey | "" })}
-              className="w-full appearance-none px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-300 pr-8"
-            >
-              <option value="">Seleccione</option>
-              {INCIDENCIA_TAGS.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
-            </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-          </div>
-        </div>
-        <div>
-          <label className="block text-xs text-gray-400 font-medium mb-1.5">Cantidad afectada *</label>
-          <input
-            type="number" min={1} max={product.esperadas}
-            value={row.cantidad}
-            onChange={e => onUpdate(row.rowId, { cantidad: Math.max(1, parseInt(e.target.value) || 1) })}
-            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
-          />
-        </div>
+        <FormField
+          as="select"
+          label="Tipo de incidencia *"
+          value={row.tag}
+          onChange={v => onUpdate(row.rowId, { tag: v as IncidenciaTagKey | "" })}
+        >
+          <option value="">Seleccione</option>
+          {INCIDENCIA_TAGS.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+        </FormField>
+        <FormField
+          label="Cantidad afectada *"
+          type="number"
+          value={String(row.cantidad)}
+          onChange={v => onUpdate(row.rowId, { cantidad: Math.max(1, parseInt(v) || 1) })}
+        />
       </div>
 
       {/* Description — only for "no-en-sistema" */}
       {row.tag === "no-en-sistema" && (
-        <div>
-          <label className="block text-xs text-gray-400 font-medium mb-1.5">Descripción del producto *</label>
-          <textarea
-            value={row.descripcion}
-            onChange={e => onUpdate(row.rowId, { descripcion: e.target.value })}
-            placeholder="Nombre, código visible, descripción del producto no identificado..."
-            rows={2}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none placeholder-gray-300"
-          />
-        </div>
+        <FormField
+          as="textarea"
+          label="Descripción del producto *"
+          value={row.descripcion}
+          onChange={v => onUpdate(row.rowId, { descripcion: v })}
+          placeholder="Nombre, código visible, descripción del producto no identificado..."
+          rows={2}
+        />
       )}
 
       {/* Image upload */}
       <div>
-        <label className="block text-xs text-gray-400 font-medium mb-1.5">
-          Imágenes * <span className="text-gray-300 font-normal">({row.imagenes.length}/5 · JPG o PNG · 5 MB máx)</span>
+        <label className="block text-xs text-neutral-400 font-medium mb-1.5">
+          Imágenes * <span className="text-neutral-400 font-normal">({row.imagenes.length}/5 · JPG o PNG · 5 MB máx)</span>
         </label>
         <input
           ref={fileRef} type="file" className="hidden"
@@ -560,7 +663,7 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
           <div className="flex gap-2 flex-wrap mb-2">
             {row.imagenes.map((img, i) => (
               <div key={i} className="relative w-16 h-16 flex-shrink-0">
-                <img src={URL.createObjectURL(img)} alt="" className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
+                <img src={URL.createObjectURL(img)} alt="" className="w-16 h-16 object-cover rounded-lg border border-neutral-200" />
                 <button
                   onClick={() => onRemoveImage(row.rowId, i)}
                   className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white shadow"
@@ -574,7 +677,7 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
         {row.imagenes.length < 5 && (
           <button
             onClick={() => fileRef.current?.click()}
-            className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-200 rounded-lg text-xs text-gray-400 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50/50 transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors duration-300"
           >
             <Upload className="w-3.5 h-3.5" />
             {row.imagenes.length === 0 ? "Subir imagen" : "Agregar más"}
@@ -588,16 +691,15 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
       </div>
 
       {/* Nota */}
-      <div>
-        <label className="block text-xs text-gray-400 font-medium mb-1.5">Nota adicional <span className="font-normal">(opcional)</span></label>
-        <textarea
-          value={row.nota}
-          onChange={e => onUpdate(row.rowId, { nota: e.target.value })}
-          placeholder="Observaciones adicionales..."
-          rows={2}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none placeholder-gray-300"
-        />
-      </div>
+      <FormField
+        as="textarea"
+        label="Nota adicional"
+        value={row.nota}
+        onChange={v => onUpdate(row.rowId, { nota: v })}
+        placeholder="Observaciones adicionales..."
+        rows={2}
+        helperText="Opcional"
+      />
 
       {/* Tag resolution badge */}
       {tag && (
@@ -668,17 +770,17 @@ function IncidenciasSKUModal({ product, initialRows, onClose, onSave, onLiveUpda
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[85vh] flex flex-col">
 
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-gray-100 flex-shrink-0">
-          <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+        <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-neutral-100 flex-shrink-0">
+          <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center flex-shrink-0">
             {product.imagen
               ? <img src={product.imagen} alt="" className="w-full h-full object-cover rounded-lg" />
-              : <ImageOff className="w-5 h-5 text-gray-300" />}
+              : <ImageOff className="w-5 h-5 text-neutral-300" />}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900 truncate">{product.nombre}</p>
-            <p className="text-xs text-gray-400 mt-0.5">SKU: {product.sku} · {product.esperadas} uds declaradas</p>
+            <p className="text-sm font-semibold text-neutral-900 truncate">{product.nombre}</p>
+            <p className="text-xs text-neutral-400 mt-0.5">SKU: {product.sku} · {product.esperadas} uds declaradas</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0">
+          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300 flex-shrink-0">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -687,16 +789,16 @@ function IncidenciasSKUModal({ product, initialRows, onClose, onSave, onLiveUpda
         <div className="flex-1 overflow-y-auto">
           {rows.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-10 px-6 text-center">
-              <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
-                <ClipboardCheck className="w-6 h-6 text-gray-300" />
+              <div className="w-12 h-12 bg-neutral-100 rounded-xl flex items-center justify-center">
+                <ClipboardCheck className="w-6 h-6 text-neutral-300" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-700">Sin incidencias registradas</p>
-                <p className="text-xs text-gray-400 mt-0.5">Agrega una incidencia si este SKU presenta algún problema.</p>
+                <p className="text-sm font-semibold text-neutral-700">Sin incidencias registradas</p>
+                <p className="text-xs text-neutral-400 mt-0.5">Agrega una incidencia si este SKU presenta algún problema.</p>
               </div>
               <button
                 onClick={addRow}
-                className="flex items-center gap-1.5 px-4 py-2 border border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors mt-1"
+                className="flex items-center gap-1.5 px-4 py-2 border border-dashed border-neutral-300 rounded-lg text-sm text-neutral-500 hover:border-primary-400 hover:text-primary-500 hover:bg-primary-50 transition-colors duration-300 mt-1"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Agregar incidencia
@@ -712,10 +814,10 @@ function IncidenciasSKUModal({ product, initialRows, onClose, onSave, onLiveUpda
                   onAddImages={addImages} onRemoveImage={removeImage}
                 />
               ))}
-              <div className="px-4 py-3 border-t border-dashed border-gray-200">
+              <div className="px-4 py-3 border-t border-dashed border-neutral-200">
                 <button
                   onClick={addRow}
-                  className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-colors px-2 py-1.5 rounded-lg"
+                  className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-primary-500 hover:bg-primary-50/50 transition-colors duration-300 px-2 py-1.5 rounded-lg"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Agregar otra incidencia
@@ -726,18 +828,18 @@ function IncidenciasSKUModal({ product, initialRows, onClose, onSave, onLiveUpda
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100 flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-t border-neutral-100 flex-shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 font-medium transition-colors"
+            className="px-4 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 font-medium transition-colors duration-300"
           >
             Cancelar
           </button>
           <button
             onClick={() => saveEnabled && onSave(rows)}
             disabled={!saveEnabled}
-            className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors flex items-center gap-2 ${
-              saveEnabled ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-gray-100 text-gray-400 cursor-not-allowed"
+            className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors duration-300 flex items-center gap-2 ${
+              saveEnabled ? "bg-primary-500 hover:bg-primary-600 text-white" : "bg-neutral-100 text-neutral-400 cursor-not-allowed"
             }`}
           >
             <Check className="w-4 h-4" />
@@ -783,9 +885,9 @@ function AddProductModal({ onCancel, onConfirm }: {
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
 
         {/* Header */}
-        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-gray-100 flex-shrink-0">
-          <h3 className="text-xl font-bold text-gray-900">Añadir producto</h3>
-          <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 transition-colors ml-4">
+        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-neutral-100 flex-shrink-0">
+          <h3 className="text-xl font-bold text-neutral-900">Añadir producto</h3>
+          <button onClick={onCancel} className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300 ml-4">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -794,68 +896,54 @@ function AddProductModal({ onCancel, onConfirm }: {
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
 
           {/* Nombre */}
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Nombre del producto *</label>
-            <input
-              type="text" value={form.nombre}
-              onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
-              placeholder="Ej: Tropical Delight 20 Sachets"
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-300"
-              autoFocus
-            />
-          </div>
+          <FormField
+            label="Nombre del producto"
+            value={form.nombre}
+            onChange={v => setForm(f => ({ ...f, nombre: v }))}
+            placeholder="Ej: Tropical Delight 20 Sachets"
+          />
 
           {/* SKU + Código de barras */}
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">SKU <span className="text-gray-300 font-normal">(opcional)</span></label>
-              <input
-                type="text" value={form.sku}
-                onChange={e => setForm(f => ({ ...f, sku: e.target.value }))}
-                placeholder="300034"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-300"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">Código de barras <span className="text-gray-300 font-normal">(opcional)</span></label>
-              <input
-                type="text" value={form.barcode}
-                onChange={e => setForm(f => ({ ...f, barcode: e.target.value }))}
-                placeholder="8500942860946"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-300"
-              />
-            </div>
+            <FormField
+              label="SKU"
+              value={form.sku}
+              onChange={v => setForm(f => ({ ...f, sku: v }))}
+              placeholder="300034"
+              helperText="Opcional"
+            />
+            <FormField
+              label="Código de barras"
+              value={form.barcode}
+              onChange={v => setForm(f => ({ ...f, barcode: v }))}
+              placeholder="8500942860946"
+              helperText="Opcional"
+            />
           </div>
 
           {/* Cantidad + Categoría */}
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">Cantidad *</label>
-              <input
-                type="number" min={1} value={form.cantidad}
-                onChange={e => setForm(f => ({ ...f, cantidad: e.target.value }))}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">Categoría <span className="text-gray-300 font-normal">(opcional)</span></label>
-              <div className="relative">
-                <select
-                  value={form.categoria}
-                  onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}
-                  className="w-full appearance-none px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white pr-9"
-                >
-                  <option value="">Sin categoría</option>
-                  {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
-            </div>
+            <FormField
+              type="number"
+              label="Cantidad"
+              value={form.cantidad}
+              onChange={v => setForm(f => ({ ...f, cantidad: v }))}
+            />
+            <FormField
+              as="select"
+              label="Categoría"
+              value={form.categoria}
+              onChange={v => setForm(f => ({ ...f, categoria: v }))}
+              helperText="Opcional"
+            >
+              <option value="">Sin categoría</option>
+              {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+            </FormField>
           </div>
 
           {/* Foto */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Foto <span className="text-gray-300 font-normal">(opcional · JPG o PNG · 5 MB máx)</span></label>
+            <p className="text-[11px] font-semibold text-neutral-600 mb-1.5">Foto <span className="text-neutral-400 font-normal">(opcional · JPG o PNG · 5 MB máx)</span></p>
             <input
               ref={fileRef} type="file" className="hidden"
               accept="image/jpeg,image/png" capture="environment"
@@ -865,17 +953,17 @@ function AddProductModal({ onCancel, onConfirm }: {
               <div className="flex items-center gap-3 border border-green-200 bg-green-50 rounded-xl p-3">
                 <img src={URL.createObjectURL(form.imagen)} alt="" className="w-12 h-12 object-cover rounded-lg flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{form.imagen.name}</p>
-                  <p className="text-xs text-gray-400">{(form.imagen.size / 1024).toFixed(0)} KB</p>
+                  <p className="text-sm font-medium text-neutral-800 truncate">{form.imagen.name}</p>
+                  <p className="text-xs text-neutral-400">{(form.imagen.size / 1024).toFixed(0)} KB</p>
                 </div>
-                <button onClick={() => setForm(f => ({ ...f, imagen: null }))} className="text-gray-400 hover:text-red-400 p-1">
+                <button onClick={() => setForm(f => ({ ...f, imagen: null }))} className="text-neutral-400 hover:text-red-400 p-1">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             ) : (
               <button
                 onClick={() => fileRef.current?.click()}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50/40 transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-neutral-200 rounded-xl text-sm text-neutral-400 hover:border-primary-300 hover:text-primary-500 hover:bg-primary-50/40 transition-colors duration-300"
               >
                 <Upload className="w-4 h-4" />
                 Subir o tomar foto
@@ -884,28 +972,26 @@ function AddProductModal({ onCancel, onConfirm }: {
           </div>
 
           {/* Comentarios */}
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Comentarios <span className="text-gray-300 font-normal">(opcional)</span></label>
-            <textarea
-              value={form.comentarios}
-              onChange={e => setForm(f => ({ ...f, comentarios: e.target.value }))}
-              placeholder="Observaciones sobre el producto..."
-              rows={3}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none placeholder-gray-300"
-            />
-          </div>
+          <FormField
+            as="textarea"
+            label="Comentarios"
+            value={form.comentarios}
+            onChange={v => setForm(f => ({ ...f, comentarios: v }))}
+            placeholder="Observaciones sobre el producto..."
+            helperText="Opcional"
+          />
 
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 flex-shrink-0">
-          <button onClick={onCancel} className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 font-medium transition-colors">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-neutral-100 flex-shrink-0">
+          <button onClick={onCancel} className="px-4 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 font-medium transition-colors duration-300">
             Cancelar
           </button>
           <button
             onClick={handleConfirm} disabled={!canConfirm}
-            className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors flex items-center gap-2 ${
-              canConfirm ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-gray-100 text-gray-400 cursor-not-allowed"
+            className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors duration-300 flex items-center gap-2 ${
+              canConfirm ? "bg-primary-500 hover:bg-primary-600 text-white" : "bg-neutral-100 text-neutral-400 cursor-not-allowed"
             }`}
           >
             <Plus className="w-4 h-4" />
@@ -915,6 +1001,675 @@ function AddProductModal({ onCancel, onConfirm }: {
 
       </div>
     </div>
+  );
+}
+
+// ─── AddProductChoiceModal ────────────────────────────────────────────────────
+function AddProductChoiceModal({ onRecognized, onUnrecognized, onCancel }: {
+  onRecognized: () => void;
+  onUnrecognized: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+      <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full space-y-5">
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <h3 className="text-lg font-bold text-neutral-900">Añadir producto</h3>
+          <button onClick={onCancel} className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Question */}
+        <p className="text-sm text-neutral-600">¿Puedes reconocer el producto?</p>
+
+        {/* Options */}
+        <div className="space-y-3">
+          <button
+            onClick={onRecognized}
+            className="w-full flex items-center gap-4 p-4 border border-neutral-200 rounded-xl hover:border-primary-300 hover:bg-primary-50/40 transition-colors duration-300 text-left group"
+          >
+            <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0 group-hover:bg-primary-100 transition-colors duration-300">
+              <Search className="w-5 h-5 text-primary-500" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-neutral-900">Sí, lo reconozco</p>
+              <p className="text-xs text-neutral-400 mt-0.5">Buscar en el catálogo de productos</p>
+            </div>
+          </button>
+
+          <button
+            onClick={onUnrecognized}
+            className="w-full flex items-center gap-4 p-4 border border-neutral-200 rounded-xl hover:border-amber-300 hover:bg-amber-50/40 transition-colors duration-300 text-left group"
+          >
+            <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0 group-hover:bg-amber-100 transition-colors duration-300">
+              <HelpCircle className="w-5 h-5 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-neutral-900">No, no lo reconozco</p>
+              <p className="text-xs text-neutral-400 mt-0.5">Ingresar datos manualmente</p>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── GestionCuarentena ───────────────────────────────────────────────────────
+function GestionCuarentena({ records, onUpdate }: {
+  records:  QuarantineRecord[];
+  onUpdate: (id: string, patch: Partial<QuarantineRecord>) => void;
+}) {
+  const [catCModal,    setCatCModal]    = useState<QuarantineRecord | null>(null);
+  const [decisionMode, setDecisionMode] = useState<"stock" | "merma" | "mixto">("stock");
+  const [stockQty,     setStockQty]     = useState(0);
+  const [mermaQty,     setMermaQty]     = useState(0);
+  const [decisionNota, setDecisionNota] = useState("");
+
+  function openCatC(rec: QuarantineRecord) {
+    setCatCModal(rec);
+    setDecisionMode("stock");
+    setStockQty(rec.cantidad);
+    setMermaQty(0);
+    setDecisionNota("");
+  }
+
+  function confirmCatC() {
+    if (!catCModal) return;
+    const res: QuarantineResolution =
+      decisionMode === "merma" ? "merma" : "stock_disponible";
+    onUpdate(catCModal.id, {
+      estado:         "resuelto",
+      resolucion:     res,
+      stockCantidad:  decisionMode === "stock" ? catCModal.cantidad : decisionMode === "mixto" ? stockQty : 0,
+      mermaCantidad:  decisionMode === "merma" ? catCModal.cantidad : decisionMode === "mixto" ? mermaQty : 0,
+      decisionSeller: decisionNota || undefined,
+      resueltoen:     new Date().toISOString(),
+    });
+    setCatCModal(null);
+  }
+
+  function catBadge(cat: QuarantineCategory) {
+    if (cat === "interna")           return { label: "Cat. A · Interna",    cls: "bg-primary-50 text-primary-600 border-primary-200" };
+    if (cat === "devolucion_seller") return { label: "Cat. B · Devolución", cls: "bg-red-50 text-red-700 border-red-200" };
+    return                                  { label: "Cat. C · Decisión",   cls: "bg-amber-50 text-amber-700 border-amber-200" };
+  }
+
+  function estadoBadge(estado: QuarantineStatus) {
+    if (estado === "pendiente")  return { label: "Pendiente",  cls: "bg-neutral-100  text-neutral-600  border-neutral-200"  };
+    if (estado === "en_gestion") return { label: "En gestión", cls: "bg-blue-50   text-blue-700  border-blue-200"  };
+    return                              { label: "Resuelto",   cls: "bg-green-50  text-green-700 border-green-200" };
+  }
+
+  function resolucionLabel(r: QuarantineResolution, rec: QuarantineRecord) {
+    if (!r) return "—";
+    if (r === "stock_disponible") {
+      if (rec.stockCantidad && rec.mermaCantidad)
+        return `Stock (${rec.stockCantidad}) + Merma (${rec.mermaCantidad})`;
+      return "Stock disponible";
+    }
+    if (r === "merma")    return "Merma";
+    return "Devolución";
+  }
+
+  const pendientes = records.filter(r => r.estado !== "resuelto").length;
+
+  return (
+    <>
+      {/* ── Cat C decision modal ── */}
+      {catCModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md space-y-4">
+            <div>
+              <p className="text-base font-bold text-neutral-900">Registrar decisión del seller</p>
+              <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">
+                {catCModal.productName}
+                <span className="font-mono ml-1 text-neutral-400">· {catCModal.sku}</span>
+                <span className="ml-1 text-neutral-400">· {catCModal.cantidad} uds</span>
+              </p>
+            </div>
+
+            {/* Opciones */}
+            <div className="space-y-2">
+              {(["stock", "merma", "mixto"] as const).map(mode => (
+                <button
+                  key={mode}
+                  onClick={() => {
+                    setDecisionMode(mode);
+                    if (mode === "stock") { setStockQty(catCModal.cantidad); setMermaQty(0); }
+                    if (mode === "merma") { setStockQty(0); setMermaQty(catCModal.cantidad); }
+                    if (mode === "mixto") {
+                      const half = Math.floor(catCModal.cantidad / 2);
+                      setStockQty(half);
+                      setMermaQty(catCModal.cantidad - half);
+                    }
+                  }}
+                  className={`w-full text-left px-4 py-3 rounded-xl border text-sm transition-colors duration-300 ${
+                    decisionMode === mode
+                      ? "border-primary-300 bg-primary-50 text-primary-600 font-medium"
+                      : "border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+                  }`}
+                >
+                  {mode === "stock" ? "Ingresar a stock (tal como está)" :
+                   mode === "merma" ? "Mermar (dar de baja)" :
+                                     "Dividir lote — parcial stock + parcial merma"}
+                </button>
+              ))}
+            </div>
+
+            {/* Mixto split inputs */}
+            {decisionMode === "mixto" && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">Uds a stock disponible</label>
+                  <input
+                    type="number" min={0} max={catCModal.cantidad}
+                    value={stockQty}
+                    onChange={e => {
+                      const v = Math.max(0, Math.min(catCModal.cantidad, parseInt(e.target.value) || 0));
+                      setStockQty(v); setMermaQty(catCModal.cantidad - v);
+                    }}
+                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 tabular-nums"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">Uds a mermar</label>
+                  <input
+                    type="number" min={0} max={catCModal.cantidad}
+                    value={mermaQty}
+                    onChange={e => {
+                      const v = Math.max(0, Math.min(catCModal.cantidad, parseInt(e.target.value) || 0));
+                      setMermaQty(v); setStockQty(catCModal.cantidad - v);
+                    }}
+                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 tabular-nums"
+                  />
+                </div>
+                <p className={`col-span-2 text-xs font-medium ${
+                  stockQty + mermaQty === catCModal.cantidad ? "text-green-600" : "text-red-500"
+                }`}>
+                  Total asignado: {(stockQty + mermaQty).toLocaleString("es-CL")} / {catCModal.cantidad.toLocaleString("es-CL")} uds
+                </p>
+              </div>
+            )}
+
+            {/* Nota seller */}
+            <div>
+              <label className="block text-xs text-neutral-400 mb-1">
+                Nota / decisión del seller <span className="font-normal">(opcional)</span>
+              </label>
+              <textarea
+                value={decisionNota}
+                onChange={e => setDecisionNota(e.target.value)}
+                rows={2}
+                placeholder="Ej: Seller acepta daño cosmético, autoriza venta con descuento"
+                className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 resize-none placeholder-neutral-300"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setCatCModal(null)}
+                className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 font-medium transition-colors duration-300"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmCatC}
+                disabled={decisionMode === "mixto" && stockQty + mermaQty !== catCModal.cantidad}
+                className="flex-1 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:bg-neutral-100 disabled:text-neutral-400 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Table ── */}
+      <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-neutral-100 flex items-center justify-between">
+          <div>
+            <p className="text-base font-semibold text-neutral-900">Gestión de cuarentena</p>
+            <p className="text-xs text-neutral-400 mt-0.5">
+              {pendientes} registro{pendientes !== 1 ? "s" : ""} pendiente{pendientes !== 1 ? "s" : ""} de resolución
+            </p>
+          </div>
+          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
+            pendientes === 0
+              ? "bg-green-50 text-green-700 border-green-200"
+              : "bg-amber-50 text-amber-700 border-amber-200"
+          }`}>
+            {pendientes === 0 ? "Todo resuelto" : `${pendientes} en cuarentena`}
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[700px]">
+            <thead>
+              <tr className="bg-neutral-50/60 border-b border-neutral-100">
+                {["SKU", "Producto / Tag", "Cant.", "Categoría", "Estado", "Resolución", "Acciones"].map(h => (
+                  <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold text-neutral-500">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-50">
+              {records.map(rec => {
+                const cat     = catBadge(rec.categoria);
+                const est     = estadoBadge(rec.estado);
+                const tagInfo = INCIDENCIA_TAGS.find(t => t.key === rec.tag);
+                return (
+                  <tr key={rec.id} className="hover:bg-neutral-50/40 transition-colors duration-300">
+                    <td className="px-4 py-3 font-mono text-xs text-neutral-500 whitespace-nowrap align-top">{rec.sku}</td>
+                    <td className="px-4 py-3 align-top max-w-[180px]">
+                      <p className="text-xs text-neutral-700 leading-snug">{rec.productName}</p>
+                      {tagInfo && (
+                        <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium border mt-1 ${
+                          tagInfo.color === "amber"  ? "bg-amber-50 text-amber-700 border-amber-200"  :
+                          tagInfo.color === "orange" ? "bg-orange-50 text-orange-700 border-orange-200":
+                          tagInfo.color === "purple" ? "bg-purple-50 text-purple-700 border-purple-200":
+                                                       "bg-red-50 text-red-700 border-red-200"
+                        }`}>{tagInfo.label}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 tabular-nums font-semibold text-neutral-800 align-top">{rec.cantidad}</td>
+                    <td className="px-4 py-3 align-top">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${cat.cls}`}>
+                        {cat.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${est.cls}`}>
+                        {est.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-neutral-600 align-top">
+                      {rec.resolucion
+                        ? <span className="font-medium">{resolucionLabel(rec.resolucion, rec)}</span>
+                        : <span className="text-neutral-300">—</span>}
+                      {rec.decisionSeller && (
+                        <p className="text-[10px] text-neutral-400 italic mt-0.5">"{rec.decisionSeller}"</p>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      {rec.estado === "pendiente" && (
+                        <button
+                          onClick={() => onUpdate(rec.id, { estado: "en_gestion" })}
+                          className="text-xs font-semibold px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors duration-300 whitespace-nowrap"
+                        >
+                          Iniciar gestión
+                        </button>
+                      )}
+                      {rec.estado === "en_gestion" && rec.categoria === "interna" && (
+                        <button
+                          onClick={() => onUpdate(rec.id, { estado: "resuelto", resolucion: "stock_disponible", resueltoen: new Date().toISOString() })}
+                          className="text-xs font-medium px-3 py-1.5 border border-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors duration-300 whitespace-nowrap"
+                        >
+                          Confirmar re-etiquetado
+                        </button>
+                      )}
+                      {rec.estado === "en_gestion" && rec.categoria === "devolucion_seller" && (
+                        <button
+                          onClick={() => onUpdate(rec.id, { estado: "resuelto", resolucion: "devolucion", resueltoen: new Date().toISOString() })}
+                          className="text-xs font-medium px-3 py-1.5 border border-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors duration-300 whitespace-nowrap"
+                        >
+                          Confirmar retiro seller
+                        </button>
+                      )}
+                      {rec.estado === "en_gestion" && rec.categoria === "decision_seller" && (
+                        <button
+                          onClick={() => openCatC(rec)}
+                          className="text-xs font-semibold px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors duration-300 whitespace-nowrap"
+                        >
+                          Registrar decisión
+                        </button>
+                      )}
+                      {rec.estado === "resuelto" && (
+                        <span className="text-[10px] text-neutral-400 flex items-center gap-1">
+                          <Check className="w-3 h-3 text-green-500" /> Resuelto
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── ResumenOR ────────────────────────────────────────────────────────────────
+function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, acumulado, OPERADOR }: {
+  id: string; baseData: OrdenData; orEstado: OrOutcome | null;
+  sesiones: Sesion[]; products: ProductConteo[];
+  incidencias: Record<string, IncidenciaRow[]>;
+  acumulado: Record<string, number>; OPERADOR: string;
+}) {
+  const [viewMode, setViewMode] = useState<"consolidado" | "por-sesion">("consolidado");
+  const [lightbox, setLightbox] = useState<File | null>(null);
+
+  const skuRows = products.map(p => {
+    const acc     = acumulado[p.id] ?? 0;
+    const incRows = (incidencias[p.id] ?? []).filter(r => r.tag !== "");
+    const incUds  = incRows.reduce((s, r) => s + r.cantidad, 0);
+    const received = acc + incUds;
+    const diff    = received - p.esperadas;
+    const status  = incRows.length > 0 ? "Con incidencia" :
+                    diff === 0 ? "Correcto" : diff > 0 ? "Exceso" : "Diferencia";
+    return { p, received, diff, status, incRows };
+  });
+
+  const flatInc = products.flatMap(p =>
+    (incidencias[p.id] ?? []).filter(r => r.tag !== "").map(r => ({ product: p, row: r }))
+  );
+
+  const catGroups = [
+    {
+      cat: "A", color: "primary" as const,
+      label: "Resolución interna Amplifica",
+      desc: "Re-etiquetado o creación de SKU en bodega",
+      rows: flatInc.filter(({ row }) =>
+        row.tag === "sin-codigo-barra" || row.tag === "codigo-incorrecto" ||
+        row.tag === "codigo-ilegible"  || row.tag === "no-en-sistema"),
+    },
+    {
+      cat: "B", color: "red" as const,
+      label: "Devolución obligatoria al seller",
+      desc: "El seller retira, corrige y reingresa como nueva OR",
+      rows: flatInc.filter(({ row }) => row.tag === "sin-nutricional" || row.tag === "sin-vencimiento"),
+    },
+    {
+      cat: "C", color: "amber" as const,
+      label: "Decisión del seller",
+      desc: "El KAM consulta al seller la disposición del producto",
+      rows: flatInc.filter(({ row }) => row.tag === "danio-parcial" || row.tag === "danio-total"),
+    },
+  ].filter(g => g.rows.length > 0);
+
+  function tagCatBadge(tag: IncidenciaTagKey) {
+    if (tag === "sin-codigo-barra" || tag === "codigo-incorrecto" || tag === "codigo-ilegible" || tag === "no-en-sistema")
+      return { badge: "Cat.A", cls: "bg-primary-100 text-primary-500" };
+    if (tag === "sin-nutricional" || tag === "sin-vencimiento")
+      return { badge: "Cat.B", cls: "bg-red-100 text-red-600" };
+    return { badge: "Cat.C", cls: "bg-amber-100 text-amber-600" };
+  }
+
+  return (
+    <>
+      {/* Lightbox */}
+      {lightbox && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={() => setLightbox(null)}>
+          <button
+            className="absolute top-4 right-4 p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors duration-300"
+            onClick={e => { e.stopPropagation(); setLightbox(null); }}
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <img
+            src={URL.createObjectURL(lightbox)} alt=""
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-xl shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
+      )}
+
+      <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+
+        {/* ── Header ── */}
+        <div className="px-5 py-4 border-b border-neutral-100 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-base font-semibold text-neutral-900">Resumen de recepción</p>
+            <p className="text-xs text-neutral-400 mt-0.5">
+              {sesiones.length} sesión{sesiones.length !== 1 ? "es" : ""} · detalle por SKU
+            </p>
+          </div>
+          {sesiones.length > 1 && (
+            <div className="flex items-center gap-0.5 bg-neutral-100 rounded-lg p-0.5 flex-shrink-0">
+              {(["consolidado", "por-sesion"] as const).map(m => (
+                <button
+                  key={m} onClick={() => setViewMode(m)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors duration-300 ${
+                    viewMode === m ? "bg-white text-neutral-800 shadow-sm" : "text-neutral-500 hover:text-neutral-700"
+                  }`}
+                >
+                  {m === "consolidado" ? "Consolidado" : "Por sesión"}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── OR meta ── */}
+        <div className="px-5 py-3.5 bg-neutral-50 border-b border-neutral-100 grid grid-cols-3 gap-x-6 gap-y-2.5">
+          {([
+            ["ID de OR", id], ["Seller", baseData.seller], ["Sucursal", baseData.sucursal],
+            ["Fecha agendada", baseData.fechaAgendada], ["Estado", orEstado ?? "—"], ["Operador", OPERADOR],
+          ] as [string, string][]).map(([label, value]) => (
+            <div key={label}>
+              <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">{label}</p>
+              <p className="text-sm font-semibold text-neutral-800 mt-0.5">{value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Consolidated table ── */}
+        {viewMode === "consolidado" && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[700px]">
+              <thead>
+                <tr className="border-b border-neutral-100 bg-neutral-50/60">
+                  {["SKU", "Nombre", "Teórica", "Recibida", "Diferencia", "Estado", "Tag incidencia", "Uds c/inc.", "Imágenes"].map(h => (
+                    <th key={h} className={`px-3 py-2.5 text-[11px] font-semibold text-neutral-500 ${
+                      ["Teórica","Recibida","Diferencia","Uds c/inc."].includes(h) ? "text-right" :
+                      h === "Estado" ? "text-center" : "text-left"
+                    }`}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-50">
+                {skuRows.map(({ p, received, diff, status, incRows }) => {
+                  const allImgs = incRows.flatMap(r => r.imagenes);
+                  return (
+                    <tr key={p.id} className="hover:bg-neutral-50/40 transition-colors duration-300">
+                      <td className="px-3 py-3 font-mono text-xs text-neutral-500 align-top whitespace-nowrap">{p.sku}</td>
+                      <td className="px-3 py-3 text-xs text-neutral-700 align-top leading-relaxed max-w-[160px]">{p.nombre}</td>
+                      <td className="px-3 py-3 text-right tabular-nums text-xs text-neutral-500 align-top">{p.esperadas.toLocaleString("es-CL")}</td>
+                      <td className="px-3 py-3 text-right tabular-nums text-sm font-semibold text-neutral-800 align-top">{received.toLocaleString("es-CL")}</td>
+                      <td className={`px-3 py-3 text-right tabular-nums font-bold align-top ${
+                        diff === 0 ? "text-green-600" : diff > 0 ? "text-blue-600" : "text-red-600"
+                      }`}>
+                        {diff === 0 ? "0" : diff > 0 ? `+${diff.toLocaleString("es-CL")}` : diff.toLocaleString("es-CL")}
+                      </td>
+                      <td className="px-3 py-3 text-center align-top">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${
+                          status === "Correcto"       ? "bg-green-50 text-green-700 border-green-200" :
+                          status === "Con incidencia" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                          status === "Exceso"         ? "bg-blue-50  text-blue-700  border-blue-200"  :
+                                                        "bg-red-50   text-red-600   border-red-200"
+                        }`}>{status}</span>
+                      </td>
+                      <td className="px-3 py-3 align-top">
+                        {incRows.length === 0
+                          ? <span className="text-neutral-200 text-xs">—</span>
+                          : <div className="flex flex-col gap-1">
+                              {incRows.map(r => {
+                                const tag = INCIDENCIA_TAGS.find(t => t.key === r.tag);
+                                if (!tag) return null;
+                                const { badge, cls } = tagCatBadge(r.tag as IncidenciaTagKey);
+                                return (
+                                  <div key={r.rowId} className="flex items-center gap-1 flex-wrap">
+                                    <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium border ${
+                                      tag.color === "amber"  ? "bg-amber-50 text-amber-700 border-amber-200"  :
+                                      tag.color === "orange" ? "bg-orange-50 text-orange-700 border-orange-200":
+                                      tag.color === "purple" ? "bg-purple-50 text-purple-700 border-purple-200":
+                                                               "bg-red-50 text-red-700 border-red-200"
+                                    }`}>{tag.label}</span>
+                                    <span className={`text-[9px] font-bold px-1 py-0.5 rounded ${cls}`}>{badge}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                        }
+                      </td>
+                      <td className="px-3 py-3 text-right align-top">
+                        {incRows.length === 0
+                          ? <span className="text-neutral-200 text-xs">—</span>
+                          : <span className="font-semibold text-amber-700 tabular-nums">
+                              {incRows.reduce((s, r) => s + r.cantidad, 0).toLocaleString("es-CL")}
+                            </span>
+                        }
+                      </td>
+                      <td className="px-3 py-3 align-top">
+                        {allImgs.length === 0
+                          ? <span className="text-neutral-200 text-xs">—</span>
+                          : <div className="flex gap-1 flex-wrap">
+                              {allImgs.slice(0, 3).map((img, i) => (
+                                <button
+                                  key={i} onClick={() => setLightbox(img)}
+                                  className="w-8 h-8 rounded-lg overflow-hidden border border-neutral-200 hover:border-primary-400 flex-shrink-0 transition-colors duration-300"
+                                >
+                                  <img src={URL.createObjectURL(img)} alt="" className="w-full h-full object-cover" />
+                                </button>
+                              ))}
+                              {allImgs.length > 3 && (
+                                <button
+                                  onClick={() => setLightbox(allImgs[3])}
+                                  className="w-8 h-8 rounded-lg border border-neutral-200 bg-neutral-50 flex items-center justify-center text-[10px] font-bold text-neutral-500 hover:border-primary-400 flex-shrink-0 transition-colors duration-300"
+                                >
+                                  +{allImgs.length - 3}
+                                </button>
+                              )}
+                            </div>
+                        }
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* ── Per-session view ── */}
+        {viewMode === "por-sesion" && (
+          <div className="divide-y divide-neutral-100">
+            {sesiones.map(ses => (
+              <div key={ses.id}>
+                <div className="px-4 py-2.5 bg-primary-50/60 flex items-center gap-4 flex-wrap">
+                  <span className="text-sm font-bold text-primary-500">{ses.id}</span>
+                  <span className="flex items-center gap-1 text-xs text-neutral-500">
+                    <User className="w-3 h-3" />{ses.operador}
+                  </span>
+                  <span className="flex items-center gap-1.5 text-xs text-neutral-400">
+                    <Clock className="w-3 h-3" />
+                    {fmtDT(ses.inicio)} <span className="text-neutral-300">→</span> {fmtDT(ses.fin)}
+                  </span>
+                  <span className="ml-auto text-xs font-bold text-primary-500 tabular-nums">
+                    {ses.items.reduce((s, i) => s + i.cantidad, 0).toLocaleString("es-CL")} uds
+                  </span>
+                </div>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-neutral-50/60 border-b border-neutral-100">
+                      <th className="px-4 py-2 text-left text-[11px] font-semibold text-neutral-400">SKU</th>
+                      <th className="px-4 py-2 text-left text-[11px] font-semibold text-neutral-400">Producto</th>
+                      <th className="px-4 py-2 text-right text-[11px] font-semibold text-neutral-400">Contadas</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-50">
+                    {ses.items.map(item => (
+                      <tr key={item.pid}>
+                        <td className="px-4 py-2.5 font-mono text-xs text-neutral-500">{item.sku}</td>
+                        <td className="px-4 py-2.5 text-xs text-neutral-700">{item.nombre}</td>
+                        <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-neutral-800">{item.cantidad.toLocaleString("es-CL")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Incidencias por categoría de resolución ── */}
+        {flatInc.length > 0 && (
+          <div className="border-t border-neutral-100 px-5 py-4 space-y-3">
+            <p className="text-sm font-semibold text-neutral-800">Incidencias por categoría de resolución</p>
+            {catGroups.map(({ cat, label, desc, color, rows }) => {
+              const borderCls  = color === "primary" ? "border-primary-200" : color === "red" ? "border-red-200" : "border-amber-200";
+              const headerCls  = color === "primary" ? "bg-primary-50"      : color === "red" ? "bg-red-50"      : "bg-amber-50";
+              const badgeCls   = color === "primary" ? "bg-primary-500"     : color === "red" ? "bg-red-600"     : "bg-amber-500";
+              const titleCls   = color === "primary" ? "text-primary-700"   : color === "red" ? "text-red-800"   : "text-amber-800";
+              const subCls     = color === "primary" ? "text-primary-500"   : color === "red" ? "text-red-500"   : "text-amber-600";
+              return (
+                <div key={cat} className={`rounded-xl border overflow-hidden ${borderCls}`}>
+                  <div className={`px-4 py-2.5 flex items-center gap-2.5 ${headerCls}`}>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full text-white ${badgeCls}`}>Cat. {cat}</span>
+                    <div>
+                      <p className={`text-xs font-semibold ${titleCls}`}>{label}</p>
+                      <p className={`text-[10px] ${subCls}`}>{desc}</p>
+                    </div>
+                  </div>
+                  <div className="divide-y divide-neutral-100">
+                    {rows.map(({ product, row }) => {
+                      const tag = INCIDENCIA_TAGS.find(t => t.key === row.tag);
+                      return (
+                        <div key={row.rowId} className="px-4 py-3 flex items-start gap-4 bg-white">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-baseline gap-2 flex-wrap">
+                              <span className="text-xs font-semibold text-neutral-800">{product.nombre}</span>
+                              <span className="font-mono text-[10px] text-neutral-400">{product.sku}</span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                              {tag && (
+                                <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium border ${
+                                  tag.color === "amber"  ? "bg-amber-50 text-amber-700 border-amber-200"  :
+                                  tag.color === "orange" ? "bg-orange-50 text-orange-700 border-orange-200":
+                                  tag.color === "purple" ? "bg-purple-50 text-purple-700 border-purple-200":
+                                                           "bg-red-50 text-red-700 border-red-200"
+                                }`}>{tag.label}</span>
+                              )}
+                              <span className="text-xs text-neutral-500">
+                                <span className="font-semibold tabular-nums">{row.cantidad.toLocaleString("es-CL")}</span> uds afectadas
+                              </span>
+                            </div>
+                            {row.nota && <p className="text-xs text-neutral-400 italic mt-1">"{row.nota}"</p>}
+                            {row.tag === "no-en-sistema" && row.descripcion && (
+                              <p className="text-xs text-purple-700 mt-1.5">{row.descripcion}</p>
+                            )}
+                          </div>
+                          {row.imagenes.length > 0 ? (
+                            <div className="flex gap-1.5 flex-wrap flex-shrink-0">
+                              {row.imagenes.map((img, i) => (
+                                <button
+                                  key={i} onClick={() => setLightbox(img)}
+                                  className="w-10 h-10 rounded-lg overflow-hidden border border-neutral-200 hover:border-primary-400 flex-shrink-0 transition-colors duration-300"
+                                >
+                                  <img src={URL.createObjectURL(img)} alt="" className="w-full h-full object-cover" />
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="flex items-center gap-1 text-[10px] text-neutral-300 flex-shrink-0">
+                              <ImageOff className="w-3 h-3" /> Sin imágenes
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+      </div>
+    </>
   );
 }
 
@@ -928,7 +1683,7 @@ export default function ConteoORPage() {
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [products,      setProducts]      = useState<ProductConteo[]>(baseData.products);
-  const [sesiones,      setSesiones]      = useState<Sesion[]>([]);
+  const [sesiones,      setSesiones]      = useState<Sesion[]>(() => SEED_SESIONES[id] ?? []);
   const [sesionActiva,  setSesionActiva]  = useState(false);
   const [sesionInicio,  setSesionInicio]  = useState("");
   const [scanner,       setScanner]       = useState("");
@@ -940,7 +1695,8 @@ export default function ConteoORPage() {
   const [incidenciaTarget, setIncidenciaTarget] = useState<string | null>(null);
   // Snapshot of incidencias[target] at the moment the modal opens (to revert on cancel)
   const incidenciaSnapshotRef = useRef<IncidenciaRow[]>([]);
-  const [showAddProduct,   setShowAddProduct]   = useState(false);
+  const [addProductFlow, setAddProductFlow] = useState<"closed" | "choice" | "catalog" | "manual">("closed");
+  const [quarantineRecs,   setQuarantineRecs]   = useState<QuarantineRecord[]>([]);
 
   // Capture snapshot of incidencias for a SKU when the modal opens (to revert on cancel)
   useEffect(() => {
@@ -962,6 +1718,49 @@ export default function ConteoORPage() {
       }
     } catch { /* ignore */ }
   }, [id]);
+
+  // Load quarantine records when OR is closed
+  useEffect(() => {
+    if (!orEstado) return;
+    const all = loadAllQuarantine();
+    setQuarantineRecs(all.filter(r => r.orId === id));
+  }, [orEstado, id]);
+
+  // Update a quarantine record (local state + persist to localStorage)
+  const updateQuarantineRecord = (qrId: string, patch: Partial<QuarantineRecord>) => {
+    setQuarantineRecs(prev => {
+      const next = prev.map(r => r.id === qrId ? { ...r, ...patch } : r);
+      // Persist: replace all records for this OR in global quarantine store
+      const all     = loadAllQuarantine();
+      const others  = all.filter(r => r.orId !== id);
+      saveAllQuarantine([...others, ...next]);
+      return next;
+    });
+  };
+
+  // Convert ProductsModal output (AddProduct[]) → ProductConteo[] and merge
+  const handleCatalogAdd = (incoming: AddProduct[]) => {
+    setProducts(prev => {
+      const updated = [...prev];
+      incoming.forEach(p => {
+        const idx = updated.findIndex(e => e.sku === p.sku);
+        if (idx >= 0) {
+          updated[idx] = { ...updated[idx], esperadas: updated[idx].esperadas + p.qty };
+        } else {
+          updated.push({
+            id: `catalog-${p.sku}-${Date.now()}`,
+            sku: p.sku,
+            nombre: p.nombre,
+            barcode: p.barcode,
+            esperadas: p.qty,
+            contadasSesion: 0,
+          });
+        }
+      });
+      return updated;
+    });
+    setAddProductFlow("closed");
+  };
 
   const dotsRef = useRef<HTMLDivElement>(null);
   const OPERADOR = "Fernando Roblero";
@@ -1075,12 +1874,12 @@ export default function ConteoORPage() {
   const orCerrada        = orEstado !== null;
   const terminarDisabled = sesionActiva || orCerrada || sesiones.length === 0;
   const terminarClass = terminarDisabled
-    ? "bg-gray-50 border-gray-200 text-gray-300 cursor-not-allowed"
+    ? "bg-neutral-50 border-neutral-200 text-neutral-300 cursor-not-allowed"
     : "bg-red-50 border-red-200 text-red-600 hover:bg-red-100";
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-neutral-50">
 
       {/* ── Modals ── */}
       {incidenciaTarget !== null && (() => {
@@ -1108,10 +1907,25 @@ export default function ConteoORPage() {
         ) : null;
       })()}
 
-      {showAddProduct && (
+      {addProductFlow === "choice" && (
+        <AddProductChoiceModal
+          onRecognized={() => setAddProductFlow("catalog")}
+          onUnrecognized={() => setAddProductFlow("manual")}
+          onCancel={() => setAddProductFlow("closed")}
+        />
+      )}
+
+      {addProductFlow === "catalog" && (
+        <ProductsModal
+          onClose={() => setAddProductFlow("closed")}
+          onAdd={handleCatalogAdd}
+        />
+      )}
+
+      {addProductFlow === "manual" && (
         <AddProductModal
-          onCancel={() => setShowAddProduct(false)}
-          onConfirm={(product) => { setProducts(ps => [...ps, product]); setShowAddProduct(false); }}
+          onCancel={() => setAddProductFlow("closed")}
+          onConfirm={(product) => { setProducts(ps => [...ps, product]); setAddProductFlow("closed"); }}
         />
       )}
 
@@ -1123,6 +1937,16 @@ export default function ConteoORPage() {
           onCancel={() => setConfirmClose(false)}
           onConfirm={(outcome) => {
             setOrEstado(outcome);
+            // Build and persist quarantine records for all incidencias
+            const qrRecords = buildQuarantineRecords(
+              id, baseData.seller, baseData.sucursal, products, incidencias,
+            );
+            if (qrRecords.length > 0) {
+              const all      = loadAllQuarantine();
+              const filtered = all.filter(r => r.orId !== id);
+              saveAllQuarantine([...filtered, ...qrRecords]);
+              setQuarantineRecs(qrRecords);
+            }
             try {
               localStorage.setItem(`amplifica_or_${id}`, JSON.stringify({ estado: outcome }));
               localStorage.setItem("amplifica_pending_toast", JSON.stringify({
@@ -1147,11 +1971,11 @@ export default function ConteoORPage() {
       )}
 
       {/* ── Breadcrumb ── */}
-      <div className="bg-white border-b border-gray-100">
-        <nav className="max-w-4xl mx-auto px-6 py-3 flex items-center gap-1.5 text-sm text-gray-500">
-          <Link href="/recepciones" className="hover:text-indigo-600 transition-colors">Recepciones</Link>
-          <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
-          <span className="text-gray-700 font-medium">Orden de Recepción</span>
+      <div className="bg-white border-b border-neutral-100">
+        <nav className="max-w-4xl mx-auto px-6 py-3 flex items-center gap-1.5 text-sm text-neutral-500">
+          <Link href="/recepciones" className="hover:text-primary-500 transition-colors duration-300">Recepciones</Link>
+          <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
+          <span className="text-neutral-700 font-medium">Orden de Recepción</span>
         </nav>
       </div>
 
@@ -1160,31 +1984,31 @@ export default function ConteoORPage() {
         {/* ── Title row ── */}
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-neutral-900">
               Orden de Recepción{" "}
-              <span className="font-mono text-gray-900">#{id}</span>
+              <span className="font-mono text-neutral-900">#{id}</span>
             </h1>
-            <p className="text-sm text-gray-400 mt-0.5">
+            <p className="text-sm text-neutral-400 mt-0.5">
               {baseData.sucursal} - {baseData.fechaAgendada}
             </p>
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
 
-            {/* ── Session control button: Iniciar (indigo) or Finalizar (outline) ── */}
+            {/* ── Session control button: Iniciar (primary) or Finalizar (outline) ── */}
             {!orCerrada && (
               sesionActiva ? (
                 <button
                   onClick={finalizarSesion}
-                  className="flex items-center gap-2 px-4 py-2 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+                  className="flex items-center gap-2 px-4 py-2 border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700 text-sm font-medium rounded-lg transition-colors duration-300 whitespace-nowrap"
                 >
-                  <StopCircle className="w-4 h-4 text-gray-500" />
+                  <StopCircle className="w-4 h-4 text-neutral-500" />
                   Finalizar sesión
                 </button>
               ) : (
                 <button
                   onClick={iniciarSesion}
-                  className="flex items-center gap-2.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors whitespace-nowrap"
+                  className="flex items-center gap-2.5 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300 whitespace-nowrap"
                 >
                   <PlayCircle className="w-4 h-4" />
                   Iniciar sesión de conteo
@@ -1195,8 +2019,8 @@ export default function ConteoORPage() {
         </div>
 
         {/* ── Summary cards ── */}
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <div className="grid grid-cols-4 divide-x divide-gray-100">
+        <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+          <div className="grid grid-cols-4 divide-x divide-neutral-100">
             {[
               { label: "Seller",              value: baseData.seller },
               { label: "SKUs",                value: String(products.length) },
@@ -1204,24 +2028,36 @@ export default function ConteoORPage() {
               { label: "Sesiones",            value: String(sesiones.length + (sesionActiva ? 1 : 0)) },
             ].map(({ label, value }) => (
               <div key={label} className="px-5 py-4">
-                <p className="text-xs text-gray-400 font-medium mb-1">{label}</p>
-                <p className="text-base font-bold text-gray-900 tabular-nums">{value}</p>
+                <p className="text-xs text-neutral-400 font-medium mb-1">{label}</p>
+                <p className="text-base font-bold text-neutral-900 tabular-nums">{value}</p>
               </div>
             ))}
           </div>
         </div>
 
+        {/* ── QR Display (only when OR is in Programado-equivalent state) ── */}
+        {orEstado === null && sesiones.length === 0 && !sesionActiva && (
+          <QrDisplaySection
+            orId={id}
+            seller={baseData.seller}
+            sucursal={baseData.sucursal}
+            fechaAgendada={baseData.fechaAgendada}
+            skus={products.length}
+            uTotales={stats.totalEsperadas.toLocaleString("es-CL")}
+          />
+        )}
+
         {/* ── Active session banner ── */}
         {sesionActiva && (
-          <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse flex-shrink-0" />
+          <div className="bg-primary-50 border border-primary-200 rounded-xl px-4 py-3 flex items-center gap-3">
+            <span className="w-2 h-2 rounded-full bg-primary-500 animate-pulse flex-shrink-0" />
             <div className="flex-1 min-w-0 text-sm">
-              <span className="font-bold text-indigo-700">{sesionId(sesionNumActual)}</span>
-              <span className="text-indigo-400 ml-2 text-xs">
+              <span className="font-bold text-primary-600">{sesionId(sesionNumActual)}</span>
+              <span className="text-primary-400 ml-2 text-xs">
                 Iniciada {fmtDT(sesionInicio)}
               </span>
             </div>
-            <span className="text-sm font-bold text-indigo-600 tabular-nums flex-shrink-0">
+            <span className="text-sm font-bold text-primary-500 tabular-nums flex-shrink-0">
               {stats.totalSesionAct.toLocaleString("es-CL")} uds esta sesión
             </span>
           </div>
@@ -1229,56 +2065,58 @@ export default function ConteoORPage() {
 
         {/* ── Scanner (active session only) ── */}
         {sesionActiva && (
-          <div className="bg-white border border-gray-200 rounded-xl p-5">
-            <p className="text-base font-semibold text-gray-800 mb-3">
+          <div className="bg-white border border-neutral-200 rounded-xl p-5">
+            <p className="text-base font-semibold text-neutral-800 mb-3">
               Escanear código de barras
             </p>
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <Scan className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <Scan className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
                 <input
                   type="text"
                   value={scanner}
                   onChange={e => setScanner(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && handleScan()}
                   placeholder="Ingresa o escanea  SKU / Código de barras"
-                  className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-400"
+                  className="w-full pl-9 pr-4 py-2.5 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 placeholder-neutral-400"
                   autoFocus
                 />
               </div>
               <button
                 onClick={handleScan}
-                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                className="px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
               >
                 Registrar
               </button>
             </div>
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs text-neutral-400 mt-2">
               Presiona{" "}
-              <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[11px] font-mono border border-gray-200">Enter</kbd>{" "}
-              o haz clic en <span className="font-semibold text-gray-600">Registrar</span> para escanear una unidad.
+              <kbd className="px-1.5 py-0.5 bg-neutral-100 rounded text-[11px] font-mono border border-neutral-200">Enter</kbd>{" "}
+              o haz clic en <span className="font-semibold text-neutral-600">Registrar</span> para escanear una unidad.
             </p>
           </div>
         )}
 
         {/* ── Progreso de conteo ── */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <div className="bg-white border border-neutral-200 rounded-xl p-5">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-base font-semibold text-gray-800">Progreso de conteo</span>
-            <span className="text-sm font-bold text-gray-700 tabular-nums">
+            <span className="text-base font-semibold text-neutral-800">Progreso de conteo</span>
+            <span className="text-sm font-bold text-neutral-700 tabular-nums">
               {stats.totalContadas.toLocaleString("es-CL")}/{stats.totalEsperadas.toLocaleString("es-CL")}
-              <span className="ml-1 text-gray-500 font-normal">({stats.pct}%)</span>
+              <span className="ml-1 text-neutral-500 font-normal">({stats.pct}%)</span>
             </span>
           </div>
-          <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-2.5 bg-neutral-100 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
                 stats.pct === 100 ? "bg-green-500" :
-                stats.conDiferencias > 0 ? "bg-amber-400" : "bg-indigo-500"
+                stats.conDiferencias > 0 ? "bg-amber-400" : "bg-primary-500"
               }`}
               style={{ width: `${stats.pct}%` }}
             />
           </div>
+
+          {/* Summary chips */}
           <div className="flex items-center gap-2 mt-3 flex-wrap">
             {stats.conDiferencias > 0 && (
               <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full">
@@ -1291,11 +2129,10 @@ export default function ConteoORPage() {
               </span>
             )}
             {stats.pendientes > 0 && (
-              <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 bg-gray-50 text-gray-500 border border-gray-200 rounded-full">
+              <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 bg-neutral-50 text-neutral-500 border border-neutral-200 rounded-full">
                 {stats.pendientes} pendientes
               </span>
             )}
-            {/* Incidencia category chips */}
             {(Object.entries(incidenciasPorTag) as [IncidenciaTagKey, number][]).map(([tagKey, total]) => {
               const tag = INCIDENCIA_TAGS.find(t => t.key === tagKey);
               if (!tag || total === 0) return null;
@@ -1312,6 +2149,60 @@ export default function ConteoORPage() {
               );
             })}
           </div>
+
+          {/* Per-product breakdown table */}
+          {products.length > 0 && (
+            <div className="mt-4 border border-neutral-100 rounded-lg overflow-hidden">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-neutral-50 text-neutral-500 text-left">
+                    <th className="px-3 py-2 font-medium">SKU</th>
+                    <th className="px-3 py-2 font-medium">Producto</th>
+                    <th className="px-3 py-2 font-medium text-right">Esperado</th>
+                    <th className="px-3 py-2 font-medium text-right">Contado</th>
+                    <th className="px-3 py-2 font-medium text-right">Diferencia</th>
+                    <th className="px-3 py-2 font-medium text-right">Incidencias</th>
+                    <th className="px-3 py-2 font-medium text-center">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-100">
+                  {products.map(p => {
+                    const total      = totalPP[p.id] ?? 0;
+                    const diff       = total - p.esperadas;
+                    const incCount   = (incidencias[p.id] ?? []).reduce((s, r) => s + r.cantidad, 0);
+                    const status     = getProductStatus(total, p.esperadas);
+                    const statusConf = {
+                      completo:   { label: "Completo",   cls: "bg-green-50 text-green-700" },
+                      diferencia: { label: "Diferencia", cls: "bg-amber-50 text-amber-700" },
+                      exceso:     { label: "Exceso",     cls: "bg-orange-50 text-orange-700" },
+                      pendiente:  { label: "Pendiente",  cls: "bg-neutral-50 text-neutral-500" },
+                    }[status];
+                    return (
+                      <tr key={p.id} className="hover:bg-neutral-50/50">
+                        <td className="px-3 py-2 text-neutral-500 font-mono">{p.sku}</td>
+                        <td className="px-3 py-2 text-neutral-800 max-w-[180px] truncate">{p.nombre}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-neutral-600">{p.esperadas}</td>
+                        <td className="px-3 py-2 text-right tabular-nums font-semibold text-neutral-800">{total}</td>
+                        <td className={`px-3 py-2 text-right tabular-nums font-semibold ${
+                          diff === 0 ? "text-green-600" : diff > 0 ? "text-orange-600" : "text-red-600"
+                        }`}>
+                          {diff === 0 ? "—" : (diff > 0 ? "+" : "") + diff}
+                        </td>
+                        <td className={`px-3 py-2 text-right tabular-nums ${incCount > 0 ? "text-red-600 font-semibold" : "text-neutral-400"}`}>
+                          {incCount > 0 ? incCount : "—"}
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusConf.cls}`}>
+                            {statusConf.label}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* ── OR closed result banner ── */}
@@ -1343,50 +2234,67 @@ export default function ConteoORPage() {
           );
         })()}
 
-        {/* ── Products container ── */}
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          {products.length === 0 ? (
-            <div className="p-12 flex flex-col items-center gap-3 text-center">
-              <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center">
-                <Package className="w-7 h-7 text-gray-300" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-700">Sin productos</p>
-                <p className="text-xs text-gray-400 mt-0.5">Agrega los productos que llegaron en esta OR.</p>
-              </div>
-            </div>
-          ) : (
-            products.map(p => (
-              <ProductCard
-                key={p.id}
-                product={p}
-                acumulado={acumulado[p.id] ?? 0}
-                sesionActiva={sesionActiva}
-                onChange={updateContadas}
-                onRemove={pid => setPendingRemove(pid)}
-                incidencias={incidencias[p.id] ?? []}
-                onCategorizar={() => setIncidenciaTarget(p.id)}
-              />
-            ))
-          )}
+        {/* ── Resumen (OR cerrada) ── */}
+        {orCerrada && (
+          <ResumenOR
+            id={id} baseData={baseData} orEstado={orEstado}
+            sesiones={sesiones} products={products}
+            incidencias={incidencias} acumulado={acumulado}
+            OPERADOR={OPERADOR}
+          />
+        )}
 
-          {/* Añadir producto */}
-          <div className="border-t border-dashed border-gray-200">
-            <button onClick={() => setShowAddProduct(true)} className="w-full flex items-center justify-center gap-2 py-3.5 text-sm text-gray-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-colors font-medium">
-              <span className="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center flex-shrink-0">
-                <Plus className="w-3 h-3" />
-              </span>
-              Añadir producto
-            </button>
+        {/* ── Products container (hidden when OR closed — ResumenOR has details) ── */}
+        {!orCerrada && (
+          <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+            {products.length === 0 ? (
+              <div className="p-12 flex flex-col items-center gap-3 text-center">
+                <div className="w-14 h-14 bg-neutral-100 rounded-2xl flex items-center justify-center">
+                  <Package className="w-7 h-7 text-neutral-300" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-neutral-700">Sin productos</p>
+                  <p className="text-xs text-neutral-400 mt-0.5">Agrega los productos que llegaron en esta OR.</p>
+                </div>
+              </div>
+            ) : (
+              products.map(p => (
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  acumulado={acumulado[p.id] ?? 0}
+                  sesionActiva={sesionActiva}
+                  onChange={updateContadas}
+                  onRemove={pid => setPendingRemove(pid)}
+                  incidencias={incidencias[p.id] ?? []}
+                  onCategorizar={() => setIncidenciaTarget(p.id)}
+                />
+              ))
+            )}
+
+            {/* Añadir producto */}
+            <div className="border-t border-dashed border-neutral-200">
+              <button onClick={() => setAddProductFlow("choice")} className="w-full flex items-center justify-center gap-2 py-3.5 text-sm text-neutral-400 hover:text-primary-500 hover:bg-primary-50/50 transition-colors duration-300 font-medium">
+                <span className="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center flex-shrink-0">
+                  <Plus className="w-3 h-3" />
+                </span>
+                Añadir producto
+              </button>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* ── Gestión de cuarentena (OR cerrada con registros) ── */}
+        {orCerrada && quarantineRecs.length > 0 && (
+          <GestionCuarentena records={quarantineRecs} onUpdate={updateQuarantineRecord} />
+        )}
 
         {/* ── Session history ── */}
         {sesiones.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            <div className="px-4 py-3.5 border-b border-gray-100 flex items-center justify-between">
-              <span className="text-base font-semibold text-gray-800">Historial de sesiones</span>
-              <span className="text-sm text-gray-400 tabular-nums">
+          <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+            <div className="px-4 py-3.5 border-b border-neutral-100 flex items-center justify-between">
+              <span className="text-base font-semibold text-neutral-800">Historial de sesiones</span>
+              <span className="text-sm text-neutral-400 tabular-nums">
                 {totalAcumUds.toLocaleString("es-CL")} uds acumuladas
               </span>
             </div>
@@ -1408,10 +2316,10 @@ export default function ConteoORPage() {
             <button
               onClick={liberarSesion}
               disabled={!sesionActiva}
-              className={`flex items-center gap-2 px-5 py-2.5 border text-sm font-medium rounded-lg transition-colors ${
+              className={`flex items-center gap-2 px-5 py-2.5 border text-sm font-medium rounded-lg transition-colors duration-300 ${
                 !sesionActiva
-                  ? "border-gray-200 bg-white text-gray-300 cursor-not-allowed"
-                  : "border-gray-200 bg-white hover:bg-gray-50 text-gray-600"
+                  ? "border-neutral-200 bg-white text-neutral-300 cursor-not-allowed"
+                  : "border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-600"
               }`}
             >
               <LockUnlocked01 className="w-4 h-4" />
@@ -1425,7 +2333,7 @@ export default function ConteoORPage() {
                 sesiones.length === 0 ? "Registra al menos una sesión antes de terminar" :
                 sesionActiva ? "Finaliza la sesión activa antes de terminar" : undefined
               }
-              className={`flex items-center gap-2 px-5 py-2.5 border text-sm font-medium rounded-lg transition-colors ${terminarClass}`}
+              className={`flex items-center gap-2 px-5 py-2.5 border text-sm font-medium rounded-lg transition-colors duration-300 ${terminarClass}`}
             >
               <ClipboardCheck className="w-4 h-4" />
               Terminar recepción

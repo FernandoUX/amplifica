@@ -32,33 +32,33 @@ export default function StepIndicator({ current, maxReached, onStepClick, steps 
               type="button"
               disabled={!clickable}
               onClick={() => clickable && onStepClick?.(step.number)}
-              className={`flex items-center gap-2 rounded-lg px-1 py-0.5 transition-colors
-                ${clickable ? "cursor-pointer hover:bg-gray-100" : "cursor-default"}
-                ${done ? "text-green-600" : active ? "text-indigo-600" : "text-gray-400"}
+              className={`flex items-center gap-2 rounded-lg px-1 py-0.5 transition-colors duration-300
+                ${clickable ? "cursor-pointer hover:bg-neutral-100" : "cursor-default"}
+                ${done ? "text-green-600" : active ? "text-primary-500" : "text-neutral-400"}
               `}
             >
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0
                   ${done   ? "bg-green-500 text-white"   : ""}
-                  ${active ? "bg-indigo-600 text-white"  : ""}
-                  ${!done && !active && reachable  ? "bg-indigo-100 text-indigo-500" : ""}
-                  ${!done && !active && !reachable ? "bg-gray-100 text-gray-400"    : ""}
+                  ${active ? "bg-primary-500 text-white"  : ""}
+                  ${!done && !active && reachable  ? "bg-primary-100 text-primary-500" : ""}
+                  ${!done && !active && !reachable ? "bg-neutral-100 text-neutral-400"    : ""}
                 `}
               >
                 {done ? <Check className="w-4 h-4" /> : step.number}
               </div>
               <span className={`text-sm font-medium whitespace-nowrap
                 ${done            ? "text-green-600"  : ""}
-                ${active          ? "text-indigo-700" : ""}
-                ${!done && !active && reachable  ? "text-indigo-400" : ""}
-                ${!done && !active && !reachable ? "text-gray-400"   : ""}
+                ${active          ? "text-primary-600" : ""}
+                ${!done && !active && reachable  ? "text-primary-400" : ""}
+                ${!done && !active && !reachable ? "text-neutral-400"   : ""}
               `}>
                 {step.label}
               </span>
             </button>
 
             {i < activeSteps.length - 1 && (
-              <div className={`h-px w-12 mx-3 flex-shrink-0 ${done ? "bg-green-400" : "bg-gray-200"}`} />
+              <div className={`h-px w-12 mx-3 flex-shrink-0 ${done ? "bg-green-400" : "bg-neutral-200"}`} />
             )}
           </div>
         );

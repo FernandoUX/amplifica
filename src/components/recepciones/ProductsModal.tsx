@@ -39,8 +39,8 @@ const MOCK_PRODUCTS: ModalProduct[] = [
 function Checkbox({ checked }: { checked: boolean }) {
   return (
     <span
-      className={`inline-flex w-5 h-5 rounded items-center justify-center flex-shrink-0 transition-colors ${
-        checked ? "bg-indigo-600" : "bg-white border-2 border-gray-300"
+      className={`inline-flex w-5 h-5 rounded items-center justify-center flex-shrink-0 transition-colors duration-300 ${
+        checked ? "bg-primary-500" : "bg-white border-2 border-neutral-300"
       }`}
     >
       {checked && (
@@ -104,10 +104,10 @@ export default function ProductsModal({ onClose, onAdd, initialSearch = "" }: Pr
       >
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900">Agregar productos</h2>
+          <h2 className="text-2xl font-bold text-neutral-900">Agregar productos</h2>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors"
+            className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-500 transition-colors duration-300"
           >
             <X className="w-4 h-4" />
           </button>
@@ -115,31 +115,31 @@ export default function ProductsModal({ onClose, onAdd, initialSearch = "" }: Pr
 
         {/* ── Search ──────────────────────────────────────────────────────── */}
         <div className="relative">
-          <SearchLg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          <SearchLg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Busca por SKU, nombre o código de barras"
-            className="w-full pl-10 pr-4 py-3 bg-gray-100 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            className="w-full pl-10 pr-4 py-3 bg-neutral-100 rounded-xl text-sm text-neutral-700 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
             autoFocus
           />
         </div>
 
         {/* ── Table card ──────────────────────────────────────────────────── */}
         <div
-          className="border border-gray-200 rounded-2xl overflow-hidden flex flex-col flex-1 min-h-0"
+          className="border border-neutral-200 rounded-2xl overflow-hidden flex flex-col flex-1 min-h-0"
         >
           {/* Scrollable area */}
           <div className="overflow-y-auto flex-1">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-white border-b border-gray-200">
+              <thead className="sticky top-0 bg-white border-b border-neutral-200">
                 <tr>
-                  <th className="text-left py-3 px-5 font-semibold text-gray-900 w-24">Agregar</th>
-                  <th className="text-left py-3 px-5 font-semibold text-gray-900">Nombre</th>
-                  <th className="text-left py-3 px-5 font-semibold text-gray-900">SKU</th>
-                  <th className="text-left py-3 px-5 font-semibold text-gray-900">C. de barras</th>
-                  <th className="text-left py-3 px-5 font-semibold text-gray-900">Cantidad</th>
+                  <th className="text-left py-3 px-5 font-semibold text-neutral-900 w-24">Agregar</th>
+                  <th className="text-left py-3 px-5 font-semibold text-neutral-900">Nombre</th>
+                  <th className="text-left py-3 px-5 font-semibold text-neutral-900">SKU</th>
+                  <th className="text-left py-3 px-5 font-semibold text-neutral-900">C. de barras</th>
+                  <th className="text-left py-3 px-5 font-semibold text-neutral-900">Cantidad</th>
                 </tr>
               </thead>
 
@@ -147,7 +147,7 @@ export default function ProductsModal({ onClose, onAdd, initialSearch = "" }: Pr
                 {filtered.map((product, i) => (
                   <tr
                     key={`${product.sku}-${i}`}
-                    className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/60 transition-colors cursor-pointer"
+                    className="border-b border-neutral-100 last:border-b-0 hover:bg-neutral-50/60 transition-colors duration-300 cursor-pointer"
                     onClick={() => toggleCheck(product.sku)}
                   >
                     {/* Checkbox */}
@@ -156,13 +156,13 @@ export default function ProductsModal({ onClose, onAdd, initialSearch = "" }: Pr
                     </td>
 
                     {/* Nombre */}
-                    <td className="py-4 px-5 text-gray-700">{product.nombre}</td>
+                    <td className="py-4 px-5 text-neutral-700">{product.nombre}</td>
 
                     {/* SKU */}
-                    <td className="py-4 px-5 text-gray-700">{product.sku}</td>
+                    <td className="py-4 px-5 text-neutral-700">{product.sku}</td>
 
                     {/* Barcode */}
-                    <td className="py-4 px-5 text-gray-700">{product.barcode}</td>
+                    <td className="py-4 px-5 text-neutral-700">{product.barcode}</td>
 
                     {/* Cantidad — stop row click when editing */}
                     <td className="py-4 px-5" onClick={(e) => e.stopPropagation()}>
@@ -170,7 +170,7 @@ export default function ProductsModal({ onClose, onAdd, initialSearch = "" }: Pr
                         type="number"
                         value={product.qty}
                         onChange={(e) => updateQty(product.sku, e.target.value)}
-                        className="w-24 px-3 py-1.5 bg-gray-100 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="w-24 px-3 py-1.5 bg-neutral-100 rounded-lg text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                     </td>
                   </tr>
@@ -180,7 +180,7 @@ export default function ProductsModal({ onClose, onAdd, initialSearch = "" }: Pr
           </div>
 
           {/* Selected count — pinned bottom of card */}
-          <div className="border-t border-gray-100 py-3.5 text-center text-sm text-gray-500 bg-white">
+          <div className="border-t border-neutral-100 py-3.5 text-center text-sm text-neutral-500 bg-white">
             {selected.length > 0
               ? `${selected.length} Producto${selected.length !== 1 ? "s" : ""} seleccionado${selected.length !== 1 ? "s" : ""}`
               : "Sin productos seleccionados"}
@@ -191,14 +191,14 @@ export default function ProductsModal({ onClose, onAdd, initialSearch = "" }: Pr
         <div className="flex items-center justify-between">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors"
+            className="px-5 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-sm font-medium rounded-lg transition-colors duration-300"
           >
             Cerrar
           </button>
           <button
             onClick={handleAdd}
             disabled={selected.length === 0}
-            className="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm font-semibold rounded-lg transition-colors"
+            className="px-8 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:opacity-40 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
           >
             Agregar
           </button>

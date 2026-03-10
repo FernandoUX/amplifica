@@ -2,17 +2,19 @@
 
 import Link from "next/link";
 import { createPortal } from "react-dom";
-import { useState, useMemo, useEffect, Suspense, useRef } from "react";
+import { useState, useMemo, useEffect, Suspense, useRef, useCallback } from "react";
 import { useColumnConfig, type ColumnKey } from "@/hooks/useColumnConfig";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
-  Download01, Sliders01, LayoutGrid01, SearchLg,
+  Download01, Sliders01, LayoutGrid01, SearchLg, QrCode02,
   DotsVertical, CheckCircle, AlertTriangle, XCircle, ClockRefresh, InfoCircle, X,
-  SwitchVertical01, ArrowUp, ArrowDown, Plus, ChevronDown, ChevronRight,
+  SwitchVertical01, ArrowUp, ArrowDown, Plus, ChevronDown, ChevronLeft, ChevronRight,
   CalendarPlus01, PackageCheck, Play, ClipboardCheck, FastForward,
   Eye, Edit01, SlashCircle01, LockUnlocked01,
 } from "@untitled-ui/icons-react";
 import StatusBadge, { Status } from "@/components/recepciones/StatusBadge";
+import Button from "@/components/ui/Button";
+import QrScannerModal from "@/components/recepciones/QrScannerModal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 /** Feature 4: multi-label resultado tags (aparecen solo en "Completada") */
@@ -77,36 +79,73 @@ const TAG_FILTER_OPTIONS: {
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const ORDENES: Orden[] = [
-  // Creado — sin fecha agendada aún
+  // ─── Creado — sin fecha agendada aún ─────────────────────────────────────────
   { id: "RO-BARRA-191", creacion: "01/03/2026", fechaAgendada: "—", seller: "Extra Life", sucursal: "Quilicura", estado: "Creado", skus: 5, uTotales: "100" },
+  { id: "RO-BARRA-192", creacion: "08/03/2026", fechaAgendada: "—", seller: "NutriPro", sucursal: "Providencia", estado: "Creado", skus: 12, uTotales: "640" },
+  { id: "RO-BARRA-193", creacion: "09/03/2026", fechaAgendada: "—", seller: "BioNature", sucursal: "Las Condes", estado: "Creado", skus: 8, uTotales: "380", comentarios: "Primer envío del seller, coordinar recepción con KAM Carolina." },
+  { id: "RO-BARRA-210", creacion: "10/03/2026", fechaAgendada: "—", seller: "Gohard", sucursal: "Lo Barnechea", estado: "Creado", skus: 3, uTotales: "150" },
 
-  // Programado
+  // ─── Programado ──────────────────────────────────────────────────────────────
   { id: "RO-BARRA-183", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "Extra Life", sucursal: "Quilicura", estado: "Programado", skus: 320, uTotales: "2.550", pallets: 10, bultos: 32, comentarios: "Llegará en un camión blanco patente XXNN33, preguntar por Carlos." },
   { id: "RO-BARRA-182", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", fechaExtra: "Expirado hace 4 horas", seller: "Extra Life", sucursal: "La Reina", estado: "Programado", skus: 320, uTotales: "2.550", pallets: 8, bultos: 28 },
   { id: "RO-BARRA-190", creacion: "17/02/2026", fechaAgendada: "21/02/2026 09:00", fechaExtra: "Expira en 28 minutos", seller: "Le Vice", sucursal: "Lo Barnechea", estado: "Programado", skus: 15, uTotales: "450", pallets: 3, bultos: 15, comentarios: "Entrega parcial, solo 2 pallets llegarán hoy. El resto el miércoles." },
+  { id: "RO-BARRA-194", creacion: "07/03/2026", fechaAgendada: "11/03/2026 10:00", seller: "VitaFit", sucursal: "Quilicura", estado: "Programado", skus: 24, uTotales: "1.800", pallets: 6, bultos: 18, comentarios: "Incluye 4 pallets de colágeno que requieren temperatura controlada." },
+  { id: "RO-BARRA-195", creacion: "06/03/2026", fechaAgendada: "12/03/2026 14:30", seller: "NutriPro", sucursal: "La Reina", estado: "Programado", skus: 18, uTotales: "960", pallets: 4, bultos: 12 },
+  { id: "RO-BARRA-211", creacion: "09/03/2026", fechaAgendada: "13/03/2026 11:00", seller: "BioNature", sucursal: "Santiago Centro", estado: "Programado", skus: 9, uTotales: "420", pallets: 2, bultos: 6 },
 
-  // Recepcionado en bodega
+  // ─── Recepcionado en bodega ──────────────────────────────────────────────────
   { id: "RO-BARRA-180", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Recepcionado en bodega", skus: 2, uTotales: "200" },
+  { id: "RO-BARRA-196", creacion: "05/03/2026", fechaAgendada: "09/03/2026 09:00", seller: "BioNature", sucursal: "Lo Barnechea", estado: "Recepcionado en bodega", skus: 10, uTotales: "520", pallets: 2, bultos: 8, comentarios: "Bultos paletizados, descargar con grúa horquilla." },
+  { id: "RO-BARRA-197", creacion: "04/03/2026", fechaAgendada: "08/03/2026 11:00", seller: "Extra Life", sucursal: "Providencia", estado: "Recepcionado en bodega", skus: 6, uTotales: "310" },
 
-  // En proceso de conteo (la OR permanece aquí durante TODO el conteo — 1 sesión o 20)
+  // ─── En proceso de conteo ────────────────────────────────────────────────────
   { id: "RO-BARRA-184", creacion: "15/02/2026", fechaAgendada: "19/02/2026 10:00", seller: "Extra Life", sucursal: "Quilicura", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
   { id: "RO-BARRA-179", creacion: "14/02/2026", fechaAgendada: "18/02/2026 09:00", seller: "Gohard", sucursal: "La Reina", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
   { id: "RO-BARRA-185", creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "Gohard", sucursal: "Lo Barnechea", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
+  { id: "RO-BARRA-198", creacion: "03/03/2026", fechaAgendada: "07/03/2026 08:30", seller: "VitaFit", sucursal: "Santiago Centro", estado: "En proceso de conteo", skus: 15, uTotales: "1.120" },
 
-  // Pendiente de aprobación — recepción cerrada con diferencias, esperando supervisor
+  // ─── Pendiente de aprobación — esperando supervisor ──────────────────────────
   { id: "RO-BARRA-187", creacion: "10/02/2026", fechaAgendada: "14/02/2026 13:00", seller: "Le Vice", sucursal: "La Reina", estado: "Pendiente de aprobación", skus: 320, uTotales: "2.550",
     tags: makeTags({ conDiferencias: 20 }) },
+  { id: "RO-BARRA-199", creacion: "02/03/2026", fechaAgendada: "06/03/2026 10:00", seller: "NutriPro", sucursal: "Las Condes", estado: "Pendiente de aprobación", skus: 14, uTotales: "780",
+    tags: makeTags({ conDiferencias: 45, noPickeables: 12 }) },
+  { id: "RO-BARRA-212", creacion: "08/03/2026", fechaAgendada: "10/03/2026 09:30", seller: "Gohard", sucursal: "Providencia", estado: "Pendiente de aprobación", skus: 22, uTotales: "1.340",
+    tags: makeTags({ conDiferencias: 8, noPickeables: 3 }) },
 
-  // Cancelado
+  // ─── Cancelado ───────────────────────────────────────────────────────────────
   { id: "RO-BARRA-188", creacion: "12/02/2026", fechaAgendada: "16/02/2026 11:30", seller: "Extra Life", sucursal: "Santiago Centro", estado: "Cancelado", skus: 320, uTotales: "2.550" },
+  { id: "RO-BARRA-213", creacion: "20/02/2026", fechaAgendada: "24/02/2026 10:00", seller: "Le Vice", sucursal: "Providencia", estado: "Cancelado", skus: 7, uTotales: "280", comentarios: "Seller canceló envío por falta de stock." },
 
-  // Completado con diferencias — aprobado por supervisor tras revisión
+  // ─── Completado con diferencias ──────────────────────────────────────────────
   { id: "RO-BARRA-186", creacion: "11/02/2026", fechaAgendada: "15/02/2026 08:00", seller: "Extra Life", sucursal: "Quilicura", estado: "Completado con diferencias", skus: 320, uTotales: "2.550",
     tags: makeTags({ sinDiferencias: 2510, conDiferencias: 20, noPickeables: 20 }) },
+  { id: "RO-BARRA-201", creacion: "25/02/2026", fechaAgendada: "01/03/2026 09:00", seller: "VitaFit", sucursal: "La Reina", estado: "Completado con diferencias", skus: 20, uTotales: "1.540",
+    tags: makeTags({ sinDiferencias: 1480, conDiferencias: 36, noPickeables: 24 }) },
+  { id: "RO-BARRA-214", creacion: "18/02/2026", fechaAgendada: "22/02/2026 14:00", seller: "NutriPro", sucursal: "Lo Barnechea", estado: "Completado con diferencias", skus: 16, uTotales: "890",
+    tags: makeTags({ sinDiferencias: 840, conDiferencias: 32, noPickeables: 18 }) },
 
-  // Completado sin diferencias — conteo exacto, sin ajustes
+  // ─── Completado sin diferencias ──────────────────────────────────────────────
   { id: "RO-BARRA-189", creacion: "09/02/2026", fechaAgendada: "13/02/2026 15:30", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Completado sin diferencias", skus: 320, uTotales: "2.550",
     tags: makeTags({ sinDiferencias: 2550 }) },
+  { id: "RO-BARRA-200", creacion: "28/02/2026", fechaAgendada: "04/03/2026 15:00", seller: "BioNature", sucursal: "Quilicura", estado: "Completado sin diferencias", skus: 10, uTotales: "520",
+    tags: makeTags({ sinDiferencias: 520 }) },
+  { id: "RO-BARRA-215", creacion: "22/02/2026", fechaAgendada: "26/02/2026 08:30", seller: "Gohard", sucursal: "Las Condes", estado: "Completado sin diferencias", skus: 28, uTotales: "2.100",
+    tags: makeTags({ sinDiferencias: 2100 }) },
+
+  // ─── Adicionales ────────────────────────────────────────────────────────────
+  { id: "RO-BARRA-216", creacion: "05/03/2026", fechaAgendada: "—", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Creado", skus: 14, uTotales: "720", comentarios: "Seller solicita recepción urgente esta semana." },
+  { id: "RO-BARRA-217", creacion: "02/03/2026", fechaAgendada: "10/03/2026 08:00", seller: "Extra Life", sucursal: "Lo Barnechea", estado: "Programado", skus: 42, uTotales: "3.200", pallets: 12, bultos: 40, comentarios: "Camión refrigerado, requiere andén 3." },
+  { id: "RO-BARRA-218", creacion: "01/03/2026", fechaAgendada: "06/03/2026 15:00", seller: "VitaFit", sucursal: "Las Condes", estado: "Recepcionado en bodega", skus: 19, uTotales: "1.450", pallets: 5, bultos: 14 },
+  { id: "RO-BARRA-219", creacion: "27/02/2026", fechaAgendada: "03/03/2026 10:30", seller: "NutriPro", sucursal: "Quilicura", estado: "En proceso de conteo", skus: 36, uTotales: "2.840", comentarios: "Conteo parcial, faltan 8 SKUs por verificar." },
+  { id: "RO-BARRA-220", creacion: "26/02/2026", fechaAgendada: "02/03/2026 09:00", seller: "BioNature", sucursal: "La Reina", estado: "Pendiente de aprobación", skus: 11, uTotales: "610",
+    tags: makeTags({ conDiferencias: 15 }) },
+  { id: "RO-BARRA-221", creacion: "24/02/2026", fechaAgendada: "28/02/2026 14:00", seller: "Gohard", sucursal: "Providencia", estado: "Cancelado", skus: 5, uTotales: "200", comentarios: "Proveedor no se presentó en la fecha acordada." },
+  { id: "RO-BARRA-222", creacion: "23/02/2026", fechaAgendada: "27/02/2026 11:00", seller: "Le Vice", sucursal: "Lo Barnechea", estado: "Completado con diferencias", skus: 30, uTotales: "2.200",
+    tags: makeTags({ sinDiferencias: 2050, conDiferencias: 95, noPickeables: 55 }) },
+  { id: "RO-BARRA-223", creacion: "21/02/2026", fechaAgendada: "25/02/2026 16:00", seller: "Extra Life", sucursal: "Las Condes", estado: "Completado sin diferencias", skus: 18, uTotales: "1.360",
+    tags: makeTags({ sinDiferencias: 1360 }) },
+  { id: "RO-BARRA-224", creacion: "04/03/2026", fechaAgendada: "09/03/2026 12:00", seller: "VitaFit", sucursal: "Providencia", estado: "Recepcionado en bodega", skus: 8, uTotales: "480", pallets: 2, bultos: 5, comentarios: "Productos frágiles, manipular con cuidado." },
+  { id: "RO-BARRA-225", creacion: "07/03/2026", fechaAgendada: "—", seller: "NutriPro", sucursal: "La Reina", estado: "Creado", skus: 21, uTotales: "1.580" },
 ];
 
 // ─── Tabs — alineados con estados del Notion spec ─────────────────────────────
@@ -114,24 +153,24 @@ const TABS = [
   "Todas",
   "Creado",
   "Programado",
-  "Recepcionado en bodega",
+  "Recepción en bodega",
   "En proceso de conteo",
-  "Pendiente de aprobación",
-  "Completado sin diferencias",
-  "Completado con diferencias",
-  "Cancelado",
+  "Parcialmente recepcionada",
+  "Completada sin diferencias",
+  "Completada con diferencias",
+  "Cancelada",
 ] as const;
 
 const TAB_STATUS: Record<string, Status | null> = {
   "Todas":                        null,
   "Creado":                       "Creado",
   "Programado":                   "Programado",
-  "Recepcionado en bodega":       "Recepcionado en bodega",
+  "Recepción en bodega":          "Recepcionado en bodega",
   "En proceso de conteo":         "En proceso de conteo",
-  "Pendiente de aprobación":      "Pendiente de aprobación",
-  "Completado sin diferencias":   "Completado sin diferencias",
-  "Completado con diferencias":   "Completado con diferencias",
-  "Cancelado":                    "Cancelado",
+  "Parcialmente recepcionada":    "Pendiente de aprobación",
+  "Completada sin diferencias":   "Completado sin diferencias",
+  "Completada con diferencias":   "Completado con diferencias",
+  "Cancelada":                    "Cancelado",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -149,10 +188,10 @@ function parseDate(str: string): number {
 function SortIcon({ field, sortField, sortDir }: {
   field: SortField; sortField: SortField; sortDir: SortDir;
 }) {
-  if (sortField !== field) return <SwitchVertical01 className="w-3 h-3 text-gray-400 inline ml-1 align-middle" />;
+  if (sortField !== field) return <SwitchVertical01 className="w-3 h-3 text-neutral-400 inline ml-1 align-middle" />;
   return sortDir === "asc"
-    ? <ArrowUp   className="w-3 h-3 text-indigo-500 inline ml-1 align-middle" />
-    : <ArrowDown className="w-3 h-3 text-indigo-500 inline ml-1 align-middle" />;
+    ? <ArrowUp   className="w-3 h-3 text-primary-500 inline ml-1 align-middle" />
+    : <ArrowDown className="w-3 h-3 text-primary-500 inline ml-1 align-middle" />;
 }
 
 // Sticky shadow for the Acciones column
@@ -165,7 +204,9 @@ const stickyRight: React.CSSProperties = {
 // ─── Badge helper for fechaExtra ──────────────────────────────────────────────
 function fechaExtraClass(label: string): string {
   const lower = label.toLowerCase();
-  if (lower.startsWith("expirado")) return "bg-red-50 text-red-500";
+  if (lower.startsWith("expirado")) return "bg-red-50 text-red-600";
+  // "Expira en X minutos" → less than 1 hour → warning
+  if (lower.includes("minutos") || lower.includes("min ")) return "bg-amber-50 text-amber-600";
   return "bg-orange-50 text-orange-500";
 }
 
@@ -261,49 +302,49 @@ function RecebirModal({ orden, onCancel, onConfirm }: {
 
         {/* Header */}
         <div className="flex items-start justify-between px-6 pt-6 pb-4">
-          <h3 className="text-xl font-bold text-gray-900">
+          <h3 className="text-xl font-bold text-neutral-900">
             Recibir Orden <span className="font-mono">#{orden.id}</span>
           </h3>
-          <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 transition-colors ml-4 flex-shrink-0">
+          <button onClick={onCancel} className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300 ml-4 flex-shrink-0">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Body */}
         <div className="px-6 pb-2 space-y-4">
-          <p className="text-sm font-semibold text-gray-800">Detalles de la recepción:</p>
+          <p className="text-sm font-semibold text-neutral-800">Detalles de la recepción:</p>
 
           {/* Info card */}
-          <div className="border border-gray-200 rounded-xl px-4 py-3.5 flex items-start divide-x divide-gray-100">
+          <div className="border border-neutral-200 rounded-xl px-4 py-3.5 flex items-start divide-x divide-neutral-100">
             <div className="pr-5 min-w-0">
-              <p className="text-xs text-gray-400 mb-1">Seller</p>
-              <p className="text-sm font-bold text-gray-900 truncate">{orden.seller}</p>
+              <p className="text-xs text-neutral-400 mb-1">Seller</p>
+              <p className="text-sm font-bold text-neutral-900 truncate">{orden.seller}</p>
             </div>
             <div className="px-5">
-              <p className="text-xs text-gray-400 mb-1">Estado</p>
+              <p className="text-xs text-neutral-400 mb-1">Estado</p>
               <StatusBadge status={orden.estado} />
             </div>
             <div className="px-5 flex-1">
-              <p className="text-xs text-gray-400 mb-1">Fecha programada</p>
-              <p className="text-sm font-semibold text-gray-700 whitespace-nowrap">{orden.fechaAgendada}</p>
+              <p className="text-xs text-neutral-400 mb-1">Fecha programada</p>
+              <p className="text-sm font-semibold text-neutral-700 whitespace-nowrap">{orden.fechaAgendada}</p>
             </div>
             <div className="px-5">
-              <p className="text-xs text-gray-400 mb-1">Pallets</p>
-              <p className="text-sm font-bold text-gray-900">{declaredPallets}</p>
+              <p className="text-xs text-neutral-400 mb-1">Pallets</p>
+              <p className="text-sm font-bold text-neutral-900">{declaredPallets}</p>
             </div>
             <div className="pl-5">
-              <p className="text-xs text-gray-400 mb-1">Bultos</p>
-              <p className="text-sm font-bold text-gray-900">{declaredBultos}</p>
+              <p className="text-xs text-neutral-400 mb-1">Bultos</p>
+              <p className="text-sm font-bold text-neutral-900">{declaredBultos}</p>
             </div>
           </div>
 
           {/* Comentarios (read-only, from OR creation) */}
           {orden.comentarios && (
             <div>
-              <label className="block text-xs text-gray-400 font-medium mb-1.5">
+              <label className="block text-xs text-neutral-400 font-medium mb-1.5">
                 Comentarios adicionales
               </label>
-              <div className="w-full px-3 py-2.5 border border-gray-100 rounded-lg text-sm text-gray-600 bg-gray-50 min-h-[72px]">
+              <div className="w-full px-3 py-2.5 border border-neutral-100 rounded-lg text-sm text-neutral-600 bg-neutral-50 min-h-[72px]">
                 {orden.comentarios}
               </div>
             </div>
@@ -312,35 +353,35 @@ function RecebirModal({ orden, onCancel, onConfirm }: {
           {/* Dropdowns */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-gray-500 font-medium mb-1.5">Cantidad de pallets</label>
+              <label className="block text-xs text-neutral-500 font-medium mb-1.5">Cantidad de pallets</label>
               <div className="relative">
                 <select
                   value={palletsRecibidos}
                   onChange={e => setPalletsRecibidos(e.target.value)}
-                  className="w-full appearance-none px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white pr-9"
+                  className="w-full appearance-none px-3 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-200 bg-white pr-9"
                 >
                   <option value="">Seleccione</option>
                   {Array.from({ length: maxPallets + 1 }, (_, i) => (
                     <option key={i} value={String(i)}>{i}</option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
               </div>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 font-medium mb-1.5">Cantidad de bultos</label>
+              <label className="block text-xs text-neutral-500 font-medium mb-1.5">Cantidad de bultos</label>
               <div className="relative">
                 <select
                   value={bultosRecibidos}
                   onChange={e => setBultosRecibidos(e.target.value)}
-                  className="w-full appearance-none px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white pr-9"
+                  className="w-full appearance-none px-3 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-200 bg-white pr-9"
                 >
                   <option value="">Seleccione</option>
                   {Array.from({ length: maxBultos + 1 }, (_, i) => (
                     <option key={i} value={String(i)}>{i}</option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
               </div>
             </div>
           </div>
@@ -357,20 +398,20 @@ function RecebirModal({ orden, onCancel, onConfirm }: {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 mt-2 border-t border-gray-100">
+        <div className="flex items-center justify-between px-6 py-4 mt-2 border-t border-neutral-100">
           <button
             onClick={onCancel}
-            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 font-medium transition-colors"
+            className="px-4 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 font-medium transition-colors duration-300"
           >
             Cerrar
           </button>
           <button
             onClick={onConfirm}
             disabled={!hasValues}
-            className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors flex items-center gap-2 ${
+            className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors duration-300 flex items-center gap-2 ${
               hasValues
-                ? "bg-indigo-600 hover:bg-indigo-700 text-white"
-                : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                ? "bg-primary-500 hover:bg-primary-600 text-white"
+                : "bg-neutral-100 text-neutral-400 cursor-not-allowed"
             }`}
           >
             <CheckCircle className="w-4 h-4" />
@@ -420,7 +461,7 @@ function ActionsCell({ orden, onPrimaryAction }: { orden: Orden; onPrimaryAction
       })()
     : null;
 
-  const btnCls = "flex items-center justify-center p-1.5 border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-gray-600 rounded-lg transition-colors";
+  const btnCls = "flex items-center justify-center p-1.5 font-medium whitespace-nowrap transition-colors duration-200 outline-none select-none rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200";
 
   return (
     <div className="flex items-center gap-1">
@@ -445,8 +486,8 @@ function ActionsCell({ orden, onPrimaryAction }: { orden: Orden; onPrimaryAction
       <button
         ref={dotsRef}
         onClick={toggleMenu}
-        className={`p-1.5 rounded-lg transition-colors ${
-          menuPos ? "bg-gray-100 text-gray-700" : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+        className={`p-1.5 rounded-lg transition-colors duration-300 ${
+          menuPos ? "bg-neutral-100 text-neutral-700" : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
         }`}
       >
         <DotsVertical className="w-4 h-4" />
@@ -464,10 +505,10 @@ function ActionsCell({ orden, onPrimaryAction }: { orden: Orden; onPrimaryAction
             pointerEvents: "none",
           }}
         >
-          <div className="bg-gray-900 text-white text-xs font-medium px-2 py-1 rounded-lg" style={NW}>
+          <div className="bg-neutral-900 text-white text-xs font-medium px-2 py-1 rounded-lg" style={NW}>
             {primary.tooltip}
           </div>
-          <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-gray-900" />
+          <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-neutral-900" />
         </div>,
         document.body
       )}
@@ -476,7 +517,7 @@ function ActionsCell({ orden, onPrimaryAction }: { orden: Orden; onPrimaryAction
       {mounted && menuPos && createPortal(
         <div
           style={{ position: "fixed", top: menuPos.top, right: menuPos.right, zIndex: 2147483647 }}
-          className="bg-white border border-gray-200 rounded-xl shadow-xl py-1.5 min-w-[192px]"
+          className="bg-white border border-neutral-200 rounded-xl shadow-xl py-1.5 min-w-[192px]"
           onMouseDown={e => e.stopPropagation()}
         >
           {menu.map((item, i) => {
@@ -486,12 +527,12 @@ function ActionsCell({ orden, onPrimaryAction }: { orden: Orden; onPrimaryAction
               <button
                 key={item.label}
                 onClick={() => { setMenuPos(null); if (item.href) router.push(item.href); }}
-                className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-colors ${
-                  item.danger ? "text-red-500 hover:bg-red-50" : "text-gray-700 hover:bg-gray-50"
-                } ${hasSeparator ? "border-t border-gray-100 mt-1 pt-2.5" : ""}`}
+                className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-colors duration-300 ${
+                  item.danger ? "text-red-500 hover:bg-red-50" : "text-neutral-700 hover:bg-neutral-50"
+                } ${hasSeparator ? "border-t border-neutral-100 mt-1 pt-2.5" : ""}`}
               >
                 {ItemIcon && (
-                  <ItemIcon className={`w-4 h-4 flex-shrink-0 ${item.danger ? "text-red-400" : "text-gray-400"}`} />
+                  <ItemIcon className={`w-4 h-4 flex-shrink-0 ${item.danger ? "text-red-400" : "text-neutral-400"}`} />
                 )}
                 {item.label}
               </button>
@@ -504,41 +545,62 @@ function ActionsCell({ orden, onPrimaryAction }: { orden: Orden; onPrimaryAction
   );
 }
 
-// ─── Filter Section component ─────────────────────────────────────────────────
+// ─── Filter Section component (accordion) ────────────────────────────────────
 function FilterSection({
   title,
   options,
   selected,
   onToggle,
   renderOption,
+  defaultOpen = true,
 }: {
   title: string;
   options: string[];
   selected: Set<string>;
   onToggle: (val: string) => void;
   renderOption?: (val: string) => React.ReactNode;
+  defaultOpen?: boolean;
 }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const scrollable = options.length >= 4;
+  const count = selected.size;
   return (
     <div>
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{title}</p>
-      <div className="space-y-1">
-        {options.map(opt => (
-          <label
-            key={opt}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors group"
-          >
-            <input
-              type="checkbox"
-              checked={selected.has(opt)}
-              onChange={() => onToggle(opt)}
-              className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-            />
-            {renderOption ? renderOption(opt) : (
-              <span className="text-sm text-gray-700">{opt}</span>
-            )}
-          </label>
-        ))}
-      </div>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center justify-between w-full group"
+      >
+        <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide flex items-center gap-2">
+          {title}
+          {count > 0 && (
+            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold leading-none">
+              {count}
+            </span>
+          )}
+        </span>
+        <ChevronDown className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-200 ${open ? "" : "-rotate-90"}`} />
+      </button>
+      {open && (
+        <div className={`space-y-1 mt-2 ${scrollable ? "overflow-y-auto max-h-[176px] pr-1 filter-scroll" : ""}`}>
+          {options.map(opt => (
+            <label
+              key={opt}
+              className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-neutral-50 transition-colors duration-300 group"
+            >
+              <input
+                type="checkbox"
+                checked={selected.has(opt)}
+                onChange={() => onToggle(opt)}
+                className="w-4 h-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500 cursor-pointer"
+              />
+              {renderOption ? renderOption(opt) : (
+                <span className="text-sm text-neutral-700">{opt}</span>
+              )}
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -553,7 +615,9 @@ function OrdenesPageInner() {
   const activeColumns = colOrder.filter(k => colVisible.includes(k));
 
   const tabsScrollRef = useRef<HTMLDivElement>(null);
-  const [showTabsChevron, setShowTabsChevron] = useState(false);
+  const tabsDragRef   = useRef({ active: false, startX: 0, scrollLeft: 0, moved: false });
+  const [showLeftArrow, setShowLeftArrow]   = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
 
   const [activeTab,         setActiveTab]         = useState<string>("Todas");
   const [showToast,         setShowToast]         = useState(false);
@@ -564,6 +628,7 @@ function OrdenesPageInner() {
   const [orStatusOverrides, setOrStatusOverrides] = useState<Record<string, Status>>({});
   const [recibirOrden,      setRecibirOrden]      = useState<Orden | null>(null);
   const [createdOrs,        setCreatedOrs]        = useState<Orden[]>([]);
+  const [showQrScanner,     setShowQrScanner]     = useState(false);
 
   // Read per-OR status overrides + created ORs from localStorage
   useEffect(() => {
@@ -624,6 +689,21 @@ function OrdenesPageInner() {
     [orStatusOverrides, createdOrs]
   );
 
+  // ── QR scanner helpers ──
+  const getOrInfo = useCallback((orId: string) => {
+    const o = ordenesEffective.find(x => x.id === orId);
+    if (!o) return undefined;
+    return { id: o.id, seller: o.seller, sucursal: o.sucursal, fechaAgendada: o.fechaAgendada, estado: o.estado, skus: o.skus, uTotales: o.uTotales, pallets: o.pallets, bultos: o.bultos };
+  }, [ordenesEffective]);
+
+  const handleQrConfirm = useCallback((orId: string) => {
+    // Persist the new estado to localStorage
+    localStorage.setItem(`amplifica_or_${orId}`, JSON.stringify({ estado: "Recepcionado en bodega" }));
+    setOrStatusOverrides(prev => ({ ...prev, [orId]: "Recepcionado en bodega" as Status }));
+    setToastMsg({ title: "Orden recepcionada", subtitle: `${orId} cambió a Recepcionado en bodega` });
+    setShowToast(true);
+  }, []);
+
   // ── Filter options (unique values from data) ──
   const allSellers    = useMemo(() => [...new Set(ordenesEffective.map(o => o.seller))].sort(),    [ordenesEffective]);
   const allSucursales = useMemo(() => [...new Set(ordenesEffective.map(o => o.sucursal))].sort(), [ordenesEffective]);
@@ -659,6 +739,28 @@ function OrdenesPageInner() {
     }
   }, [searchParams, router]);
 
+  // ── Sidebar global filters (synced via localStorage) ──
+  const [sidebarSucursal, setSidebarSucursal] = useState<string | null>(null);
+  const [sidebarSeller, setSidebarSeller]     = useState<string | null>(null);
+  const [sidebarDateFrom, setSidebarDateFrom] = useState<string | null>(null);
+  const [sidebarDateTo, setSidebarDateTo]     = useState<string | null>(null);
+
+  useEffect(() => {
+    const sync = () => {
+      const s = localStorage.getItem("amplifica_filter_sucursal");
+      const t = localStorage.getItem("amplifica_filter_seller");
+      const df = localStorage.getItem("amplifica_filter_date_from");
+      const dt = localStorage.getItem("amplifica_filter_date_to");
+      setSidebarSucursal(s || null);
+      setSidebarSeller(t || null);
+      setSidebarDateFrom(df || null);
+      setSidebarDateTo(dt || null);
+    };
+    sync();
+    window.addEventListener("amplifica-filter-change", sync);
+    return () => window.removeEventListener("amplifica-filter-change", sync);
+  }, []);
+
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDir,   setSortDir]   = useState<SortDir>("asc");
   const [pageSize,  setPageSize]  = useState(10);
@@ -673,6 +775,21 @@ function OrdenesPageInner() {
     let rows = [...ordenesEffective];
     const statusFilter = TAB_STATUS[activeTab];
     if (statusFilter) rows = rows.filter(o => o.estado === statusFilter);
+
+    // ── Sidebar global filters ──
+    if (sidebarSucursal) rows = rows.filter(o => o.sucursal === sidebarSucursal);
+    if (sidebarSeller)   rows = rows.filter(o => o.seller === sidebarSeller);
+
+    // ── Sidebar date range filter (creacion is DD/MM/YYYY, localStorage is YYYY-MM-DD) ──
+    if (sidebarDateFrom || sidebarDateTo) {
+      rows = rows.filter(o => {
+        const [d, m, y] = o.creacion.split("/").map(Number);
+        const iso = `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+        if (sidebarDateFrom && iso < sidebarDateFrom) return false;
+        if (sidebarDateTo   && iso > sidebarDateTo)   return false;
+        return true;
+      });
+    }
 
     // ── Apply multiselect filters ──
     if (filterSellers.size > 0)    rows = rows.filter(o => filterSellers.has(o.seller));
@@ -706,24 +823,46 @@ function OrdenesPageInner() {
       });
     }
     return rows;
-  }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes, ordenesEffective]);
+  }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes, ordenesEffective, sidebarSucursal, sidebarSeller, sidebarDateFrom, sidebarDateTo]);
 
   // Reset to page 1 whenever filters/tabs/search change
   useEffect(() => { setPage(1); }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes, pageSize]);
 
-  // Detect tabs overflow → show/hide chevron
+  // Detect tabs overflow → show/hide left/right arrows
   useEffect(() => {
     const el = tabsScrollRef.current;
     if (!el) return;
-    const checkOverflow = () =>
-      setShowTabsChevron(el.scrollWidth > el.clientWidth + 4);
-    checkOverflow();
-    el.addEventListener("scroll", checkOverflow);
-    const ro = new ResizeObserver(checkOverflow);
+    const update = () => {
+      setShowLeftArrow(el.scrollLeft > 4);
+      setShowRightArrow(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+    };
+    update();
+    el.addEventListener("scroll", update);
+    const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => {
-      el.removeEventListener("scroll", checkOverflow);
+      el.removeEventListener("scroll", update);
       ro.disconnect();
+    };
+  }, []);
+
+  // Drag-to-scroll for tabs
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const d = tabsDragRef.current;
+      if (!d.active || !tabsScrollRef.current) return;
+      const dx = e.clientX - d.startX;
+      if (Math.abs(dx) > 4) {
+        d.moved = true;
+        tabsScrollRef.current.scrollLeft = d.scrollLeft - dx;
+      }
+    };
+    const onUp = () => { tabsDragRef.current.active = false; };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    return () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
     };
   }, []);
 
@@ -744,10 +883,10 @@ function OrdenesPageInner() {
         <div className="fixed top-5 right-5 z-50 bg-white border border-green-200 rounded-xl shadow-xl p-4 flex items-start gap-3 max-w-xs">
           <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-semibold text-gray-800">{toastMsg.title}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{toastMsg.subtitle}</p>
+            <p className="text-sm font-semibold text-neutral-800">{toastMsg.title}</p>
+            <p className="text-xs text-neutral-500 mt-0.5">{toastMsg.subtitle}</p>
           </div>
-          <button onClick={() => setShowToast(false)} className="text-gray-400 hover:text-gray-600 flex-shrink-0">
+          <button onClick={() => setShowToast(false)} className="text-neutral-400 hover:text-neutral-600 flex-shrink-0">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -766,19 +905,19 @@ function OrdenesPageInner() {
           >
             <div className="flex items-start justify-between gap-3 mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-9 h-9 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <InfoCircle className="w-5 h-5 text-indigo-600" />
+                <div className="w-9 h-9 bg-primary-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <InfoCircle className="w-5 h-5 text-primary-500" />
                 </div>
-                <h2 className="text-base font-semibold text-gray-900">Órdenes de Recepción</h2>
+                <h2 className="text-base font-semibold text-neutral-900">Órdenes de Recepción</h2>
               </div>
-              <button onClick={() => setShowInfo(false)} className="text-gray-400 hover:text-gray-600 flex-shrink-0 mt-0.5">
+              <button onClick={() => setShowInfo(false)} className="text-neutral-400 hover:text-neutral-600 flex-shrink-0 mt-0.5">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-sm text-gray-600 leading-relaxed">
+            <p className="text-sm text-neutral-600 leading-relaxed">
               Las <strong>Órdenes de Recepción (OR)</strong> gestionan la entrada de mercancía al centro de distribución. Cada OR registra el proceso completo: desde la programación de fecha de entrega hasta la verificación del inventario recibido.
             </p>
-            <ul className="mt-3 space-y-1.5 text-sm text-gray-500">
+            <ul className="mt-3 space-y-1.5 text-sm text-neutral-500">
               <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" /> Programa citas de descarga con horario</li>
               <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" /> Declara SKUs y unidades antes de la recepción</li>
               <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" /> Rastrea diferencias y productos no pickeables</li>
@@ -821,21 +960,21 @@ function OrdenesPageInner() {
             onMouseDown={e => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Sliders01 className="w-4 h-4 text-gray-600" />
+                <div className="w-8 h-8 bg-neutral-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Sliders01 className="w-4 h-4 text-neutral-600" />
                 </div>
-                <h2 className="text-base font-semibold text-gray-900">Filtros</h2>
+                <h2 className="text-base font-semibold text-neutral-900">Filtros</h2>
                 {activeFilterCount > 0 && (
-                  <span className="inline-flex items-center justify-center w-5 h-5 bg-indigo-600 text-white text-[10px] font-bold rounded-full">
+                  <span className="inline-flex items-center justify-center w-5 h-5 bg-primary-500 text-white text-[10px] font-bold rounded-full">
                     {activeFilterCount}
                   </span>
                 )}
               </div>
               <button
                 onClick={() => setShowFilters(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -867,12 +1006,12 @@ function OrdenesPageInner() {
                 onToggle={v => toggleInSet(setFilterTagTypes, v)}
                 renderOption={key => {
                   const opt = TAG_FILTER_OPTIONS.find(t => t.key === key);
-                  if (!opt) return <span className="text-sm text-gray-700">{key}</span>;
+                  if (!opt) return <span className="text-sm text-neutral-700">{key}</span>;
                   const OptIcon = opt.Icon;
                   return (
                     <span className="flex items-center gap-2">
                       <OptIcon className={`w-4 h-4 flex-shrink-0 ${opt.iconClass}`} />
-                      <span className="text-sm text-gray-700">{opt.label}</span>
+                      <span className="text-sm text-neutral-700">{opt.label}</span>
                     </span>
                   );
                 }}
@@ -880,17 +1019,17 @@ function OrdenesPageInner() {
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100 bg-gray-50">
+            <div className="flex items-center justify-between px-5 py-4 border-t border-neutral-100 bg-neutral-50">
               <button
                 onClick={clearAllFilters}
-                className="text-sm text-gray-500 hover:text-gray-700 font-medium transition-colors disabled:opacity-40"
+                className="text-sm text-neutral-500 hover:text-neutral-700 font-medium transition-colors duration-300 disabled:opacity-40"
                 disabled={activeFilterCount === 0}
               >
                 Limpiar filtros
               </button>
               <button
                 onClick={() => setShowFilters(false)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                className="bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors duration-300"
               >
                 Aplicar
               </button>
@@ -902,35 +1041,27 @@ function OrdenesPageInner() {
       {/* Page header */}
       <div className="flex items-center justify-between mb-5 gap-4">
         <div className="flex items-center gap-2 min-w-0">
-          <h1 className="text-2xl font-bold text-gray-900" style={NW}>Órdenes de Recepción</h1>
+          <h1 className="text-2xl font-bold text-neutral-900" style={NW}>Órdenes de Recepción</h1>
           <button
             onClick={() => setShowInfo(true)}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300"
           >
             <InfoCircle className="w-5 h-5" />
           </button>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm text-gray-600 font-medium transition-colors"
-            style={NW}
-          >
-            <Download01 className="w-4 h-4" /> Exportar
-          </button>
-          <Link
-            href="/recepciones/crear?mode=sin-agenda"
-            className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm text-gray-600 font-medium transition-colors"
-            style={NW}
-          >
+          <Button variant="tertiary" size="md" iconLeft={<Download01 className="w-4 h-4" />}>
+            Exportar
+          </Button>
+          <Button variant="secondary" href="/recepciones/crear?mode=sin-agenda">
             Recepción sin agenda
-          </Link>
-          <Link
-            href="/recepciones/crear"
-            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-            style={NW}
-          >
-            <Plus className="w-4 h-4" /> Crear OR
-          </Link>
+          </Button>
+          <Button variant="secondary" iconLeft={<QrCode02 className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
+            Escanear QR
+          </Button>
+          <Button variant="primary" href="/recepciones/crear" iconLeft={<Plus className="w-4 h-4" />}>
+            Crear recepción
+          </Button>
         </div>
       </div>
 
@@ -940,29 +1071,53 @@ function OrdenesPageInner() {
         <div className="relative flex-1 min-w-0">
           <div
             ref={tabsScrollRef}
-            className="tabs-scroll flex items-center gap-1 overflow-x-auto pb-0.5"
+            className="tabs-scroll flex items-center gap-1 overflow-x-auto pb-0.5 select-none"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+            onMouseDown={e => {
+              const el = tabsScrollRef.current;
+              if (!el) return;
+              tabsDragRef.current = { active: true, startX: e.clientX, scrollLeft: el.scrollLeft, moved: false };
+            }}
+            onClickCapture={e => {
+              if (tabsDragRef.current.moved) {
+                e.stopPropagation();
+                tabsDragRef.current.moved = false;
+              }
+            }}
           >
             {TABS.map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 style={NW}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-colors flex-shrink-0 ${
-                  activeTab === tab ? "bg-gray-900 text-white font-medium" : "text-gray-600 hover:bg-gray-100"
+                className={`px-3 py-1.5 rounded-lg text-sm transition-colors duration-300 flex-shrink-0 ${
+                  activeTab === tab ? "bg-neutral-900 text-white font-medium" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
                 }`}
               >
                 {tab}
               </button>
             ))}
           </div>
-          {/* Gradient + chevron when overflowing */}
-          {showTabsChevron && (
+          {/* Left arrow */}
+          {showLeftArrow && (
             <>
-              <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-white via-white/80 to-transparent" />
+              <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-white to-transparent" />
               <button
-                onClick={() => tabsScrollRef.current?.scrollBy({ left: 9999, behavior: "smooth" })}
-                className="absolute inset-y-0 right-0 flex items-center justify-center w-8 text-gray-500 hover:text-gray-900 transition-colors"
+                onClick={() => tabsScrollRef.current?.scrollBy({ left: -200, behavior: "smooth" })}
+                className="absolute inset-y-0 left-0 flex items-center justify-center w-8 text-neutral-500 hover:text-neutral-900 transition-colors duration-300"
+                aria-label="Tabs anteriores"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </>
+          )}
+          {/* Right arrow */}
+          {showRightArrow && (
+            <>
+              <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-white to-transparent" />
+              <button
+                onClick={() => tabsScrollRef.current?.scrollBy({ left: 200, behavior: "smooth" })}
+                className="absolute inset-y-0 right-0 flex items-center justify-center w-8 text-neutral-500 hover:text-neutral-900 transition-colors duration-300"
                 aria-label="Ver más tabs"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -976,16 +1131,16 @@ function OrdenesPageInner() {
           {/* ── Filters button — opens filter modal ── */}
           <button
             onClick={() => setShowFilters(true)}
-            className={`relative p-2 border rounded-lg transition-colors ${
+            className={`relative p-2 rounded-lg transition-colors duration-300 ${
               activeFilterCount > 0
-                ? "border-indigo-300 bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
-                : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                ? "bg-primary-50 text-primary-500 hover:bg-primary-100"
+                : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
             }`}
           >
             <Sliders01 className="w-4 h-4" />
             {activeFilterCount > 0 && (
               <span
-                className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-indigo-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center"
+                className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-primary-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center"
                 style={{ lineHeight: 1 }}
               >
                 {activeFilterCount}
@@ -995,23 +1150,23 @@ function OrdenesPageInner() {
 
           <Link
             href="/recepciones/columnas"
-            className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center justify-center transition-colors"
+            className="p-2 bg-neutral-100 rounded-lg hover:bg-neutral-200 flex items-center justify-center transition-colors duration-300"
             title="Editor de columnas"
           >
-            <LayoutGrid01 className="w-4 h-4 text-gray-500" />
+            <LayoutGrid01 className="w-4 h-4 text-neutral-500" />
           </Link>
 
           <div className="relative">
-            <SearchLg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <SearchLg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
             <input
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Buscar en órdenes"
-              className="pl-9 pr-8 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 w-52"
+              className="pl-9 pr-8 py-2 bg-neutral-100 rounded-lg text-sm text-neutral-700 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200 w-52"
             />
             {search && (
-              <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
@@ -1022,19 +1177,19 @@ function OrdenesPageInner() {
       {/* Active filter chips */}
       {activeFilterCount > 0 && (
         <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <span className="text-xs text-gray-500 font-medium">Filtros activos:</span>
+          <span className="text-xs text-neutral-500 font-medium">Filtros activos:</span>
           {[...filterSellers].map(s => (
-            <span key={s} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full font-medium">
+            <span key={s} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-primary-50 text-primary-600 border border-primary-200 rounded-full font-medium">
               {s}
-              <button onClick={() => toggleInSet(setFilterSellers, s)} className="ml-0.5 text-indigo-400 hover:text-indigo-600">
+              <button onClick={() => toggleInSet(setFilterSellers, s)} className="ml-0.5 text-primary-400 hover:text-primary-500">
                 <X className="w-3 h-3" />
               </button>
             </span>
           ))}
           {[...filterSucursales].map(s => (
-            <span key={s} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full font-medium">
+            <span key={s} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-primary-50 text-primary-600 border border-primary-200 rounded-full font-medium">
               {s}
-              <button onClick={() => toggleInSet(setFilterSucursales, s)} className="ml-0.5 text-indigo-400 hover:text-indigo-600">
+              <button onClick={() => toggleInSet(setFilterSucursales, s)} className="ml-0.5 text-primary-400 hover:text-primary-500">
                 <X className="w-3 h-3" />
               </button>
             </span>
@@ -1043,66 +1198,66 @@ function OrdenesPageInner() {
             const opt = TAG_FILTER_OPTIONS.find(t => t.key === k);
             const ChipIcon = opt?.Icon;
             return (
-              <span key={k} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full font-medium">
+              <span key={k} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-primary-50 text-primary-600 border border-primary-200 rounded-full font-medium">
                 {ChipIcon && <ChipIcon className={`w-3 h-3 ${opt?.iconClass}`} />}
                 {opt?.label ?? k}
-                <button onClick={() => toggleInSet(setFilterTagTypes, k)} className="ml-0.5 text-indigo-400 hover:text-indigo-600">
+                <button onClick={() => toggleInSet(setFilterTagTypes, k)} className="ml-0.5 text-primary-400 hover:text-primary-500">
                   <X className="w-3 h-3" />
                 </button>
               </span>
             );
           })}
-          <button onClick={clearAllFilters} className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2">
+          <button onClick={clearAllFilters} className="text-xs text-neutral-400 hover:text-neutral-600 underline underline-offset-2">
             Limpiar todo
           </button>
         </div>
       )}
 
       {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <div className="overflow-x-auto w-full">
+      <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto w-full table-scroll">
           <table className="text-sm border-collapse" style={{ width: "max-content", minWidth: "100%" }}>
 
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
+              <tr className="border-b border-neutral-100 bg-neutral-50">
                 {/* Fixed: ID */}
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide" style={NW}>ID</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-500" style={NW}>ID</th>
 
                 {/* Dynamic columns */}
                 {activeColumns.map(key => {
                   if (key === "creacion") return (
-                    <th key="creacion" className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:text-gray-700 select-none" style={NW} onClick={() => toggleSort("creacion")}>
+                    <th key="creacion" className="text-left py-3 px-4 text-xs font-semibold text-neutral-500 cursor-pointer hover:text-neutral-700 select-none" style={NW} onClick={() => toggleSort("creacion")}>
                       Creación <SortIcon field="creacion" sortField={sortField} sortDir={sortDir} />
                     </th>
                   );
                   if (key === "fechaAgendada") return (
-                    <th key="fechaAgendada" className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:text-gray-700 select-none" style={NW} onClick={() => toggleSort("fechaAgendada")}>
-                      F. Agendada <SortIcon field="fechaAgendada" sortField={sortField} sortDir={sortDir} />
+                    <th key="fechaAgendada" className="text-left py-3 px-4 text-xs font-semibold text-neutral-500 cursor-pointer hover:text-neutral-700 select-none" style={NW} onClick={() => toggleSort("fechaAgendada")}>
+                      F. agendada <SortIcon field="fechaAgendada" sortField={sortField} sortDir={sortDir} />
                     </th>
                   );
                   const LABELS: Record<ColumnKey, string> = {
-                    creacion: "Creación", fechaAgendada: "F. Agendada",
+                    creacion: "Creación", fechaAgendada: "F. agendada",
                     seller: "Tienda", sucursal: "Sucursal", estado: "Estado",
-                    skus: "SKUs", uTotales: "U. Totales", tags: "Estado Productos",
+                    skus: "SKUs", uTotales: "U. totales", tags: "Estado productos",
                   };
                   return (
-                    <th key={key} className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide" style={NW}>
+                    <th key={key} className="text-left py-3 px-4 text-xs font-semibold text-neutral-500" style={NW}>
                       {LABELS[key]}
                     </th>
                   );
                 })}
 
                 {/* Fixed: Acciones */}
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide bg-gray-50" style={{ ...NW, ...stickyRight }}>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-500 bg-neutral-50" style={{ ...NW, ...stickyRight }}>
                   Acciones
                 </th>
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-neutral-50">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={activeColumns.length + 2} className="py-14 text-center text-sm text-gray-400" style={NW}>
+                  <td colSpan={activeColumns.length + 2} className="py-14 text-center text-sm text-neutral-400" style={NW}>
                     No se encontraron órdenes{search ? ` para "${search}"` : ""}.
                   </td>
                 </tr>
@@ -1110,17 +1265,17 @@ function OrdenesPageInner() {
                 paginatedRows.map((orden, i) => (
                   <tr
                     key={`${orden.id}-${i}`}
-                    className={`hover:bg-gray-50/60 transition-colors group ${
-                      orden.isSubId ? "bg-gray-50/40" : ""
+                    className={`hover:bg-neutral-50/60 transition-colors duration-300 group ${
+                      orden.isSubId ? "bg-neutral-50/40" : ""
                     }`}
                   >
                     {/* Fixed: ID */}
                     <td className="py-3 px-4" style={NW}>
                       {orden.isSubId ? (
                         <span className="flex items-center gap-1">
-                          <span className="text-gray-300 text-sm select-none pl-1">└</span>
+                          <span className="text-neutral-300 text-sm select-none pl-1">└</span>
                           <span
-                            className="inline-block bg-gray-100 text-gray-500 rounded px-2 py-0.5"
+                            className="inline-block bg-neutral-100 text-neutral-500 rounded px-2 py-0.5"
                             style={{ fontFamily: "var(--font-atkinson)", fontSize: "11px" }}
                           >
                             {orden.id}
@@ -1128,7 +1283,7 @@ function OrdenesPageInner() {
                         </span>
                       ) : (
                         <span
-                          className="inline-block bg-gray-100 text-gray-700 rounded px-2 py-0.5"
+                          className="inline-block bg-neutral-100 text-neutral-700 rounded px-2 py-0.5"
                           style={{ fontFamily: "var(--font-atkinson)", fontSize: "12px" }}
                         >
                           {orden.id}
@@ -1141,16 +1296,16 @@ function OrdenesPageInner() {
                       switch (key) {
                         case "creacion":
                           return (
-                            <td key="creacion" className="py-3 px-4 text-gray-600" style={NW}>
+                            <td key="creacion" className="py-3 px-4 text-neutral-600" style={NW}>
                               {orden.creacion}
                             </td>
                           );
                         case "fechaAgendada":
                           return (
                             <td key="fechaAgendada" className="py-3 px-4">
-                              <p className="text-gray-700" style={NW}>
+                              <p className="text-neutral-700" style={NW}>
                                 {orden.fechaAgendada === "—"
-                                  ? <span className="text-gray-400">Sin agendar</span>
+                                  ? <span className="text-neutral-400">Sin agendar</span>
                                   : orden.fechaAgendada
                                 }
                               </p>
@@ -1165,13 +1320,13 @@ function OrdenesPageInner() {
                           );
                         case "seller":
                           return (
-                            <td key="seller" className="py-3 px-4 text-gray-600" style={NW}>
+                            <td key="seller" className="py-3 px-4 text-neutral-600" style={NW}>
                               {orden.seller}
                             </td>
                           );
                         case "sucursal":
                           return (
-                            <td key="sucursal" className="py-3 px-4 text-gray-600" style={NW}>
+                            <td key="sucursal" className="py-3 px-4 text-neutral-600" style={NW}>
                               {orden.sucursal}
                             </td>
                           );
@@ -1183,13 +1338,13 @@ function OrdenesPageInner() {
                           );
                         case "skus":
                           return (
-                            <td key="skus" className="py-3 px-4 text-gray-700 tabular-nums" style={NW}>
+                            <td key="skus" className="py-3 px-4 text-neutral-700 tabular-nums" style={NW}>
                               {orden.skus}
                             </td>
                           );
                         case "uTotales":
                           return (
-                            <td key="uTotales" className="py-3 px-4 text-gray-700 tabular-nums" style={NW}>
+                            <td key="uTotales" className="py-3 px-4 text-neutral-700 tabular-nums" style={NW}>
                               {orden.uTotales}
                             </td>
                           );
@@ -1213,7 +1368,7 @@ function OrdenesPageInner() {
                                   })}
                                 </div>
                               ) : (
-                                <span className="text-gray-300 text-xs">—</span>
+                                <span className="text-neutral-300 text-xs">—</span>
                               )}
                             </td>
                           );
@@ -1224,7 +1379,7 @@ function OrdenesPageInner() {
 
                     {/* Fixed: Acciones */}
                     <td
-                      className="py-3 px-4 bg-white group-hover:bg-gray-50/60"
+                      className="py-3 px-4 bg-white group-hover:bg-neutral-50/60"
                       style={{ ...NW, ...stickyRight }}
                     >
                       <ActionsCell
@@ -1240,19 +1395,21 @@ function OrdenesPageInner() {
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+        <div className="flex items-center justify-between px-3 py-3 border-t border-neutral-100">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500" style={NW}>Mostrar</span>
-            <select
-              value={pageSize}
-              onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
-              className="border border-gray-200 rounded-lg px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            >
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-            </select>
-            <span className="text-sm text-gray-400" style={NW}>
+            <label className="flex items-center gap-1.5 bg-neutral-100 rounded-lg px-3 h-[44px] text-sm text-neutral-700 cursor-pointer">
+              <span className="text-neutral-500">Mostrar</span>
+              <select
+                value={pageSize}
+                onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
+                className="bg-transparent font-medium focus:outline-none cursor-pointer"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+              </select>
+            </label>
+            <span className="text-sm text-neutral-400" style={NW}>
               {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
             </span>
           </div>
@@ -1260,18 +1417,18 @@ function OrdenesPageInner() {
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={clampedPage <= 1}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="px-3 h-[44px] bg-neutral-100 rounded-lg text-sm text-neutral-700 hover:bg-neutral-200 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300"
               style={NW}
             >
               ← Anterior
             </button>
-            <span className="text-sm text-gray-500 tabular-nums" style={NW}>
+            <span className="text-sm text-neutral-500 tabular-nums" style={NW}>
               {fromRow}–{toRow} de {filtered.length}
             </span>
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={clampedPage >= totalPages}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="px-3 h-[44px] bg-neutral-100 rounded-lg text-sm text-neutral-700 hover:bg-neutral-200 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300"
               style={NW}
             >
               Siguiente →
@@ -1279,6 +1436,14 @@ function OrdenesPageInner() {
           </div>
         </div>
       </div>
+
+      {/* QR Scanner Modal */}
+      <QrScannerModal
+        open={showQrScanner}
+        onClose={() => setShowQrScanner(false)}
+        onConfirm={handleQrConfirm}
+        getOrInfo={getOrInfo}
+      />
     </div>
   );
 }

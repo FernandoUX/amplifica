@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { ORDENES_SEED } from "../_data";
 import Link from "next/link";
+import StatusBadge, { type Status } from "@/components/recepciones/StatusBadge";
 import {
   ChevronRight, ChevronLeft, Check, X, Trash2,
   Plus, ChevronDown, ChevronUp,
@@ -12,13 +14,21 @@ import {
 } from "@untitled-ui/icons-react";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-type Sucursal = { id: string; label: string; address: string; active: boolean };
+type Sucursal = { id: string; label: string; address: string; timezone: string; active: boolean };
 
 const DEFAULT_SUCURSALES: Sucursal[] = [
-  { id: "quilicura",        label: "Quilicura",       address: "El Juncal 901, Quilicura", active: true },
-  { id: "la-reina",         label: "La Reina",         address: "La Reina, Santiago",       active: true },
-  { id: "lo-barnechea",     label: "Lo Barnechea",     address: "Lo Barnechea, Santiago",   active: true },
-  { id: "santiago-centro",  label: "Santiago Centro",  address: "Santiago Centro",          active: true },
+  { id: "quilicura",        label: "Quilicura",       address: "El Juncal 901, Quilicura",     timezone: "America/Santiago", active: true },
+  { id: "la-reina",         label: "La Reina",         address: "La Reina, Santiago",           timezone: "America/Santiago", active: true },
+  { id: "lo-barnechea",     label: "Lo Barnechea",     address: "Lo Barnechea, Santiago",       timezone: "America/Santiago", active: true },
+  { id: "santiago-centro",  label: "Santiago Centro",  address: "Santiago Centro, Chile",       timezone: "America/Santiago", active: true },
+];
+
+const TIMEZONES = [
+  { value: "America/Santiago",    label: "Santiago (UTC−3/−4)" },
+  { value: "Pacific/Easter",      label: "Isla de Pascua (UTC−5/−6)" },
+  { value: "America/Argentina/Buenos_Aires", label: "Buenos Aires (UTC−3)" },
+  { value: "America/Lima",        label: "Lima / Bogotá (UTC−5)" },
+  { value: "America/Mexico_City", label: "Ciudad de México (UTC−6/−5)" },
 ];
 
 const DIAS: { key: DiaSemana; label: string; short: string }[] = [
@@ -159,10 +169,10 @@ function ConfigCard({ title, description, children }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-      <div className="px-5 py-4 border-b border-gray-100">
-        <p className="text-sm font-semibold text-gray-900">{title}</p>
-        {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
+    <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+      <div className="px-5 py-4 border-b border-neutral-100">
+        <p className="text-sm font-semibold text-neutral-900">{title}</p>
+        {description && <p className="text-xs text-neutral-500 mt-0.5">{description}</p>}
       </div>
       <div className="px-5 py-4 space-y-4">
         {children}
@@ -177,10 +187,90 @@ function FieldRow({ label, hint, children }: {
   return (
     <div className="flex items-start justify-between gap-8">
       <div className="flex-1 min-w-0 pt-0.5">
-        <p className="text-sm text-gray-700 font-medium">{label}</p>
-        {hint && <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{hint}</p>}
+        <p className="text-sm text-neutral-700 font-medium">{label}</p>
+        {hint && <p className="text-xs text-neutral-400 mt-0.5 leading-relaxed">{hint}</p>}
       </div>
       <div className="flex-shrink-0">{children}</div>
+    </div>
+  );
+}
+
+// ─── TimePicker ───────────────────────────────────────────────────────────────
+function TimePicker({ value, onChange, className = "" }: {
+  value: string;
+  onChange: (v: string) => void;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const parts   = value.split(":");
+  const hours   = Math.min(23, Math.max(0, parseInt(parts[0]) || 0));
+  const minutes = Math.min(59, Math.max(0, parseInt(parts[1]) || 0));
+
+  function fmt(n: number) { return String(n).padStart(2, "0"); }
+  function emit(hh: number, mm: number) { onChange(`${fmt(hh)}:${fmt(mm)}`); }
+
+  useEffect(() => {
+    function oc(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", oc);
+    return () => document.removeEventListener("mousedown", oc);
+  }, []);
+
+  return (
+    <div ref={ref} className={`relative ${className}`}>
+      <input
+        type="text"
+        readOnly
+        value={value || "──:──"}
+        onClick={() => setOpen(o => !o)}
+        className="w-[4.5rem] text-center cursor-pointer px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 text-neutral-700 tabular-nums bg-white select-none"
+      />
+
+      {open && (
+        <div className="absolute z-50 left-0 mt-1 bg-white border border-neutral-200 rounded-xl shadow-xl p-3 flex flex-col items-center gap-0.5 w-28">
+          {/* Up row */}
+          <div className="flex items-center justify-around w-full">
+            <button
+              onClick={() => emit((hours + 1) % 24, minutes)}
+              className="p-1.5 text-neutral-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors duration-300"
+            >
+              <ChevronUp className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => emit(hours, (minutes + 1) % 60)}
+              className="p-1.5 text-neutral-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors duration-300"
+            >
+              <ChevronUp className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Time display */}
+          <div className="flex items-center gap-1 text-xl font-semibold text-neutral-800 tabular-nums py-1 select-none">
+            <span>{fmt(hours)}</span>
+            <span className="text-neutral-400 leading-none">:</span>
+            <span>{fmt(minutes)}</span>
+          </div>
+
+          {/* Down row */}
+          <div className="flex items-center justify-around w-full">
+            <button
+              onClick={() => emit((hours - 1 + 24) % 24, minutes)}
+              className="p-1.5 text-neutral-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors duration-300"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => emit(hours, (minutes - 1 + 60) % 60)}
+              className="p-1.5 text-neutral-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors duration-300"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -210,7 +300,7 @@ export default function ConfiguracionPage() {
   // ── Sucursales state ──────────────────────────────────────────────────────
   const [sucursales,       setSucursales]       = useState<Sucursal[]>(DEFAULT_SUCURSALES);
   const [showAddSucursal,  setShowAddSucursal]  = useState(false);
-  const [newSucursalForm,  setNewSucursalForm]  = useState({ label: "", address: "" });
+  const [newSucursalForm,  setNewSucursalForm]  = useState({ label: "", address: "", timezone: "America/Santiago" });
   const [deactivateTarget, setDeactivateTarget] = useState<string | null>(null);
 
   // ── Calendar view state ───────────────────────────────────────────────────
@@ -266,9 +356,13 @@ export default function ConfiguracionPage() {
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/\s+/g, "-")
       .replace(/[^a-z0-9-]/g, "");
-    saveSucursales([...sucursales, { id, label, address: newSucursalForm.address.trim(), active: true }]);
+    saveSucursales([...sucursales, { id, label, address: newSucursalForm.address.trim(), timezone: newSucursalForm.timezone, active: true }]);
     setShowAddSucursal(false);
-    setNewSucursalForm({ label: "", address: "" });
+    setNewSucursalForm({ label: "", address: "", timezone: "America/Santiago" });
+  };
+
+  const updateSucursalField = (id: string, field: keyof Pick<Sucursal, "label" | "address" | "timezone">, value: string) => {
+    saveSucursales(sucursales.map(s => s.id === id ? { ...s, [field]: value } : s));
   };
 
   const confirmDeactivate = (id: string) => {
@@ -333,17 +427,17 @@ export default function ConfiguracionPage() {
     setDeleteBloqueo(null);
   };
 
-  // ── Calendar mock ORs ─────────────────────────────────────────────────────
+  // ── Calendar ORs (seed + created) ────────────────────────────────────────
   const calOrs = useMemo(() => {
+    let created: { fechaAgendada?: string; sucursal?: string; seller?: string; estado?: string; id?: string }[] = [];
     try {
       const stored = localStorage.getItem("amplifica_created_ors");
-      const raw: { fechaAgendada?: string; sucursal?: string; seller?: string; estado?: string; id?: string }[] =
-        stored ? JSON.parse(stored) : [];
-      return raw.filter(o =>
-        o.fechaAgendada &&
-        (o.sucursal ?? "").toLowerCase().replace(/\s/g, "-") === calSucursal
-      );
-    } catch { return []; }
+      if (stored) created = JSON.parse(stored);
+    } catch { /* ignore */ }
+    return [...ORDENES_SEED, ...created].filter(o =>
+      o.fechaAgendada && o.fechaAgendada !== "—" &&
+      (o.sucursal ?? "").toLowerCase().replace(/\s/g, "-") === calSucursal
+    );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calSucursal, bloqueos]);
 
@@ -377,14 +471,14 @@ export default function ConfiguracionPage() {
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-neutral-100">
 
       {/* ── Breadcrumb ── */}
-      <div className="bg-white border-b border-gray-100">
-        <nav className="max-w-5xl mx-auto px-6 py-3 flex items-center gap-1.5 text-sm text-gray-500">
-          <Link href="/recepciones" className="hover:text-indigo-600 transition-colors">Recepciones</Link>
-          <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
-          <span className="text-gray-700 font-medium">Configuración</span>
+      <div>
+        <nav className="max-w-5xl mx-auto px-6 py-3 flex items-center gap-1.5 text-sm text-neutral-500">
+          <Link href="/recepciones" className="hover:text-primary-500 transition-colors duration-300">Recepciones</Link>
+          <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
+          <span className="text-neutral-700 font-medium">Configuración</span>
         </nav>
       </div>
 
@@ -393,33 +487,34 @@ export default function ConfiguracionPage() {
         {/* ── Title ── */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2.5">
-              <Settings01 className="w-6 h-6 text-gray-400" />
+            <h1 className="text-2xl font-bold text-neutral-900 flex items-center gap-2.5">
+              <Settings01 className="w-6 h-6 text-neutral-400" />
               Configuración
             </h1>
-            <p className="text-sm text-gray-400 mt-0.5">Panel de administración del calendario de recepciones</p>
+            <p className="text-sm text-neutral-400 mt-0.5">Panel de administración del calendario de recepciones</p>
           </div>
         </div>
 
         {/* ── Tabs ── */}
-        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+        <div className="flex border-b border-neutral-200">
           {([
             { key: "sucursales",  label: "Sucursales",           icon: Building01 },
             { key: "feriados",    label: "Feriados y bloqueos",  icon: CalendarDate },
             { key: "calendario",  label: "Vista de calendario",  icon: Calendar },
           ] as const).map(tab => {
             const Icon = tab.icon;
+            const isActive = activeTab === tab.key;
             return (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  activeTab === tab.key
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
+                className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors duration-300 ${
+                  isActive
+                    ? "border-primary-500 text-primary-500"
+                    : "border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300"
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className={`w-4 h-4 ${isActive ? "text-primary-500" : "text-neutral-400"}`} />
                 {tab.label}
               </button>
             );
@@ -439,10 +534,10 @@ export default function ConfiguracionPage() {
                   <div key={s.id} className="relative group">
                     <button
                       onClick={() => setActiveSucursal(s.id)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors duration-300 ${
                         activeSucursal === s.id
-                          ? "bg-indigo-600 text-white border-indigo-600"
-                          : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600"
+                          ? "bg-primary-500 text-white border-primary-500"
+                          : "bg-white text-neutral-600 border-neutral-200 hover:border-primary-300 hover:text-primary-500"
                       }`}
                     >
                       <Building01 className="w-3.5 h-3.5" />
@@ -452,7 +547,7 @@ export default function ConfiguracionPage() {
                     <button
                       onClick={() => setDeactivateTarget(s.id)}
                       title="Desactivar sucursal"
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:border-red-300 opacity-0 group-hover:opacity-100 transition-all shadow-sm z-10"
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white border border-neutral-200 rounded-full flex items-center justify-center text-neutral-400 hover:text-red-500 hover:border-red-300 opacity-0 group-hover:opacity-100 transition-all shadow-sm z-10"
                     >
                       <X className="w-2.5 h-2.5" />
                     </button>
@@ -461,7 +556,7 @@ export default function ConfiguracionPage() {
                 {/* Add new sucursal */}
                 <button
                   onClick={() => setShowAddSucursal(v => !v)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-dashed border-gray-300 text-gray-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-dashed border-neutral-300 text-neutral-400 hover:border-primary-400 hover:text-primary-500 transition-colors duration-300"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Nueva sucursal
@@ -471,13 +566,13 @@ export default function ConfiguracionPage() {
               {/* Inactive sucursales — click to reactivate */}
               {sucursales.some(s => !s.active) && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs text-gray-400 font-medium">Inactivas:</span>
+                  <span className="text-xs text-neutral-400 font-medium">Inactivas:</span>
                   {sucursales.filter(s => !s.active).map(s => (
                     <button
                       key={s.id}
                       onClick={() => reactivateSucursal(s.id)}
                       title="Reactivar sucursal"
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border border-dashed border-gray-200 text-gray-400 hover:border-green-300 hover:text-green-600 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border border-dashed border-neutral-200 text-neutral-400 hover:border-green-300 hover:text-green-600 transition-colors duration-300"
                     >
                       <Check className="w-3 h-3" />
                       {s.label}
@@ -488,46 +583,59 @@ export default function ConfiguracionPage() {
 
               {/* Add sucursal inline form */}
               {showAddSucursal && (
-                <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-5 space-y-4">
+                <div className="bg-primary-50 border border-primary-100 rounded-xl p-5 space-y-4">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-indigo-800">Nueva sucursal</p>
-                    <button onClick={() => setShowAddSucursal(false)} className="text-indigo-400 hover:text-indigo-600">
+                    <p className="text-sm font-semibold text-primary-700">Nueva sucursal</p>
+                    <button onClick={() => setShowAddSucursal(false)} className="text-primary-400 hover:text-primary-500">
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1.5">Nombre *</label>
+                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Nombre *</label>
                       <input
                         type="text"
                         value={newSucursalForm.label}
                         onChange={e => setNewSucursalForm(f => ({ ...f, label: e.target.value }))}
                         placeholder="Ej: Maipú, Las Condes..."
-                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-300"
+                        className="w-full px-3 py-2.5 border border-neutral-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 placeholder-neutral-400 text-neutral-700"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1.5">Dirección</label>
-                      <input
-                        type="text"
-                        value={newSucursalForm.address}
-                        onChange={e => setNewSucursalForm(f => ({ ...f, address: e.target.value }))}
-                        placeholder="Ej: Av. Pajaritos 123, Maipú"
-                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-300"
-                      />
+                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Zona horaria</label>
+                      <div className="relative">
+                        <select
+                          value={newSucursalForm.timezone}
+                          onChange={e => setNewSucursalForm(f => ({ ...f, timezone: e.target.value }))}
+                          className="w-full appearance-none pl-3 pr-8 py-2.5 border border-neutral-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 text-neutral-700"
+                        >
+                          {TIMEZONES.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                      </div>
                     </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-600 mb-1.5">Dirección</label>
+                    <input
+                      type="text"
+                      value={newSucursalForm.address}
+                      onChange={e => setNewSucursalForm(f => ({ ...f, address: e.target.value }))}
+                      placeholder="Ej: Av. Pajaritos 123, Maipú"
+                      className="w-full px-3 py-2.5 border border-neutral-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 placeholder-neutral-400 text-neutral-700"
+                    />
                   </div>
                   <div className="flex justify-end gap-2">
                     <button
                       onClick={() => setShowAddSucursal(false)}
-                      className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-white transition-colors"
+                      className="px-4 py-2 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-white transition-colors duration-300"
                     >
                       Cancelar
                     </button>
                     <button
                       onClick={addSucursal}
                       disabled={!newSucursalForm.label.trim()}
-                      className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-neutral-100 disabled:text-neutral-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors duration-300"
                     >
                       <Check className="w-4 h-4" />
                       Agregar
@@ -536,6 +644,52 @@ export default function ConfiguracionPage() {
                 </div>
               )}
             </div>
+
+            {/* ── Información de sucursal ── */}
+            {(() => {
+              const suc = sucursales.find(s => s.id === activeSucursal);
+              if (!suc) return null;
+              return (
+                <ConfigCard title="Información de sucursal" description="Nombre, dirección y zona horaria">
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-600 mb-1.5">Nombre</label>
+                        <input
+                          type="text"
+                          value={suc.label}
+                          onChange={e => updateSucursalField(suc.id, "label", e.target.value)}
+                          className="w-full px-3 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-200 placeholder-neutral-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-neutral-600 mb-1.5">Zona horaria</label>
+                        <div className="relative">
+                          <select
+                            value={suc.timezone ?? "America/Santiago"}
+                            onChange={e => updateSucursalField(suc.id, "timezone", e.target.value)}
+                            className="w-full appearance-none pl-3 pr-8 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary-200"
+                          >
+                            {TIMEZONES.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
+                          </select>
+                          <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Dirección</label>
+                      <input
+                        type="text"
+                        value={suc.address}
+                        onChange={e => updateSucursalField(suc.id, "address", e.target.value)}
+                        placeholder="Ej: Av. Pajaritos 123, Maipú"
+                        className="w-full px-3 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-200 placeholder-neutral-400"
+                      />
+                    </div>
+                  </div>
+                </ConfigCard>
+              );
+            })()}
 
             {/* ── Horario operativo ── */}
             <ConfigCard
@@ -554,10 +708,10 @@ export default function ConfiguracionPage() {
                           : [...current, d.key];
                         updateCfg({ diasHabilitados: next });
                       }}
-                      className={`w-9 h-9 rounded-lg text-xs font-semibold transition-colors ${
+                      className={`w-9 h-9 rounded-lg text-xs font-semibold transition-colors duration-300 ${
                         cfg.diasHabilitados.includes(d.key)
-                          ? "bg-indigo-600 text-white"
-                          : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                          ? "bg-primary-500 text-white"
+                          : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
                       }`}
                     >
                       {d.short}
@@ -566,39 +720,29 @@ export default function ConfiguracionPage() {
                 </div>
               </FieldRow>
 
-              <div className="border-t border-gray-100 pt-4">
+              <div className="border-t border-neutral-100 pt-4">
                 <FieldRow label="Hora de operación" hint="Rango horario en que se abren slots de recepción">
                   <div className="flex items-center gap-2">
-                    <input
-                      type="time"
-                      value={cfg.horaInicio}
-                      onChange={e => updateCfg({ horaInicio: e.target.value })}
-                      className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 tabular-nums"
-                    />
-                    <span className="text-gray-400 text-sm">—</span>
-                    <input
-                      type="time"
-                      value={cfg.horaFin}
-                      onChange={e => updateCfg({ horaFin: e.target.value })}
-                      className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 tabular-nums"
-                    />
+                    <TimePicker value={cfg.horaInicio} onChange={v => updateCfg({ horaInicio: v })} />
+                    <span className="text-neutral-400 text-sm">—</span>
+                    <TimePicker value={cfg.horaFin} onChange={v => updateCfg({ horaFin: v })} />
                   </div>
                 </FieldRow>
               </div>
 
-              <div className="border-t border-gray-100 pt-4">
+              <div className="border-t border-neutral-100 pt-4">
                 <FieldRow label="Duración del slot" hint="Tiempo estándar de cada bloque de recepción">
                   <div className="relative">
                     <select
                       value={cfg.duracionSlot}
                       onChange={e => updateCfg({ duracionSlot: Number(e.target.value) })}
-                      className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+                      className="appearance-none pl-3 pr-8 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 bg-white text-neutral-700"
                     >
                       {[30, 45, 60, 90, 120].map(m => (
                         <option key={m} value={m}>{m} minutos</option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
                   </div>
                 </FieldRow>
               </div>
@@ -614,16 +758,16 @@ export default function ConfiguracionPage() {
                   type="number" min={1} max={20}
                   value={cfg.slotsSimultaneos}
                   onChange={e => updateCfg({ slotsSimultaneos: Math.max(1, parseInt(e.target.value) || 1) })}
-                  className="w-20 px-3 py-2 border border-gray-200 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-300 tabular-nums"
+                  className="w-20 px-3 py-2 border border-neutral-200 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-primary-200 text-neutral-700 tabular-nums"
                 />
               </FieldRow>
-              <div className="border-t border-gray-100 pt-4">
+              <div className="border-t border-neutral-100 pt-4">
                 <FieldRow label="Límite de sobrecupos diarios" hint="Máximo de ORs extra permitidas por encima de la capacidad normal">
                   <input
                     type="number" min={0} max={20}
                     value={cfg.sobrecuposDiarios}
                     onChange={e => updateCfg({ sobrecuposDiarios: Math.max(0, parseInt(e.target.value) || 0) })}
-                    className="w-20 px-3 py-2 border border-gray-200 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-300 tabular-nums"
+                    className="w-20 px-3 py-2 border border-neutral-200 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-primary-200 text-neutral-700 tabular-nums"
                   />
                 </FieldRow>
               </div>
@@ -640,21 +784,21 @@ export default function ConfiguracionPage() {
                     type="number" min={0} max={30}
                     value={cfg.diasMinAnticipacion}
                     onChange={e => updateCfg({ diasMinAnticipacion: Math.max(0, parseInt(e.target.value) || 0) })}
-                    className="w-20 px-3 py-2 border border-gray-200 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-300 tabular-nums"
+                    className="w-20 px-3 py-2 border border-neutral-200 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-primary-200 text-neutral-700 tabular-nums"
                   />
-                  <span className="text-sm text-gray-500">días</span>
+                  <span className="text-sm text-neutral-500">días</span>
                 </div>
               </FieldRow>
-              <div className="border-t border-gray-100 pt-4">
+              <div className="border-t border-neutral-100 pt-4">
                 <FieldRow label="Días máximos a futuro" hint="Máximo de días hacia adelante visibles en el calendario del seller">
                   <div className="flex items-center gap-2">
                     <input
                       type="number" min={7} max={120}
                       value={cfg.diasMaxFuturo}
                       onChange={e => updateCfg({ diasMaxFuturo: Math.max(7, parseInt(e.target.value) || 7) })}
-                      className="w-20 px-3 py-2 border border-gray-200 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-300 tabular-nums"
+                      className="w-20 px-3 py-2 border border-neutral-200 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-primary-200 text-neutral-700 tabular-nums"
                     />
-                    <span className="text-sm text-gray-500">días</span>
+                    <span className="text-sm text-neutral-500">días</span>
                   </div>
                 </FieldRow>
               </div>
@@ -670,22 +814,22 @@ export default function ConfiguracionPage() {
                   <select
                     value={cfg.plazoReagendamiento}
                     onChange={e => updateCfg({ plazoReagendamiento: Number(e.target.value) })}
-                    className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+                    className="appearance-none pl-3 pr-8 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 bg-white text-neutral-700"
                   >
                     {[6, 12, 24, 48, 72].map(h => (
                       <option key={h} value={h}>{h} horas antes</option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
                 </div>
               </FieldRow>
-              <div className="border-t border-gray-100 pt-4">
+              <div className="border-t border-neutral-100 pt-4">
                 <FieldRow label="Máximo de reagendamientos por OR" hint="Cantidad de veces que un seller puede cambiar su slot">
                   <input
                     type="number" min={1} max={10}
                     value={cfg.maxReagendamientos}
                     onChange={e => updateCfg({ maxReagendamientos: Math.max(1, parseInt(e.target.value) || 1) })}
-                    className="w-20 px-3 py-2 border border-gray-200 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-300 tabular-nums"
+                    className="w-20 px-3 py-2 border border-neutral-200 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-primary-200 text-neutral-700 tabular-nums"
                   />
                 </FieldRow>
               </div>
@@ -701,7 +845,7 @@ export default function ConfiguracionPage() {
               )}
               <button
                 onClick={saveConfig}
-                className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                className="flex items-center gap-2 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
               >
                 <Check className="w-4 h-4" />
                 Guardar configuración
@@ -717,7 +861,7 @@ export default function ConfiguracionPage() {
           <div className="space-y-4">
 
             {/* Sub-tabs */}
-            <div className="flex gap-1 border-b border-gray-200">
+            <div className="flex gap-1 border-b border-neutral-200">
               {([
                 { key: "nacionales", label: "Feriados nacionales" },
                 { key: "bloqueos",   label: "Bloqueos" },
@@ -725,10 +869,10 @@ export default function ConfiguracionPage() {
                 <button
                   key={st.key}
                   onClick={() => setFeriadosSubTab(st.key)}
-                  className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                  className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors duration-300 -mb-px ${
                     feriadosSubTab === st.key
-                      ? "border-indigo-600 text-indigo-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700"
+                      ? "border-primary-500 text-primary-500"
+                      : "border-transparent text-neutral-500 hover:text-neutral-700"
                   }`}
                 >
                   {st.label}
@@ -740,14 +884,14 @@ export default function ConfiguracionPage() {
             {feriadosSubTab === "nacionales" && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-neutral-500">
                     {feriados.length === 0
                       ? "No hay feriados cargados."
                       : `${feriados.length} feriados cargados para 2026`}
                   </p>
                   <button
                     onClick={cargarFeriados2026}
-                    className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 font-medium transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 font-medium transition-colors duration-300"
                   >
                     <CalendarDate className="w-4 h-4" />
                     Cargar feriados 2026
@@ -755,30 +899,30 @@ export default function ConfiguracionPage() {
                 </div>
 
                 {feriados.length === 0 ? (
-                  <div className="bg-white border border-dashed border-gray-200 rounded-xl py-12 flex flex-col items-center gap-3 text-center">
-                    <CalendarDate className="w-10 h-10 text-gray-300" />
+                  <div className="bg-white border border-dashed border-neutral-200 rounded-xl py-12 flex flex-col items-center gap-3 text-center">
+                    <CalendarDate className="w-10 h-10 text-neutral-300" />
                     <div>
-                      <p className="text-sm font-semibold text-gray-600">Sin feriados cargados</p>
-                      <p className="text-xs text-gray-400 mt-0.5">Haz clic en "Cargar feriados 2026" para precargar el calendario nacional</p>
+                      <p className="text-sm font-semibold text-neutral-600">Sin feriados cargados</p>
+                      <p className="text-xs text-neutral-400 mt-0.5">Haz clic en "Cargar feriados 2026" para precargar el calendario nacional</p>
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-gray-100 bg-gray-50/50">
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">Fecha</th>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">Nombre</th>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">Sucursales que operan</th>
+                        <tr className="border-b border-neutral-100 bg-neutral-50/50">
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500">Fecha</th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500">Nombre</th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500">Sucursales que operan</th>
                         </tr>
                       </thead>
                       <tbody>
                         {feriados.map(f => (
-                          <tr key={f.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
-                            <td className="px-4 py-3 tabular-nums text-gray-600 font-medium whitespace-nowrap">
+                          <tr key={f.id} className="border-b border-neutral-50 last:border-0 hover:bg-neutral-50/50 transition-colors duration-300">
+                            <td className="px-4 py-3 tabular-nums text-neutral-600 font-medium whitespace-nowrap">
                               {fmtFecha(f.fecha)}
                             </td>
-                            <td className="px-4 py-3 text-gray-800">{f.nombre}</td>
+                            <td className="px-4 py-3 text-neutral-800">{f.nombre}</td>
                             <td className="px-4 py-3">
                               <div className="flex flex-wrap gap-1.5">
                                 {sucursales.map(s => {
@@ -787,10 +931,10 @@ export default function ConfiguracionPage() {
                                     <button
                                       key={s.id}
                                       onClick={() => toggleSucursalExcluida(f.id, s.id)}
-                                      className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                                      className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors duration-300 ${
                                         opera
                                           ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
-                                          : "bg-gray-100 text-gray-400 border-gray-200 hover:bg-gray-200"
+                                          : "bg-neutral-100 text-neutral-400 border-neutral-200 hover:bg-neutral-200"
                                       }`}
                                     >
                                       {opera ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
@@ -807,7 +951,7 @@ export default function ConfiguracionPage() {
                   </div>
                 )}
 
-                <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                <p className="text-xs text-neutral-400 flex items-center gap-1.5">
                   <AlertTriangle className="w-3.5 h-3.5" />
                   Por defecto los feriados aplican a todas las sucursales. Activa una sucursal para indicar que sí opera ese día.
                 </p>
@@ -819,12 +963,12 @@ export default function ConfiguracionPage() {
               <div className="space-y-4">
 
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-neutral-500">
                     {bloqueos.length === 0 ? "No hay bloqueos activos." : `${bloqueos.length} bloqueo${bloqueos.length !== 1 ? "s" : ""} activo${bloqueos.length !== 1 ? "s" : ""}`}
                   </p>
                   <button
                     onClick={() => setShowAddBloqueo(s => !s)}
-                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
                   >
                     <Plus className="w-4 h-4" />
                     Agregar bloqueo
@@ -833,10 +977,10 @@ export default function ConfiguracionPage() {
 
                 {/* Add bloqueo form */}
                 {showAddBloqueo && (
-                  <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-5 space-y-4">
+                  <div className="bg-primary-50 border border-primary-100 rounded-xl p-5 space-y-4">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-indigo-800">Nuevo bloqueo</p>
-                      <button onClick={() => setShowAddBloqueo(false)} className="text-indigo-400 hover:text-indigo-600">
+                      <p className="text-sm font-semibold text-primary-700">Nuevo bloqueo</p>
+                      <button onClick={() => setShowAddBloqueo(false)} className="text-primary-400 hover:text-primary-500">
                         <X className="w-4 h-4" />
                       </button>
                     </div>
@@ -844,59 +988,59 @@ export default function ConfiguracionPage() {
                     <div className="grid grid-cols-2 gap-3">
                       {/* Sucursal */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">Sucursal</label>
+                        <label className="block text-xs font-medium text-neutral-600 mb-1.5">Sucursal</label>
                         <div className="relative">
                           <select
                             value={bloqueoForm.sucursalId}
                             onChange={e => setBloqueoForm(f => ({ ...f, sucursalId: e.target.value }))}
-                            className="w-full appearance-none pl-3 pr-8 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                            className="w-full appearance-none pl-3 pr-8 py-2.5 border border-neutral-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 text-neutral-700 placeholder-neutral-400"
                           >
                             {sucursales.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                           </select>
-                          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
                         </div>
                       </div>
 
                       {/* Tipo */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">Tipo de bloqueo</label>
+                        <label className="block text-xs font-medium text-neutral-600 mb-1.5">Tipo de bloqueo</label>
                         <div className="relative">
                           <select
                             value={bloqueoForm.tipo}
                             onChange={e => setBloqueoForm(f => ({ ...f, tipo: e.target.value as Bloqueo["tipo"] }))}
-                            className="w-full appearance-none pl-3 pr-8 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                            className="w-full appearance-none pl-3 pr-8 py-2.5 border border-neutral-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 text-neutral-700 placeholder-neutral-400"
                           >
                             <option value="dia">Día completo</option>
                             <option value="rango">Rango de fechas</option>
                             <option value="horario">Rango horario</option>
                           </select>
-                          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
                         </div>
                       </div>
 
                       {/* Fecha inicio */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                        <label className="block text-xs font-medium text-neutral-600 mb-1.5">
                           {bloqueoForm.tipo === "rango" ? "Fecha inicio" : "Fecha"}
                         </label>
                         <input
                           type="date"
                           value={bloqueoForm.fechaInicio}
                           onChange={e => setBloqueoForm(f => ({ ...f, fechaInicio: e.target.value }))}
-                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                          className="w-full px-3 py-2.5 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 text-neutral-700 placeholder-neutral-400"
                         />
                       </div>
 
                       {/* Fecha fin (rango) */}
                       {bloqueoForm.tipo === "rango" && (
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1.5">Fecha fin</label>
+                          <label className="block text-xs font-medium text-neutral-600 mb-1.5">Fecha fin</label>
                           <input
                             type="date"
                             value={bloqueoForm.fechaFin}
                             min={bloqueoForm.fechaInicio}
                             onChange={e => setBloqueoForm(f => ({ ...f, fechaFin: e.target.value }))}
-                            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                            className="w-full px-3 py-2.5 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 text-neutral-700 placeholder-neutral-400"
                           />
                         </div>
                       )}
@@ -904,20 +1048,18 @@ export default function ConfiguracionPage() {
                       {/* Horario (tipo horario) */}
                       {bloqueoForm.tipo === "horario" && (
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1.5">Rango horario</label>
+                          <label className="block text-xs font-medium text-neutral-600 mb-1.5">Rango horario</label>
                           <div className="flex items-center gap-2">
-                            <input
-                              type="time"
-                              value={bloqueoForm.horaInicio}
-                              onChange={e => setBloqueoForm(f => ({ ...f, horaInicio: e.target.value }))}
-                              className="flex-1 px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                            <TimePicker
+                              value={bloqueoForm.horaInicio ?? "08:00"}
+                              onChange={v => setBloqueoForm(f => ({ ...f, horaInicio: v }))}
+                              className="flex-1"
                             />
-                            <span className="text-gray-400">—</span>
-                            <input
-                              type="time"
-                              value={bloqueoForm.horaFin}
-                              onChange={e => setBloqueoForm(f => ({ ...f, horaFin: e.target.value }))}
-                              className="flex-1 px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                            <span className="text-neutral-400">—</span>
+                            <TimePicker
+                              value={bloqueoForm.horaFin ?? "18:00"}
+                              onChange={v => setBloqueoForm(f => ({ ...f, horaFin: v }))}
+                              className="flex-1"
                             />
                           </div>
                         </div>
@@ -926,27 +1068,27 @@ export default function ConfiguracionPage() {
 
                     {/* Motivo */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1.5">Motivo *</label>
+                      <label className="block text-xs font-medium text-neutral-600 mb-1.5">Motivo *</label>
                       <input
                         type="text"
                         value={bloqueoForm.motivo}
                         onChange={e => setBloqueoForm(f => ({ ...f, motivo: e.target.value }))}
                         placeholder="Ej: Mantención de andén, Fumigación..."
-                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-300"
+                        className="w-full px-3 py-2.5 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 placeholder-neutral-400 text-neutral-700"
                       />
                     </div>
 
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => setShowAddBloqueo(false)}
-                        className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-white transition-colors"
+                        className="px-4 py-2 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-white transition-colors duration-300"
                       >
                         Cancelar
                       </button>
                       <button
                         onClick={addBloqueo}
                         disabled={!bloqueoForm.fechaInicio || !bloqueoForm.motivo}
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-neutral-100 disabled:text-neutral-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors duration-300"
                       >
                         <Check className="w-4 h-4" />
                         Guardar bloqueo
@@ -957,23 +1099,23 @@ export default function ConfiguracionPage() {
 
                 {/* Bloqueos table */}
                 {bloqueos.length === 0 && !showAddBloqueo ? (
-                  <div className="bg-white border border-dashed border-gray-200 rounded-xl py-12 flex flex-col items-center gap-3 text-center">
-                    <SlashCircle01 className="w-10 h-10 text-gray-300" />
+                  <div className="bg-white border border-dashed border-neutral-200 rounded-xl py-12 flex flex-col items-center gap-3 text-center">
+                    <SlashCircle01 className="w-10 h-10 text-neutral-300" />
                     <div>
-                      <p className="text-sm font-semibold text-gray-600">Sin bloqueos activos</p>
-                      <p className="text-xs text-gray-400 mt-0.5">Agrega un bloqueo para deshabilitar una sucursal en una fecha específica</p>
+                      <p className="text-sm font-semibold text-neutral-600">Sin bloqueos activos</p>
+                      <p className="text-xs text-neutral-400 mt-0.5">Agrega un bloqueo para deshabilitar una sucursal en una fecha específica</p>
                     </div>
                   </div>
                 ) : bloqueos.length > 0 && (
-                  <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-gray-100 bg-gray-50/50">
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">Sucursal</th>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">Tipo</th>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">Fecha</th>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">Horario</th>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">Motivo</th>
+                        <tr className="border-b border-neutral-100 bg-neutral-50/50">
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500">Sucursal</th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500">Tipo</th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500">Fecha</th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500">Horario</th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500">Motivo</th>
                           <th className="px-4 py-3" />
                         </tr>
                       </thead>
@@ -981,8 +1123,8 @@ export default function ConfiguracionPage() {
                         {bloqueos.map(b => {
                           const suc = sucursales.find(s => s.id === b.sucursalId);
                           return (
-                            <tr key={b.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
-                              <td className="px-4 py-3 font-medium text-gray-800">{suc?.label ?? b.sucursalId}</td>
+                            <tr key={b.id} className="border-b border-neutral-50 last:border-0 hover:bg-neutral-50/50 transition-colors duration-300">
+                              <td className="px-4 py-3 font-medium text-neutral-800">{suc?.label ?? b.sucursalId}</td>
                               <td className="px-4 py-3">
                                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
                                   b.tipo === "dia"    ? "bg-orange-50 text-orange-700 border-orange-200" :
@@ -992,27 +1134,27 @@ export default function ConfiguracionPage() {
                                   {b.tipo === "dia" ? "Día completo" : b.tipo === "rango" ? "Rango" : "Horario"}
                                 </span>
                               </td>
-                              <td className="px-4 py-3 tabular-nums text-gray-600">
+                              <td className="px-4 py-3 tabular-nums text-neutral-600">
                                 {b.tipo === "rango"
                                   ? `${fmtFecha(b.fechaInicio)} — ${fmtFecha(b.fechaFin)}`
                                   : fmtFecha(b.fechaInicio)}
                               </td>
-                              <td className="px-4 py-3 tabular-nums text-gray-500 text-xs">
+                              <td className="px-4 py-3 tabular-nums text-neutral-500 text-xs">
                                 {b.tipo === "horario" ? `${b.horaInicio} — ${b.horaFin}` : "—"}
                               </td>
-                              <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{b.motivo}</td>
+                              <td className="px-4 py-3 text-neutral-600 max-w-xs truncate">{b.motivo}</td>
                               <td className="px-4 py-3">
                                 {deleteBloqueo === b.id ? (
                                   <div className="flex items-center gap-1.5">
                                     <button
                                       onClick={() => removeBloqueo(b.id)}
-                                      className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-colors"
+                                      className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-colors duration-300"
                                     >
                                       Sí, eliminar
                                     </button>
                                     <button
                                       onClick={() => setDeleteBloqueo(null)}
-                                      className="px-2.5 py-1 border border-gray-200 text-gray-500 text-xs rounded-lg hover:bg-gray-50 transition-colors"
+                                      className="px-2.5 py-1 border border-neutral-200 text-neutral-500 text-xs rounded-lg hover:bg-neutral-50 transition-colors duration-300"
                                     >
                                       Cancelar
                                     </button>
@@ -1020,7 +1162,7 @@ export default function ConfiguracionPage() {
                                 ) : (
                                   <button
                                     onClick={() => setDeleteBloqueo(b.id)}
-                                    className="p-1.5 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors"
+                                    className="p-1.5 text-neutral-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors duration-300"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </button>
@@ -1045,33 +1187,33 @@ export default function ConfiguracionPage() {
           <div className="space-y-4">
 
             {/* Controls bar */}
-            <div className="bg-white border border-gray-200 rounded-xl px-5 py-3.5 flex items-center gap-4 flex-wrap">
+            <div className="bg-white border border-neutral-200 rounded-xl px-5 py-3.5 flex items-center gap-4 flex-wrap">
 
               {/* Sucursal */}
               <div className="flex items-center gap-2">
-                <Building01 className="w-4 h-4 text-gray-400" />
+                <Building01 className="w-4 h-4 text-neutral-400" />
                 <div className="relative">
                   <select
                     value={calSucursal}
                     onChange={e => { setCalSucursal(e.target.value); setSelectedSlot(null); }}
-                    className="appearance-none pl-3 pr-8 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white font-medium text-gray-700"
+                    className="appearance-none pl-3 pr-8 py-1.5 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 bg-white font-medium text-neutral-700"
                   >
                     {sucursales.filter(s => s.active).map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                   </select>
-                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
                 </div>
               </div>
 
-              <div className="h-5 w-px bg-gray-200" />
+              <div className="h-5 w-px bg-neutral-200" />
 
               {/* Week/Month toggle */}
-              <div className="flex gap-1 bg-gray-100 p-0.5 rounded-lg">
+              <div className="flex gap-1 bg-neutral-100 p-0.5 rounded-lg">
                 {(["week", "month"] as const).map(m => (
                   <button
                     key={m}
                     onClick={() => setCalViewMode(m)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                      calViewMode === m ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors duration-300 ${
+                      calViewMode === m ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-700"
                     }`}
                   >
                     {m === "week" ? "Semana" : "Mes"}
@@ -1083,11 +1225,11 @@ export default function ConfiguracionPage() {
               <div className="flex items-center gap-1.5 ml-auto">
                 <button
                   onClick={() => setCalViewDate(d => calViewMode === "week" ? addDays(d, -7) : new Date(d.getFullYear(), d.getMonth() - 1, 1))}
-                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors duration-300"
                 >
-                  <ChevronLeft className="w-4 h-4 text-gray-500" />
+                  <ChevronLeft className="w-4 h-4 text-neutral-500" />
                 </button>
-                <span className="text-sm font-semibold text-gray-700 min-w-[140px] text-center">
+                <span className="text-sm font-semibold text-neutral-700 min-w-[140px] text-center">
                   {calViewMode === "week"
                     ? (() => {
                         const sw = startOfWeek(calViewDate);
@@ -1098,18 +1240,18 @@ export default function ConfiguracionPage() {
                 </span>
                 <button
                   onClick={() => setCalViewDate(d => calViewMode === "week" ? addDays(d, 7) : new Date(d.getFullYear(), d.getMonth() + 1, 1))}
-                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors duration-300"
                 >
-                  <ChevronRight className="w-4 h-4 text-gray-500" />
+                  <ChevronRight className="w-4 h-4 text-neutral-500" />
                 </button>
               </div>
             </div>
 
             {/* Tiempo anticipado + leyenda */}
             <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
-                <Clock className="w-4 h-4 text-gray-400" />
-                <span className="text-xs text-gray-600 font-medium">Tiempo anticipado:</span>
+              <div className="flex items-center gap-2 bg-white border border-neutral-200 rounded-lg px-3 py-2">
+                <Clock className="w-4 h-4 text-neutral-400" />
+                <span className="text-xs text-neutral-600 font-medium">Tiempo anticipado:</span>
                 <div className="relative">
                   <select
                     value={calCfg.tiempoAnticipado}
@@ -1119,20 +1261,20 @@ export default function ConfiguracionPage() {
                       setConfigs(nc);
                       try { localStorage.setItem(LS_CONFIG, JSON.stringify(nc)); } catch { /* ignore */ }
                     }}
-                    className="appearance-none pl-2 pr-6 py-0.5 text-xs font-semibold text-indigo-600 focus:outline-none bg-transparent"
+                    className="appearance-none pl-2 pr-6 py-0.5 text-xs font-semibold text-primary-500 focus:outline-none bg-transparent"
                   >
                     {[6, 12, 24, 48, 72].map(h => <option key={h} value={h}>{h}h</option>)}
                   </select>
-                  <ChevronDown className="absolute right-0.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-indigo-400 pointer-events-none" />
+                  <ChevronDown className="absolute right-0.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-primary-400 pointer-events-none" />
                 </div>
               </div>
 
               {/* Leyenda */}
-              <div className="flex items-center gap-3 text-xs text-gray-500">
+              <div className="flex items-center gap-3 text-xs text-neutral-500">
                 <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-green-100 border border-green-200 inline-block" /> Disponible</span>
                 <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-amber-100 border border-amber-200 inline-block" /> &gt;70% ocupado</span>
                 <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-red-100 border border-red-200 inline-block" /> Lleno / sobrecupo</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-gray-200 border border-gray-300 inline-block" /> Bloqueado</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-neutral-200 border border-neutral-300 inline-block" /> Bloqueado</span>
               </div>
             </div>
 
@@ -1142,25 +1284,25 @@ export default function ConfiguracionPage() {
               const weekDays  = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
               return (
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
                   {/* Header */}
-                  <div className="grid border-b border-gray-100" style={{ gridTemplateColumns: "80px repeat(7, 1fr)" }}>
-                    <div className="px-3 py-3 border-r border-gray-100" />
+                  <div className="grid border-b border-neutral-100" style={{ gridTemplateColumns: "80px repeat(7, 1fr)" }}>
+                    <div className="px-3 py-3 border-r border-neutral-100" />
                     {weekDays.map((day, i) => {
                       const iso     = isoDate(day);
                       const blocked = isDayBlocked(iso);
                       const feriado = isDayFeriado(iso);
                       const isToday = sameDay(day, new Date());
                       return (
-                        <div key={i} className={`px-2 py-3 text-center border-r border-gray-100 last:border-0 ${blocked || feriado ? "bg-gray-50" : ""}`}>
-                          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
+                        <div key={i} className={`px-2 py-3 text-center border-r border-neutral-100 last:border-0 ${blocked || feriado ? "bg-neutral-50" : ""}`}>
+                          <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">
                             {day.toLocaleString("es-CL", { weekday: "short" })}
                           </p>
-                          <p className={`text-lg font-bold mt-0.5 ${isToday ? "text-indigo-600" : "text-gray-800"}`}>
+                          <p className={`text-lg font-bold mt-0.5 ${isToday ? "text-primary-500" : "text-neutral-800"}`}>
                             {day.getDate()}
                           </p>
                           {(blocked || feriado) && (
-                            <span className="inline-flex items-center gap-0.5 text-[10px] text-gray-500 font-medium">
+                            <span className="inline-flex items-center gap-0.5 text-[10px] text-neutral-500 font-medium">
                               <SlashCircle01 className="w-2.5 h-2.5" />
                               {blocked ? "Bloqueado" : "Feriado"}
                             </span>
@@ -1175,11 +1317,11 @@ export default function ConfiguracionPage() {
                     {slots.map(slot => (
                       <div
                         key={slot}
-                        className="grid border-b border-gray-50 last:border-0"
+                        className="grid border-b border-neutral-50 last:border-0"
                         style={{ gridTemplateColumns: "80px repeat(7, 1fr)" }}
                       >
-                        <div className="px-3 py-2 border-r border-gray-100 flex items-center">
-                          <span className="text-xs font-medium text-gray-400 tabular-nums">{slot}</span>
+                        <div className="px-3 py-2 border-r border-neutral-100 flex items-center">
+                          <span className="text-xs font-medium text-neutral-400 tabular-nums">{slot}</span>
                         </div>
                         {weekDays.map((day, di) => {
                           const iso     = isoDate(day);
@@ -1187,7 +1329,7 @@ export default function ConfiguracionPage() {
                           const feriado = isDayFeriado(iso);
                           if (blocked || feriado) {
                             return (
-                              <div key={di} className="border-r border-gray-100 last:border-0 bg-gray-50/80 py-1 px-2" />
+                              <div key={di} className="border-r border-neutral-100 last:border-0 bg-neutral-50/80 py-1 px-2" />
                             );
                           }
                           const orsHere = orsForSlot(iso, slot);
@@ -1204,7 +1346,7 @@ export default function ConfiguracionPage() {
                             <div
                               key={di}
                               onClick={() => occ > 0 && setSelectedSlot(isSelected ? null : { date: iso, hora: slot })}
-                              className={`border-r border-gray-100 last:border-0 py-1 px-2 min-h-[40px] transition-colors ${cellColor} ${isSelected ? "ring-2 ring-inset ring-indigo-400" : ""}`}
+                              className={`border-r border-neutral-100 last:border-0 py-1 px-2 min-h-[40px] transition-colors duration-300 ${cellColor} ${isSelected ? "ring-2 ring-inset ring-primary-400" : ""}`}
                             >
                               {occ > 0 && (
                                 <div className="flex items-center gap-1 flex-wrap">
@@ -1212,10 +1354,10 @@ export default function ConfiguracionPage() {
                                     {occ}/{cap}
                                   </span>
                                   {orsHere.slice(0, 2).map((or, i) => (
-                                    <span key={i} className="text-[9px] text-gray-500 truncate max-w-[60px]">{or.seller ?? or.id}</span>
+                                    <span key={i} className="text-[9px] text-neutral-500 truncate max-w-[60px]">{or.seller ?? or.id}</span>
                                   ))}
                                   {orsHere.length > 2 && (
-                                    <span className="text-[9px] text-gray-400">+{orsHere.length - 2}</span>
+                                    <span className="text-[9px] text-neutral-400">+{orsHere.length - 2}</span>
                                   )}
                                 </div>
                               )}
@@ -1230,28 +1372,32 @@ export default function ConfiguracionPage() {
                   {selectedSlot && (() => {
                     const ors = orsForSlot(selectedSlot.date, selectedSlot.hora);
                     return (
-                      <div className="border-t border-indigo-100 bg-indigo-50/50 px-5 py-4">
+                      <div className="border-t border-primary-100 bg-primary-50/50 px-5 py-4">
                         <div className="flex items-center justify-between mb-3">
-                          <p className="text-sm font-semibold text-indigo-800">
+                          <p className="text-sm font-semibold text-primary-700">
                             {fmtFecha(selectedSlot.date)} · {selectedSlot.hora} — {ors.length} OR{ors.length !== 1 ? "s" : ""}
                           </p>
-                          <button onClick={() => setSelectedSlot(null)} className="text-indigo-400 hover:text-indigo-600">
+                          <button onClick={() => setSelectedSlot(null)} className="text-primary-400 hover:text-primary-500">
                             <X className="w-4 h-4" />
                           </button>
                         </div>
                         <div className="space-y-2">
                           {ors.map((or, i) => (
-                            <div key={i} className="bg-white border border-indigo-100 rounded-lg px-3 py-2 flex items-center gap-3 text-sm">
-                              <span className="font-mono text-xs text-gray-500">{or.id ?? "—"}</span>
-                              <span className="font-medium text-gray-800">{or.seller ?? "—"}</span>
-                              <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${
-                                or.estado === "Programado" ? "bg-indigo-100 text-indigo-700" :
-                                or.estado === "Completado sin diferencias" ? "bg-green-100 text-green-700" :
-                                "bg-gray-100 text-gray-500"
-                              }`}>{or.estado ?? "—"}</span>
+                            <div key={i} className="bg-white border border-primary-100 rounded-lg px-3 py-2 flex items-center gap-3 text-sm">
+                              <span className="font-mono text-xs text-neutral-500">{or.id ?? "—"}</span>
+                              <span className="font-medium text-neutral-800">{or.seller ?? "—"}</span>
+                              {or.estado && <StatusBadge status={or.estado as Status} />}
+                              {or.id && (
+                                <Link
+                                  href={`/recepciones/${or.id}`}
+                                  className="ml-auto px-3 py-1 bg-primary-500 hover:bg-primary-600 text-white text-xs font-semibold rounded-lg transition-colors duration-200"
+                                >
+                                  Ver detalle
+                                </Link>
+                              )}
                             </div>
                           ))}
-                          {ors.length === 0 && <p className="text-xs text-indigo-500">Sin ORs en este slot.</p>}
+                          {ors.length === 0 && <p className="text-xs text-primary-500">Sin ORs en este slot.</p>}
                         </div>
                       </div>
                     );
@@ -1271,11 +1417,11 @@ export default function ConfiguracionPage() {
               const DAY_HEADERS = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"];
 
               return (
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
                   {/* Day headers */}
-                  <div className="grid grid-cols-7 border-b border-gray-100">
+                  <div className="grid grid-cols-7 border-b border-neutral-100">
                     {DAY_HEADERS.map(d => (
-                      <div key={d} className="px-2 py-2.5 text-center text-xs font-semibold text-gray-400 border-r border-gray-100 last:border-0">
+                      <div key={d} className="px-2 py-2.5 text-center text-xs font-semibold text-neutral-400 border-r border-neutral-100 last:border-0">
                         {d}
                       </div>
                     ))}
@@ -1299,7 +1445,7 @@ export default function ConfiguracionPage() {
                       const cap       = calCfg.slotsSimultaneos * slots.length;
                       const pct       = cap > 0 ? (orCount / cap) * 100 : 0;
                       const dotColor  =
-                        blocked || feriado ? "bg-gray-400" :
+                        blocked || feriado ? "bg-neutral-400" :
                         orCount === 0      ? "bg-green-400" :
                         pct >= 80          ? "bg-red-400" :
                         pct >= 50          ? "bg-amber-400" :
@@ -1308,20 +1454,20 @@ export default function ConfiguracionPage() {
                       return (
                         <div
                           key={i}
-                          className={`min-h-[90px] border-b border-r border-gray-100 last:border-r-0 p-2 flex flex-col gap-1 transition-colors ${
-                            !inMonth     ? "bg-gray-50/50" :
-                            blocked      ? "bg-gray-100/80" :
+                          className={`min-h-[90px] border-b border-r border-neutral-100 last:border-r-0 p-2 flex flex-col gap-1 transition-colors duration-300 ${
+                            !inMonth     ? "bg-neutral-50/50" :
+                            blocked      ? "bg-neutral-100/80" :
                             feriado      ? "bg-orange-50/60" :
-                                           "hover:bg-gray-50/80"
+                                           "hover:bg-neutral-50/80"
                           }`}
                         >
                           {/* Day number */}
                           <div className="flex items-center justify-between">
                             <span className={`text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full ${
-                              isToday   ? "bg-indigo-600 text-white" :
-                              !inMonth  ? "text-gray-300" :
-                              blocked || feriado ? "text-gray-400" :
-                              "text-gray-800"
+                              isToday   ? "bg-primary-500 text-white" :
+                              !inMonth  ? "text-neutral-300" :
+                              blocked || feriado ? "text-neutral-400" :
+                              "text-neutral-800"
                             }`}>
                               {day.getDate()}
                             </span>
@@ -1330,7 +1476,7 @@ export default function ConfiguracionPage() {
 
                           {/* Blocked / feriado label */}
                           {inMonth && (blocked || feriado) && (
-                            <span className="text-[10px] text-gray-500 font-medium flex items-center gap-0.5">
+                            <span className="text-[10px] text-neutral-500 font-medium flex items-center gap-0.5">
                               <SlashCircle01 className="w-2.5 h-2.5" />
                               {blocked ? "Bloqueado" : "Feriado"}
                             </span>
@@ -1380,28 +1526,28 @@ export default function ConfiguracionPage() {
                     <AlertTriangle className="w-6 h-6 text-red-500" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-gray-900">Desactivar {suc.label}</h3>
-                    <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+                    <h3 className="text-base font-bold text-neutral-900">Desactivar {suc.label}</h3>
+                    <p className="text-sm text-neutral-500 mt-2 leading-relaxed">
                       Desactivar esta sucursal ocultará sus slots del calendario y bloqueará nuevos
                       agendamientos. Los agendamientos existentes{" "}
-                      <strong className="text-gray-700">no se verán afectados</strong>.
+                      <strong className="text-neutral-700">no se verán afectados</strong>.
                     </p>
-                    <p className="text-sm text-gray-400 mt-1.5">
+                    <p className="text-sm text-neutral-400 mt-1.5">
                       Puedes reactivarla en cualquier momento desde este panel.
                     </p>
                   </div>
                 </div>
               </div>
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3">
+              <div className="px-6 py-4 bg-neutral-50 border-t border-neutral-100 flex items-center justify-end gap-3">
                 <button
                   onClick={() => setDeactivateTarget(null)}
-                  className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-white transition-colors font-medium"
+                  className="px-4 py-2 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-white transition-colors duration-300 font-medium"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={() => confirmDeactivate(deactivateTarget)}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
                 >
                   <SlashCircle01 className="w-4 h-4" />
                   Desactivar sucursal
