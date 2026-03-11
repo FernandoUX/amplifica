@@ -845,7 +845,7 @@ function CrearORPageInner() {
             <button
               onClick={handleSubmitSinAgenda}
               disabled={!canContinue()}
-              className="w-full sm:w-auto sm:flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-200 text-white text-sm font-medium rounded-lg transition-colors duration-300"
+              className="w-full h-12 sm:h-auto sm:w-auto sm:flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-200 text-white text-sm font-medium rounded-lg transition-colors duration-300"
             >
               <Check className="w-4 h-4" />
               Crear OR sin agenda
@@ -857,7 +857,7 @@ function CrearORPageInner() {
                 setMaxReached(m => Math.max(m, step + 1));
               }}
               disabled={!canContinue()}
-              className="w-full sm:w-auto sm:flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-200 text-white text-sm font-medium rounded-lg transition-colors duration-300"
+              className="w-full h-12 sm:h-auto sm:w-auto sm:flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-200 text-white text-sm font-medium rounded-lg transition-colors duration-300"
             >
               Continuar <ArrowRight className="w-4 h-4" />
             </button>
@@ -865,7 +865,7 @@ function CrearORPageInner() {
             <button
               onClick={handleSubmit}
               disabled={!canContinue()}
-              className="w-full sm:w-auto sm:flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-200 text-white text-sm font-medium rounded-lg transition-colors duration-300"
+              className="w-full h-12 sm:h-auto sm:w-auto sm:flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-200 text-white text-sm font-medium rounded-lg transition-colors duration-300"
             >
               <Check className="w-4 h-4" />
               {isReagendar ? "Guardar nueva fecha" : "Crear Orden de Recepción"}
@@ -874,7 +874,7 @@ function CrearORPageInner() {
 
           <button
             onClick={() => (step === 1 || (isReagendar && step === 3)) ? router.push("/recepciones") : setStep(s => s - 1)}
-            className="w-full sm:w-auto lg:flex-none lg:order-first px-5 py-2.5 text-neutral-600 hover:bg-neutral-50 sm:bg-neutral-100 sm:text-neutral-700 sm:hover:bg-neutral-200 rounded-lg text-sm font-medium transition-colors duration-200"
+            className="w-full h-12 sm:h-auto sm:w-auto lg:flex-none lg:order-first px-5 py-2.5 text-neutral-600 hover:bg-neutral-50 sm:bg-neutral-100 sm:text-neutral-700 sm:hover:bg-neutral-200 rounded-lg text-sm font-medium transition-colors duration-200"
           >
             Volver
           </button>

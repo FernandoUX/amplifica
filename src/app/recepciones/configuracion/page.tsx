@@ -1572,7 +1572,7 @@ export default function ConfiguracionPage() {
           )}
           <button
             onClick={saveConfig}
-            className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
+            className="flex-1 h-12 flex items-center justify-center gap-2 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
           >
             <Check className="w-4 h-4" />
             Guardar configuración

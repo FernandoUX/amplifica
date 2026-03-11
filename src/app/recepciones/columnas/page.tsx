@@ -324,13 +324,13 @@ export default function ColumnEditorPage() {
       <div className="flex items-center gap-2">
         <button
           onClick={handleReset}
-          className="flex-1 px-3 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 font-medium transition-colors duration-300"
+          className="flex-1 h-12 px-3 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 font-medium transition-colors duration-300"
         >
           Restablecer
         </button>
         <button
           onClick={handleSave}
-          className="flex-1 flex items-center justify-center gap-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors duration-300"
+          className="flex-1 h-12 flex items-center justify-center gap-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors duration-300"
         >
           <Check className="w-4 h-4" />
           Guardar cambios

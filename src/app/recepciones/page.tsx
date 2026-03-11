@@ -315,25 +315,25 @@ function RecebirModal({ orden, onCancel, onConfirm }: {
           <p className="text-sm font-semibold text-neutral-800">Detalles de la recepción:</p>
 
           {/* Info card */}
-          <div className="border border-neutral-200 rounded-xl px-4 py-3.5 grid grid-cols-2 sm:grid-cols-5 gap-x-5 gap-y-3">
-            <div className="col-span-2 sm:col-span-1 min-w-0">
-              <p className="text-xs text-neutral-400 mb-1">Seller</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="col-span-2 sm:col-span-1 bg-neutral-50 rounded-xl px-4 py-2">
+              <p className="text-[11px] text-neutral-400 mb-1 uppercase tracking-wider font-medium">Seller</p>
               <p className="text-sm font-bold text-neutral-900 truncate">{orden.seller}</p>
             </div>
-            <div>
-              <p className="text-xs text-neutral-400 mb-1">Estado</p>
+            <div className="bg-neutral-50 rounded-xl px-4 py-2">
+              <p className="text-[11px] text-neutral-400 mb-1 uppercase tracking-wider font-medium">Estado</p>
               <StatusBadge status={orden.estado} />
             </div>
-            <div>
-              <p className="text-xs text-neutral-400 mb-1">Fecha programada</p>
+            <div className="bg-neutral-50 rounded-xl px-4 py-2">
+              <p className="text-[11px] text-neutral-400 mb-1 uppercase tracking-wider font-medium">Fecha programada</p>
               <p className="text-sm font-semibold text-neutral-700 whitespace-nowrap">{orden.fechaAgendada}</p>
             </div>
-            <div>
-              <p className="text-xs text-neutral-400 mb-1">Pallets</p>
+            <div className="bg-neutral-50 rounded-xl px-4 py-2">
+              <p className="text-[11px] text-neutral-400 mb-1 uppercase tracking-wider font-medium">Pallets</p>
               <p className="text-sm font-bold text-neutral-900">{declaredPallets}</p>
             </div>
-            <div>
-              <p className="text-xs text-neutral-400 mb-1">Bultos</p>
+            <div className="bg-neutral-50 rounded-xl px-4 py-2">
+              <p className="text-[11px] text-neutral-400 mb-1 uppercase tracking-wider font-medium">Bultos</p>
               <p className="text-sm font-bold text-neutral-900">{declaredBultos}</p>
             </div>
           </div>
@@ -1709,13 +1709,13 @@ function OrdenesPageInner() {
 
       {/* ── Mobile sticky bottom bar ── */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 py-3 flex flex-col gap-2 z-40">
-        {/* Crear recepción — primary full-width */}
-        <Button variant="primary" href="/recepciones/crear" className="w-full" iconLeft={<Plus className="w-4 h-4" />}>
+        {/* Crear recepción — primary full-width 48px */}
+        <Button variant="primary" href="/recepciones/crear" className="w-full h-12" iconLeft={<Plus className="w-4 h-4" />}>
           Crear recepción
         </Button>
 
-        {/* Escanear QR — secondary full-width */}
-        <Button variant="secondary" className="w-full" iconLeft={<QrCode02 className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
+        {/* Escanear QR — secondary full-width 48px */}
+        <Button variant="secondary" className="w-full h-12" iconLeft={<QrCode02 className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
           Escanear QR
         </Button>
       </div>

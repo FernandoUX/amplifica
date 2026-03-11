@@ -2328,7 +2328,7 @@ export default function ConteoORPage() {
       )}
 
       {/* ── Breadcrumb ── */}
-      <nav className="max-w-4xl mx-auto px-4 lg:px-6 pt-4 pb-1 flex items-center gap-1.5 text-sm text-neutral-500">
+      <nav className="max-w-4xl mx-auto px-4 lg:px-6 pt-4 pb-1 flex items-center justify-center sm:justify-start gap-1.5 text-sm text-neutral-500">
         <Link href="/recepciones" className="hover:text-primary-500 transition-colors duration-300">Recepciones</Link>
         <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
         <span className="text-neutral-700 font-medium">Orden de Recepción</span>
@@ -2338,7 +2338,7 @@ export default function ConteoORPage() {
 
         {/* ── Title row ── */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
-          <div>
+          <div className="text-center sm:text-left">
             <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">
               Orden de Recepción{" "}
               <span className="font-mono text-neutral-900">#{id}</span>
@@ -2528,56 +2528,110 @@ export default function ConteoORPage() {
           {products.length > 0 && (
             <div className="mt-4">
               {showProductTable && (
-                <div className="border border-neutral-100 rounded-lg overflow-hidden mb-3">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="bg-neutral-50 text-neutral-500 text-left">
-                        <th className="px-3 py-2 font-medium">SKU</th>
-                        <th className="px-3 py-2 font-medium">Producto</th>
-                        <th className="px-3 py-2 font-medium text-right">Esperado</th>
-                        <th className="px-3 py-2 font-medium text-right">Contado</th>
-                        <th className="px-3 py-2 font-medium text-right">Diferencia</th>
-                        <th className="px-3 py-2 font-medium text-right">Incidencias</th>
-                        <th className="px-3 py-2 font-medium text-center">Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-100">
-                      {products.map(p => {
-                        const total      = totalPP[p.id] ?? 0;
-                        const diff       = total - p.esperadas;
-                        const incCount   = (incidencias[p.id] ?? []).reduce((s, r) => s + r.cantidad, 0);
-                        const status     = getProductStatus(total, p.esperadas);
-                        const statusConf = {
-                          completo:   { label: "Completo",   cls: "bg-green-50 text-green-700" },
-                          diferencia: { label: "Diferencia", cls: "bg-amber-50 text-amber-700" },
-                          exceso:     { label: "Exceso",     cls: "bg-orange-50 text-orange-700" },
-                          pendiente:  { label: "Pendiente",  cls: "bg-neutral-50 text-neutral-500" },
-                        }[status];
-                        return (
-                          <tr key={p.id} className="hover:bg-neutral-50/50">
-                            <td className="px-3 py-2 text-neutral-500 font-mono">{p.sku}</td>
-                            <td className="px-3 py-2 text-neutral-800 max-w-[180px] truncate">{p.nombre}</td>
-                            <td className="px-3 py-2 text-right tabular-nums text-neutral-600">{p.esperadas}</td>
-                            <td className="px-3 py-2 text-right tabular-nums font-semibold text-neutral-800">{total}</td>
-                            <td className={`px-3 py-2 text-right tabular-nums font-semibold ${
-                              diff === 0 ? "text-green-600" : diff > 0 ? "text-orange-600" : "text-red-600"
-                            }`}>
-                              {diff === 0 ? "—" : (diff > 0 ? "+" : "") + diff}
-                            </td>
-                            <td className={`px-3 py-2 text-right tabular-nums ${incCount > 0 ? "text-red-600 font-semibold" : "text-neutral-400"}`}>
-                              {incCount > 0 ? incCount : "—"}
-                            </td>
-                            <td className="px-3 py-2 text-center">
-                              <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusConf.cls}`}>
-                                {statusConf.label}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                <>
+                  {/* Mobile card list */}
+                  <div className="sm:hidden divide-y divide-neutral-100 border border-neutral-100 rounded-lg overflow-hidden mb-3">
+                    {products.map(p => {
+                      const total      = totalPP[p.id] ?? 0;
+                      const diff       = total - p.esperadas;
+                      const incCount   = (incidencias[p.id] ?? []).reduce((s, r) => s + r.cantidad, 0);
+                      const status     = getProductStatus(total, p.esperadas);
+                      const statusConf = {
+                        completo:   { label: "Completo",   cls: "bg-green-50 text-green-700" },
+                        diferencia: { label: "Diferencia", cls: "bg-amber-50 text-amber-700" },
+                        exceso:     { label: "Exceso",     cls: "bg-orange-50 text-orange-700" },
+                        pendiente:  { label: "Pendiente",  cls: "bg-neutral-50 text-neutral-500" },
+                      }[status];
+                      return (
+                        <div key={`m-${p.id}`} className="px-4 py-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-neutral-800 leading-snug">{p.nombre}</p>
+                              <p className="text-xs text-neutral-400 font-mono mt-0.5">{p.sku}</p>
+                            </div>
+                            <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold flex-shrink-0 ${statusConf.cls}`}>
+                              {statusConf.label}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-4 gap-2 mt-2.5 bg-neutral-50 rounded-lg px-3 py-2">
+                            <div>
+                              <p className="text-[10px] text-neutral-400 uppercase">Esperado</p>
+                              <p className="text-xs font-semibold text-neutral-600 tabular-nums">{p.esperadas}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-neutral-400 uppercase">Contado</p>
+                              <p className="text-xs font-bold text-neutral-800 tabular-nums">{total}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-neutral-400 uppercase">Diferencia</p>
+                              <p className={`text-xs font-bold tabular-nums ${diff === 0 ? "text-green-600" : diff > 0 ? "text-orange-600" : "text-red-600"}`}>
+                                {diff === 0 ? "—" : (diff > 0 ? "+" : "") + diff}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-neutral-400 uppercase">Incid.</p>
+                              <p className={`text-xs tabular-nums ${incCount > 0 ? "text-red-600 font-bold" : "text-neutral-400"}`}>
+                                {incCount > 0 ? incCount : "—"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Desktop table */}
+                  <div className="hidden sm:block border border-neutral-100 rounded-lg overflow-hidden mb-3">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-neutral-50 text-neutral-500 text-left">
+                          <th className="px-3 py-2 font-medium">SKU</th>
+                          <th className="px-3 py-2 font-medium">Producto</th>
+                          <th className="px-3 py-2 font-medium text-right">Esperado</th>
+                          <th className="px-3 py-2 font-medium text-right">Contado</th>
+                          <th className="px-3 py-2 font-medium text-right">Diferencia</th>
+                          <th className="px-3 py-2 font-medium text-right">Incidencias</th>
+                          <th className="px-3 py-2 font-medium text-center">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-neutral-100">
+                        {products.map(p => {
+                          const total      = totalPP[p.id] ?? 0;
+                          const diff       = total - p.esperadas;
+                          const incCount   = (incidencias[p.id] ?? []).reduce((s, r) => s + r.cantidad, 0);
+                          const status     = getProductStatus(total, p.esperadas);
+                          const statusConf = {
+                            completo:   { label: "Completo",   cls: "bg-green-50 text-green-700" },
+                            diferencia: { label: "Diferencia", cls: "bg-amber-50 text-amber-700" },
+                            exceso:     { label: "Exceso",     cls: "bg-orange-50 text-orange-700" },
+                            pendiente:  { label: "Pendiente",  cls: "bg-neutral-50 text-neutral-500" },
+                          }[status];
+                          return (
+                            <tr key={p.id} className="hover:bg-neutral-50/50">
+                              <td className="px-3 py-2 text-neutral-500 font-mono">{p.sku}</td>
+                              <td className="px-3 py-2 text-neutral-800 max-w-[180px] truncate">{p.nombre}</td>
+                              <td className="px-3 py-2 text-right tabular-nums text-neutral-600">{p.esperadas}</td>
+                              <td className="px-3 py-2 text-right tabular-nums font-semibold text-neutral-800">{total}</td>
+                              <td className={`px-3 py-2 text-right tabular-nums font-semibold ${
+                                diff === 0 ? "text-green-600" : diff > 0 ? "text-orange-600" : "text-red-600"
+                              }`}>
+                                {diff === 0 ? "—" : (diff > 0 ? "+" : "") + diff}
+                              </td>
+                              <td className={`px-3 py-2 text-right tabular-nums ${incCount > 0 ? "text-red-600 font-semibold" : "text-neutral-400"}`}>
+                                {incCount > 0 ? incCount : "—"}
+                              </td>
+                              <td className="px-3 py-2 text-center">
+                                <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusConf.cls}`}>
+                                  {statusConf.label}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
               <div className="flex justify-center">
                 <Button
@@ -2754,58 +2808,34 @@ export default function ConteoORPage() {
       {!orCerrada && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 py-3 z-30 lg:hidden">
           {sesionActiva ? (
-            <div className="flex items-center gap-2 relative">
-              {/* More menu + session counter */}
-              <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
-                <button
-                  onClick={() => setShowStickyMenu(m => !m)}
-                  className="w-11 h-11 flex items-center justify-center rounded-xl border border-neutral-200 text-neutral-500 hover:bg-neutral-50 active:bg-neutral-100 transition-colors"
-                >
-                  <MoreHorizontal className="w-5 h-5" />
-                </button>
-                <span className="text-[10px] font-semibold text-neutral-400 tabular-nums">{stats.totalSesionAct} uds</span>
-              </div>
-
+            <div className="flex flex-col gap-2">
               {/* Primary: Escanear unidad */}
               <button
                 onClick={() => {
                   scannerInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
                   setTimeout(() => scannerInputRef.current?.focus(), 400);
                 }}
-                className="flex-1 flex items-center justify-center gap-2 py-3 bg-primary-500 hover:bg-primary-600 active:bg-primary-700 text-white text-sm font-semibold rounded-xl transition-colors duration-300"
+                className="w-full h-12 flex items-center justify-center gap-2 bg-primary-500 hover:bg-primary-600 active:bg-primary-700 text-white text-sm font-semibold rounded-xl transition-colors duration-300"
               >
                 <ScanBarcode className="w-4 h-4" />
                 Escanear unidad
+                <span className="text-xs font-normal opacity-75">· {stats.totalSesionAct} uds</span>
               </button>
 
-              {/* Popover menu */}
-              {showStickyMenu && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowStickyMenu(false)} />
-                  <div className="absolute bottom-full left-0 mb-2 w-52 bg-white rounded-xl shadow-lg border border-neutral-200 py-1.5 z-50">
-                    <button
-                      onClick={() => { setShowStickyMenu(false); liberarSesion(); }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-                    >
-                      <LockUnlocked01 className="w-4 h-4 text-neutral-400" />
-                      Liberar sesión
-                    </button>
-                    <button
-                      onClick={() => { setShowStickyMenu(false); finalizarSesion(); }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                    >
-                      <StopCircle className="w-4 h-4" />
-                      Finalizar sesión
-                    </button>
-                  </div>
-                </>
-              )}
+              {/* Finalizar sesión — full width */}
+              <button
+                onClick={finalizarSesion}
+                className="w-full h-12 flex items-center justify-center gap-2 text-red-600 text-sm font-medium rounded-xl hover:bg-red-50 active:bg-red-100 transition-colors duration-300"
+              >
+                <StopCircle className="w-4 h-4" />
+                Finalizar sesión
+              </button>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
               <button
                 onClick={iniciarSesion}
-                className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
+                className="w-full h-12 flex items-center justify-center gap-2.5 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
               >
                 <PlayCircle className="w-4 h-4" />
                 Iniciar sesión de conteo
@@ -2817,7 +2847,7 @@ export default function ConteoORPage() {
                     setNoUnitsAlert(false);
                     setConfirmClose(true);
                   }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-red-600 text-sm font-medium rounded-lg hover:bg-red-50 active:bg-red-100 transition-colors duration-300"
+                  className="w-full h-12 flex items-center justify-center gap-2 px-4 py-2.5 text-red-600 text-sm font-medium rounded-lg hover:bg-red-50 active:bg-red-100 transition-colors duration-300"
                 >
                   <ClipboardCheck className="w-4 h-4" />
                   Terminar recepción
