@@ -9,9 +9,9 @@ export default function RecepcionesLayout({ children }: { children: React.ReactN
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-neutral-900 overflow-hidden">
+    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: "#1D1D1F" }}>
       {/* ── Mobile top bar ─────────────────────────────────────────────── */}
-      <div className="fixed top-0 left-0 right-0 h-14 bg-neutral-900 flex items-center justify-center px-4 z-40 lg:hidden">
+      <div className="fixed top-0 left-0 right-0 h-14 flex items-center justify-center px-4 z-40 lg:hidden" style={{ backgroundColor: "#1D1D1F" }}>
         <button
           onClick={() => setSidebarOpen(true)}
           className="absolute left-4 text-white/70 hover:text-white p-1.5 -ml-1.5 rounded-lg transition-colors"

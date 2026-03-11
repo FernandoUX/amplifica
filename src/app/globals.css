@@ -14,6 +14,14 @@
   --color-primary-800: #1D2084;
   --color-primary-900: #141449;
 
+  /* ── Fonts ──────────────────────────────────────────────────────────── */
+  --font-sans: var(--font-inter), "Inter", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* ── Override text-sm: 14px → 13px on desktop ────────────────────────── */
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.25rem;
+
   /* ── Neutral ─────────────────────────────────────────────────────────── */
   --color-neutral-50:  #FAFAFA;
   --color-neutral-100: #F4F4F5;
@@ -43,7 +51,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), "Inter", sans-serif;
 }
 
 /* ── Hide default number input spinners ─────────────────────────────────── */

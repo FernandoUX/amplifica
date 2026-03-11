@@ -4,10 +4,12 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useMemo, useRef, useEffect } from "react";
 import {
-  ChevronLeft, ChevronRight, Trash2, Scan, ScanBarcode, ImageOff,
+  ChevronLeft, ChevronRight, Trash2, Scan, ScanBarcode, ImageOff, Image,
   Clock, User, PlayCircle, StopCircle, Eye,
   ChevronDown, ChevronUp, MoreHorizontal, Package,
-  X, Check, Upload, Search, HelpCircle,
+  X, Check, Upload, Search, HelpCircle, FileText,
+  Bell, PlusCircle, CalendarDays, CheckCircle2, Shield,
+  Download,
 } from "lucide-react";
 import {
   Plus, ClipboardCheck, LockUnlocked01, AlertTriangle,
@@ -67,6 +69,7 @@ type IncidenciaRow = {
   tag: IncidenciaTagKey | "";
   cantidad: number;
   imagenes: File[];
+  imageUrls?: string[];   // seed image URLs (alternative to File objects)
   nota: string;
   descripcion: string;    // only for "no-en-sistema"
 };
@@ -247,6 +250,54 @@ const SEED_SESIONES: Record<string, Sesion[]> = {
   ],
 };
 
+// ─── Seed incidencias for pre-closed ORs (with image URLs) ───────────────────
+const SEED_INCIDENCIAS: Record<string, IncidenciaRow[]> = {
+  "RO-BARRA-186": [
+    {
+      rowId: "seed-inc-186-p1-a", skuId: "p1", tag: "danio-parcial", cantidad: 15,
+      imagenes: [],
+      imageUrls: [
+        "https://images.unsplash.com/photo-1586769852044-692d6e3703f0?w=640&h=480&fit=crop",
+        "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=640&h=480&fit=crop",
+        "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=640&h=480&fit=crop",
+      ],
+      nota: "Sachets con packaging dañado, producto expuesto. Se detectaron 15 unidades con daño parcial en el sellado.",
+      descripcion: "",
+    },
+    {
+      rowId: "seed-inc-186-p1-b", skuId: "p1", tag: "sin-codigo-barra", cantidad: 5,
+      imagenes: [],
+      imageUrls: [
+        "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=640&h=480&fit=crop",
+        "https://images.unsplash.com/photo-1607082349566-187342175e2f?w=640&h=480&fit=crop",
+      ],
+      nota: "Producto sin etiqueta de código de barra, requiere re-etiquetado.",
+      descripcion: "",
+    },
+    {
+      rowId: "seed-inc-186-p2-a", skuId: "p2", tag: "sin-nutricional", cantidad: 8,
+      imagenes: [],
+      imageUrls: [
+        "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=640&h=480&fit=crop",
+        "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=640&h=480&fit=crop",
+      ],
+      nota: "Lote completo sin etiqueta nutricional. Devolución obligatoria al seller.",
+      descripcion: "",
+    },
+    {
+      rowId: "seed-inc-186-p2-b", skuId: "p2", tag: "danio-total", cantidad: 12,
+      imagenes: [],
+      imageUrls: [
+        "https://images.unsplash.com/photo-1593642634367-d91a135587b5?w=640&h=480&fit=crop",
+        "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=640&h=480&fit=crop",
+        "https://images.unsplash.com/photo-1586769852044-692d6e3703f0?w=640&h=480&fit=crop",
+      ],
+      nota: "Cajas completamente aplastadas, producto no apto para venta.",
+      descripcion: "",
+    },
+  ],
+};
+
 // ─── Quarantine helpers ────────────────────────────────────────────────────────
 function categoryFromTag(tag: IncidenciaTagKey): QuarantineCategory {
   if (tag === "sin-nutricional" || tag === "sin-vencimiento") return "devolucion_seller";
@@ -312,7 +363,7 @@ function getProductStatus(total: number, esperadas: number): ProductStatus {
 function fmtDT(iso: string) {
   return new Date(iso).toLocaleString("es-CL", {
     day: "2-digit", month: "2-digit", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
   });
 }
 
@@ -334,6 +385,15 @@ const INCIDENCIA_TAGS: {
   { key: "danio-total",       label: "Daño total",                 color: "red",    resuelve: "Seller decide (KAM consulta)" },
   { key: "no-en-sistema",     label: "No creado en sistema",       color: "purple", resuelve: "Amplifica — creación de SKU" },
 ];
+
+/** Tag color by resolution category: blue=interna, red=devolución, amber=decisión seller */
+function tagColorCls(tag: IncidenciaTagKey) {
+  if (tag === "sin-codigo-barra" || tag === "codigo-incorrecto" || tag === "codigo-ilegible" || tag === "no-en-sistema")
+    return "bg-primary-50 text-primary-700 border-primary-200";   // resolución interna
+  if (tag === "sin-nutricional" || tag === "sin-vencimiento")
+    return "bg-red-50 text-red-700 border-red-200";               // devolución obligatoria
+  return "bg-amber-50 text-amber-700 border-amber-200";           // decisión del seller
+}
 
 // ─── Categorizar button (per-SKU, opens IncidenciasSKUModal) ─────────────────
 function CategorizarBtn({ incidencias, onOpen, disabled }: {
@@ -621,8 +681,35 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
 
   return (
     <div className="border-b border-neutral-100 last:border-0">
+      {/* Mobile session header */}
       <button onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-colors duration-300 text-left">
+        className="w-full px-4 py-3 hover:bg-neutral-50 transition-colors duration-300 text-left sm:hidden">
+        {/* Line 1: SES-ID · Operador | 130 uds ▾ */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-[13px] font-bold text-primary-500 flex-shrink-0">{sesion.id}</span>
+            <User className="w-3 h-3 text-neutral-400 flex-shrink-0" />
+            <span className="text-[13px] text-neutral-600 truncate">{sesion.operador}</span>
+          </div>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <span className="text-[13px] font-bold text-neutral-800 tabular-nums">{totalUds.toLocaleString("es-CL")} uds</span>
+            {open ? <ChevronUp className="w-4 h-4 text-neutral-400" />
+                   : <ChevronDown className="w-4 h-4 text-neutral-400" />}
+          </div>
+        </div>
+        {/* Line 2: 🕐 inicio → fin · N SKUs */}
+        <div className="flex items-center justify-between mt-1 text-[11px] text-neutral-400">
+          <div className="flex items-center gap-1.5">
+            <Clock className="w-3 h-3 flex-shrink-0" />
+            <span className="tabular-nums">{fmtDT(sesion.inicio)} → {fmtDT(sesion.fin)}</span>
+          </div>
+          <span className="tabular-nums flex-shrink-0">{sesion.items.length} SKU{sesion.items.length !== 1 ? "s" : ""}</span>
+        </div>
+      </button>
+
+      {/* Desktop session header */}
+      <button onClick={() => setOpen(o => !o)}
+        className="w-full hidden sm:flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-colors duration-300 text-left">
         <span className="text-sm font-bold text-primary-500 w-20 flex-shrink-0">{sesion.id}</span>
         <span className="flex items-center gap-1.5 text-sm text-neutral-600 flex-shrink-0">
           <User className="w-3.5 h-3.5 text-neutral-400" />
@@ -637,7 +724,7 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
         <span className="text-sm text-neutral-500 flex-shrink-0">
           {sesion.items.length} SKU{sesion.items.length !== 1 ? "s" : ""}
         </span>
-        <span className="text-sm font-bold text-neutral-800 tabular-nums w-14 text-right flex-shrink-0">
+        <span className="text-sm font-bold text-neutral-800 tabular-nums w-20 text-right flex-shrink-0 whitespace-nowrap">
           {totalUds.toLocaleString("es-CL")} uds
         </span>
         {open ? <ChevronUp className="w-4 h-4 text-neutral-400 flex-shrink-0" />
@@ -646,14 +733,66 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
 
       {open && sesion.items.length > 0 && (
         <div className="px-4 pb-3 bg-neutral-50/50">
-          <table className="w-full text-sm">
+          {/* Mobile: card layout */}
+          <div className="sm:hidden divide-y divide-neutral-100">
+            {sesion.items.map(item => {
+              const rows      = incidencias[item.pid] ?? [];
+              const incTotal  = rows.reduce((s, r) => s + r.cantidad, 0);
+              const esperadas = products.find(p => p.id === item.pid)?.esperadas ?? 0;
+              const overallTotal = (acumulado[item.pid] ?? 0) + incTotal;
+              const status = getProductStatus(overallTotal, esperadas);
+              return (
+                <div key={item.pid} className="py-3">
+                  {/* Row 1: SKU + badge */}
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <div className="min-w-0">
+                      <p className="font-mono text-xs text-neutral-500">{item.sku}</p>
+                      <p className="text-[13px] font-medium text-neutral-800 leading-snug mt-0.5">{item.nombre}</p>
+                    </div>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap flex-shrink-0 ${
+                      status === "completo"   ? "bg-green-50  text-green-700  border-green-200"  :
+                      status === "diferencia" ? "bg-amber-50  text-amber-700  border-amber-200"  :
+                      status === "exceso"     ? "bg-red-50    text-red-600    border-red-200"    :
+                                                "bg-neutral-100  text-neutral-500   border-neutral-200"
+                    }`}>
+                      {status === "completo" ? "Completo" : status === "diferencia" ? "Diferencias" : status === "exceso" ? "Exceso" : "Pendiente"}
+                    </span>
+                  </div>
+                  {/* Row 2: Numbers */}
+                  <div className="flex items-center gap-3 text-xs mt-1">
+                    <span className="text-neutral-500">Contadas: <span className="font-bold text-neutral-800 tabular-nums">{(item.cantidad + incTotal).toLocaleString("es-CL")}</span></span>
+                    <span className="text-neutral-400">·</span>
+                    <span className="text-neutral-500 tabular-nums">{overallTotal}/{esperadas}</span>
+                  </div>
+                  {/* Row 3: Incidencias */}
+                  {rows.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {rows.map(r => {
+                        const tag = INCIDENCIA_TAGS.find(t => t.key === r.tag);
+                        if (!tag) return null;
+                        return (
+                          <span key={r.rowId} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
+                            {tag.label}
+                            <span className="opacity-60 font-normal">· {r.cantidad}</span>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop: full table */}
+          <table className="w-full text-sm hidden sm:table">
             <thead>
               <tr className="text-neutral-400 border-b border-neutral-100">
-                <th className="text-left py-2 font-semibold">SKU</th>
-                <th className="text-left py-2 font-semibold">Producto</th>
-                <th className="text-left py-2 font-semibold">Incidencias</th>
-                <th className="text-left py-2 font-semibold">Estado</th>
-                <th className="text-right py-2 font-semibold">Contadas</th>
+                <th className="text-left py-2 text-[13px] font-semibold">SKU</th>
+                <th className="text-left py-2 text-[13px] font-semibold">Producto</th>
+                <th className="text-left py-2 text-[13px] font-semibold">Incidencias</th>
+                <th className="text-left py-2 text-[13px] font-semibold">Estado</th>
+                <th className="text-right py-2 text-[13px] font-semibold">Contadas</th>
               </tr>
             </thead>
             <tbody>
@@ -661,12 +800,11 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
                 const rows      = incidencias[item.pid] ?? [];
                 const incTotal  = rows.reduce((s, r) => s + r.cantidad, 0);
                 const esperadas = products.find(p => p.id === item.pid)?.esperadas ?? 0;
-                // Overall status: total across ALL sessions + incidencias vs expected
                 const overallTotal = (acumulado[item.pid] ?? 0) + incTotal;
                 const status = getProductStatus(overallTotal, esperadas);
                 return (
                   <tr key={item.pid} className="border-b border-neutral-50 last:border-0">
-                    <td className="py-2 font-mono text-neutral-500 text-xs align-top">{item.sku}</td>
+                    <td className="py-2 pr-4 font-mono text-neutral-500 text-xs align-top">{item.sku}</td>
                     <td className="py-2 text-neutral-700 align-top">{item.nombre}</td>
                     <td className="py-2 align-top">
                       {rows.length === 0 ? (
@@ -677,12 +815,7 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
                             const tag = INCIDENCIA_TAGS.find(t => t.key === r.tag);
                             if (!tag) return null;
                             return (
-                              <span key={r.rowId} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium ${
-                                tag.color === "amber"  ? "bg-amber-50 text-amber-700 border border-amber-200" :
-                                tag.color === "orange" ? "bg-orange-50 text-orange-700 border border-orange-200" :
-                                tag.color === "purple" ? "bg-purple-50 text-purple-700 border border-purple-200" :
-                                                         "bg-red-50 text-red-700 border border-red-200"
-                              }`}>
+                              <span key={r.rowId} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium border ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
                                 {tag.label}
                                 <span className="opacity-60 font-normal">· {r.cantidad} uds</span>
                               </span>
@@ -828,12 +961,7 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
 
       {/* Tag resolution badge */}
       {tag && (
-        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium ${
-          tag.color === "amber"  ? "bg-amber-50 text-amber-700 border border-amber-200" :
-          tag.color === "orange" ? "bg-orange-50 text-orange-700 border border-orange-200" :
-          tag.color === "purple" ? "bg-purple-50 text-purple-700 border border-purple-200" :
-                                   "bg-red-50 text-red-700 border border-red-200"
-        }`}>
+        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border ${tagColorCls(row.tag as IncidenciaTagKey)}`}>
           Resuelve: <span className="font-semibold">{tag.resuelve}</span>
         </div>
       )}
@@ -1594,7 +1722,7 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
             <thead>
               <tr className="bg-neutral-50/60 border-b border-neutral-100">
                 {["SKU", "Producto / Tag", "Cant.", "Categoría", "Estado", "Resolución", "Acciones"].map(h => (
-                  <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold text-neutral-500">{h}</th>
+                  <th key={h} className="px-4 py-2.5 text-left text-[13px] font-semibold text-neutral-500">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -1696,7 +1824,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
   const [viewMode, setViewMode] = useState<"consolidado" | "por-sesion">("consolidado");
   const [lightbox, setLightbox] = useState<File | null>(null);
   const [imageSlider, setImageSlider] = useState<{
-    images: { file: File; sku: string; nombre: string; cantidad: number; tag: string; nota: string }[];
+    images: { file?: File; url?: string; sku: string; nombre: string; cantidad: number; tag: string; nota: string }[];
     index: number;
   } | null>(null);
 
@@ -1738,28 +1866,20 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
     },
   ].filter(g => g.rows.length > 0);
 
-  function tagCatBadge(tag: IncidenciaTagKey) {
-    if (tag === "sin-codigo-barra" || tag === "codigo-incorrecto" || tag === "codigo-ilegible" || tag === "no-en-sistema")
-      return { badge: "Cat.A", cls: "bg-primary-100 text-primary-500" };
-    if (tag === "sin-nutricional" || tag === "sin-vencimiento")
-      return { badge: "Cat.B", cls: "bg-red-100 text-red-600" };
-    return { badge: "Cat.C", cls: "bg-amber-100 text-amber-600" };
-  }
-
-  // Build "Ver" handler for image slider
+  // Build "Ver" handler for image slider (supports both File objects and seed URLs)
   const openImageSlider = (p: ProductConteo, incRows: IncidenciaRow[]) => {
-    const images = incRows.flatMap(r =>
-      r.imagenes.map(file => ({
-        file,
-        sku: p.sku,
-        nombre: p.nombre,
-        cantidad: r.cantidad,
-        tag: INCIDENCIA_TAGS.find(t => t.key === r.tag)?.label ?? r.tag,
-        nota: r.nota,
-      }))
-    );
+    const images = incRows.flatMap(r => {
+      const base = { sku: p.sku, nombre: p.nombre, cantidad: r.cantidad, tag: INCIDENCIA_TAGS.find(t => t.key === r.tag)?.label ?? r.tag, nota: r.nota };
+      const fromFiles = r.imagenes.map(file => ({ ...base, file }));
+      const fromUrls  = (r.imageUrls ?? []).map(url => ({ ...base, url }));
+      return [...fromFiles, ...fromUrls];
+    });
     if (images.length > 0) setImageSlider({ images, index: 0 });
   };
+
+  // Helper: count all images (File + URL) for an incidencia row set
+  const countAllImages = (rows: IncidenciaRow[]) =>
+    rows.reduce((s, r) => s + r.imagenes.length + (r.imageUrls?.length ?? 0), 0);
 
   return (
     <>
@@ -1783,7 +1903,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
               {/* Image */}
               <div className="relative bg-neutral-900 flex items-center justify-center" style={{ minHeight: 280, maxHeight: 400 }}>
                 <img
-                  src={URL.createObjectURL(current.file)} alt=""
+                  src={current.url ?? (current.file ? URL.createObjectURL(current.file) : "")} alt=""
                   className="max-w-full max-h-[400px] object-contain"
                 />
                 {/* Nav arrows */}
@@ -1886,27 +2006,144 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
           )}
         </div>
 
-        {/* ── OR meta ── */}
-        <div className="px-5 py-3.5 bg-neutral-50 border-b border-neutral-100 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2.5">
-          {([
-            ["ID de OR", id], ["Seller", baseData.seller], ["Sucursal", baseData.sucursal],
-            ["Fecha agendada", baseData.fechaAgendada], ["Estado", orEstado ?? "—"], ["Operador", OPERADOR],
-          ] as [string, string][]).map(([label, value]) => (
-            <div key={label}>
-              <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">{label}</p>
-              <p className="text-sm font-semibold text-neutral-800 mt-0.5">{value}</p>
-            </div>
-          ))}
-        </div>
+        {/* ── Summary stats ── */}
+        {(() => {
+          const totalEsperadas = products.reduce((s, p) => s + p.esperadas, 0);
+          const totalRecibidas = skuRows.reduce((s, r) => s + r.received, 0);
+          const diffNeta       = totalRecibidas - totalEsperadas;
+          const totalInc       = flatInc.length;
+          const summaryItems = [
+            { label: "SKUs",            value: products.length.toString() },
+            { label: "Uds. esperadas",  value: totalEsperadas.toLocaleString("es-CL") },
+            { label: "Uds. recibidas",  value: totalRecibidas.toLocaleString("es-CL") },
+            { label: "Diferencia neta", value: diffNeta === 0 ? "0" : (diffNeta > 0 ? "+" : "") + diffNeta.toLocaleString("es-CL"),
+              cls: diffNeta === 0 ? "text-green-600" : diffNeta > 0 ? "text-blue-600" : "text-red-600" },
+            { label: "Incidencias",     value: totalInc > 0 ? totalInc.toString() : "0",
+              cls: totalInc > 0 ? "text-amber-600" : undefined },
+            { label: "Operador",        value: OPERADOR },
+          ];
+          return (
+            <>
+              {/* Mobile: 3-col compact cards */}
+              <div className="sm:hidden px-4 py-3 border-b border-neutral-100 space-y-2">
+                <div className="grid grid-cols-3 gap-2">
+                  {summaryItems.slice(0, 3).map(s => (
+                    <div key={s.label} className="bg-neutral-50 rounded-lg px-3 py-2.5 text-center">
+                      <p className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider">{s.label}</p>
+                      <p className={`text-base font-bold mt-0.5 tabular-nums ${s.cls ?? "text-neutral-800"}`}>{s.value}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {summaryItems.slice(3, 5).map(s => (
+                    <div key={s.label} className="bg-neutral-50 rounded-lg px-3 py-2.5 text-center">
+                      <p className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider">{s.label}</p>
+                      <p className={`text-base font-bold mt-0.5 tabular-nums ${s.cls ?? "text-neutral-800"}`}>{s.value}</p>
+                    </div>
+                  ))}
+                  <div className="bg-neutral-50 rounded-lg px-3 py-2.5 text-center">
+                    <p className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider">{summaryItems[5].label}</p>
+                    <p className="text-xs font-bold mt-0.5 text-neutral-800 truncate">{summaryItems[5].value}</p>
+                  </div>
+                </div>
+              </div>
+              {/* Desktop: 6-col summary cards */}
+              <div className="hidden sm:grid grid-cols-6 gap-3 px-5 py-4 border-b border-neutral-100">
+                {summaryItems.map(s => (
+                  <div key={s.label} className="bg-neutral-50 rounded-lg px-3 py-2.5 text-left">
+                    <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider">{s.label}</p>
+                    <p className={`text-sm font-bold mt-1 tabular-nums ${s.cls ?? "text-neutral-800"}`}>{s.value}</p>
+                  </div>
+                ))}
+              </div>
+            </>
+          );
+        })()}
 
-        {/* ── Consolidated table ── */}
-        {viewMode === "consolidado" && (
-          <div className="overflow-x-auto">
+        {/* ── Consolidated view ── */}
+        {viewMode === "consolidado" && (<>
+          {/* Mobile: card layout */}
+          <div className="sm:hidden divide-y divide-neutral-100">
+            {skuRows.map(({ p, received, diff, status, incRows }) => {
+              const allImgCount = countAllImages(incRows);
+              return (
+                <div key={p.id} className="px-4 py-3.5">
+                  {/* Row 1: SKU + Estado */}
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="min-w-0">
+                      <p className="font-mono text-xs text-neutral-500">{p.sku}</p>
+                      <p className="text-sm font-medium text-neutral-800 leading-snug mt-0.5">{p.nombre}</p>
+                    </div>
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap flex-shrink-0 ${
+                      status === "Correcto"       ? "bg-green-50 text-green-700 border-green-200" :
+                      status === "Con incidencia" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                      status === "Exceso"         ? "bg-blue-50  text-blue-700  border-blue-200"  :
+                                                    "bg-red-50   text-red-600   border-red-200"
+                    }`}>{status}</span>
+                  </div>
+                  {/* Row 2: Numbers grid */}
+                  <div className="grid grid-cols-3 gap-2 bg-neutral-50 rounded-lg p-2.5 mb-2">
+                    <div>
+                      <p className="text-[10px] text-neutral-400 uppercase font-semibold">Teórica</p>
+                      <p className="text-sm tabular-nums text-neutral-600">{p.esperadas.toLocaleString("es-CL")}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-neutral-400 uppercase font-semibold">Recibida</p>
+                      <p className="text-sm tabular-nums font-bold text-neutral-800">{received.toLocaleString("es-CL")}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-neutral-400 uppercase font-semibold">Diferencia</p>
+                      <p className={`text-sm tabular-nums font-bold ${
+                        diff === 0 ? "text-green-600" : diff > 0 ? "text-blue-600" : "text-red-600"
+                      }`}>
+                        {diff === 0 ? "0" : diff > 0 ? `+${diff.toLocaleString("es-CL")}` : diff.toLocaleString("es-CL")}
+                      </p>
+                    </div>
+                  </div>
+                  {/* Row 3: Tags + images (only when present) */}
+                  {(incRows.length > 0 || allImgCount > 0) && (
+                    <div className="flex items-center justify-between gap-2 mt-1">
+                      {incRows.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 min-w-0">
+                          {incRows.map(r => {
+                            const tag = INCIDENCIA_TAGS.find(t => t.key === r.tag);
+                            if (!tag) return null;
+                            return (
+                              <span key={r.rowId} className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium border ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
+                                {tag.label}
+                              </span>
+                            );
+                          })}
+                          <span className="text-xs font-semibold text-amber-700 tabular-nums ml-1">
+                            ({incRows.reduce((s, r) => s + r.cantidad, 0).toLocaleString("es-CL")} uds)
+                          </span>
+                        </div>
+                      ) : <div />}
+                      {allImgCount > 0 && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => openImageSlider(p, incRows)}
+                          iconLeft={<Image className="w-3.5 h-3.5" />}
+                          className="flex-shrink-0"
+                        >
+                          Ver
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop: full table */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-sm min-w-[700px]">
               <thead>
                 <tr className="border-b border-neutral-100 bg-neutral-50/60">
                   {["SKU", "Nombre", "Teórica", "Recibida", "Diferencia", "Estado", "Tag incidencia", "Uds c/inc.", "Imágenes"].map(h => (
-                    <th key={h} className={`px-3 py-2.5 text-[11px] font-semibold text-neutral-500 ${
+                    <th key={h} className={`px-3 py-2.5 text-[13px] font-semibold text-neutral-500 ${
                       ["Teórica","Recibida","Diferencia","Uds c/inc."].includes(h) ? "text-right" :
                       h === "Estado" ? "text-center" : "text-left"
                     }`}>{h}</th>
@@ -1915,7 +2152,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
               </thead>
               <tbody className="divide-y divide-neutral-50">
                 {skuRows.map(({ p, received, diff, status, incRows }) => {
-                  const allImgs = incRows.flatMap(r => r.imagenes);
+                  const allImgCount = countAllImages(incRows);
                   return (
                     <tr key={p.id} className="hover:bg-neutral-50/40 transition-colors duration-300">
                       <td className="px-3 py-3 font-mono text-xs text-neutral-500 align-top whitespace-nowrap">{p.sku}</td>
@@ -1938,21 +2175,14 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                       <td className="px-3 py-3 align-top">
                         {incRows.length === 0
                           ? <span className="text-neutral-200 text-xs">—</span>
-                          : <div className="flex flex-col gap-1">
+                          : <div className="flex flex-wrap gap-1">
                               {incRows.map(r => {
                                 const tag = INCIDENCIA_TAGS.find(t => t.key === r.tag);
                                 if (!tag) return null;
-                                const { badge, cls } = tagCatBadge(r.tag as IncidenciaTagKey);
                                 return (
-                                  <div key={r.rowId} className="flex items-center gap-1 flex-wrap">
-                                    <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium border ${
-                                      tag.color === "amber"  ? "bg-amber-50 text-amber-700 border-amber-200"  :
-                                      tag.color === "orange" ? "bg-orange-50 text-orange-700 border-orange-200":
-                                      tag.color === "purple" ? "bg-purple-50 text-purple-700 border-purple-200":
-                                                               "bg-red-50 text-red-700 border-red-200"
-                                    }`}>{tag.label}</span>
-                                    <span className={`text-[9px] font-bold px-1 py-0.5 rounded ${cls}`}>{badge}</span>
-                                  </div>
+                                  <span key={r.rowId} className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium border whitespace-nowrap ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
+                                    {tag.label}
+                                  </span>
                                 );
                               })}
                             </div>
@@ -1967,15 +2197,16 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                         }
                       </td>
                       <td className="px-3 py-3 align-top">
-                        {allImgs.length === 0
+                        {allImgCount === 0
                           ? <span className="text-neutral-200 text-xs">—</span>
-                          : <button
+                          : <Button
+                              variant="secondary"
+                              size="sm"
                               onClick={() => openImageSlider(p, incRows)}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 border border-primary-200 transition-colors duration-300"
+                              iconLeft={<Image className="w-3.5 h-3.5" />}
                             >
-                              <Eye className="w-3.5 h-3.5" />
-                              Ver ({allImgs.length})
-                            </button>
+                              Ver
+                            </Button>
                         }
                       </td>
                     </tr>
@@ -1984,7 +2215,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
               </tbody>
             </table>
           </div>
-        )}
+        </>)}
 
         {/* ── Per-session view ── */}
         {viewMode === "por-sesion" && (
@@ -2007,9 +2238,9 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-neutral-50/60 border-b border-neutral-100">
-                      <th className="px-4 py-2 text-left text-[11px] font-semibold text-neutral-400">SKU</th>
-                      <th className="px-4 py-2 text-left text-[11px] font-semibold text-neutral-400">Producto</th>
-                      <th className="px-4 py-2 text-right text-[11px] font-semibold text-neutral-400">Contadas</th>
+                      <th className="px-4 py-2 text-left text-[13px] font-semibold text-neutral-400">SKU</th>
+                      <th className="px-4 py-2 text-left text-[13px] font-semibold text-neutral-400">Producto</th>
+                      <th className="px-4 py-2 text-right text-[13px] font-semibold text-neutral-400">Contadas</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-50">
@@ -2058,12 +2289,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                             </div>
                             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                               {tag && (
-                                <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium border ${
-                                  tag.color === "amber"  ? "bg-amber-50 text-amber-700 border-amber-200"  :
-                                  tag.color === "orange" ? "bg-orange-50 text-orange-700 border-orange-200":
-                                  tag.color === "purple" ? "bg-purple-50 text-purple-700 border-purple-200":
-                                                           "bg-red-50 text-red-700 border-red-200"
-                                }`}>{tag.label}</span>
+                                <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium border ${tagColorCls(row.tag as IncidenciaTagKey)}`}>{tag.label}</span>
                               )}
                               <span className="text-xs text-neutral-500">
                                 <span className="font-semibold tabular-nums">{row.cantidad.toLocaleString("es-CL")}</span> uds afectadas
@@ -2133,6 +2359,7 @@ export default function ConteoORPage() {
   const incidenciaSnapshotRef = useRef<IncidenciaRow[]>([]);
   const [addProductFlow, setAddProductFlow] = useState<"closed" | "choice" | "catalog" | "manual">("closed");
   const [quarantineRecs,   setQuarantineRecs]   = useState<QuarantineRecord[]>([]);
+  const [guiaModal,        setGuiaModal]        = useState(false);
 
   // Capture snapshot of incidencias for a SKU when the modal opens (to revert on cancel)
   useEffect(() => {
@@ -2144,22 +2371,35 @@ export default function ConteoORPage() {
 
   // Restore closed state from localStorage OR from seed data (completed ORs)
   useEffect(() => {
+    let isClosed = false;
     try {
       const stored = localStorage.getItem(`amplifica_or_${id}`);
       if (stored) {
         const { estado } = JSON.parse(stored) as { estado: OrOutcome };
         if (estado === "Completado sin diferencias" || estado === "Completado con diferencias") {
           setOrEstado(estado);
-          return;
+          isClosed = true;
         }
       }
     } catch { /* ignore */ }
-    // Fallback: check seed data for ORs that are already completed
-    const seedEntry = ORDENES_SEED.find(o => o.id === id);
-    if (seedEntry) {
-      if (seedEntry.estado === "Completado sin diferencias" || seedEntry.estado === "Completado con diferencias") {
-        setOrEstado(seedEntry.estado as OrOutcome);
+    if (!isClosed) {
+      // Fallback: check seed data for ORs that are already completed
+      const seedEntry = ORDENES_SEED.find(o => o.id === id);
+      if (seedEntry) {
+        if (seedEntry.estado === "Completado sin diferencias" || seedEntry.estado === "Completado con diferencias") {
+          setOrEstado(seedEntry.estado as OrOutcome);
+          isClosed = true;
+        }
       }
+    }
+    // Always load seed incidencias for closed ORs (regardless of localStorage vs seed)
+    if (isClosed && SEED_INCIDENCIAS[id]) {
+      const grouped: Record<string, IncidenciaRow[]> = {};
+      for (const inc of SEED_INCIDENCIAS[id]) {
+        if (!grouped[inc.skuId]) grouped[inc.skuId] = [];
+        grouped[inc.skuId].push(inc);
+      }
+      setIncidencias(grouped);
     }
   }, [id]);
 
@@ -2417,6 +2657,39 @@ export default function ConteoORPage() {
         />
       )}
 
+      {/* ── Guía de Despacho modal ── */}
+      {guiaModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm px-0 sm:px-4" onClick={() => setGuiaModal(false)}>
+          <div className="relative bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
+              <p className="text-base font-semibold text-neutral-900">Guía de despacho</p>
+              <button onClick={() => setGuiaModal(false)} className="p-1 rounded-lg hover:bg-neutral-100 transition-colors">
+                <X className="w-4 h-4 text-neutral-500" />
+              </button>
+            </div>
+            <div className="p-5 flex flex-col items-center gap-4">
+              <div className="w-20 h-20 bg-neutral-100 rounded-2xl flex items-center justify-center">
+                <FileText className="w-10 h-10 text-neutral-300" />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-semibold text-neutral-800">GD-{id.replace("RO-", "")}-{baseData.seller.replace(/\s/g, "")}.pdf</p>
+                <span className="inline-flex items-center mt-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-600 border border-red-200">
+                  PDF · 2.4 MB
+                </span>
+              </div>
+              <div className="w-full bg-neutral-50 border border-neutral-200 rounded-xl p-6 flex flex-col items-center gap-2">
+                <FileText className="w-8 h-8 text-neutral-300" />
+                <p className="text-xs text-neutral-400 text-center">Vista previa no disponible en esta versión</p>
+              </div>
+              <button className="w-full h-11 flex items-center justify-center gap-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-xl transition-colors duration-300">
+                <Download className="w-4 h-4" />
+                Descargar guía
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Breadcrumb ── */}
       <nav className="max-w-4xl mx-auto px-4 lg:px-6 pt-4 pb-1 flex items-center justify-center sm:justify-start gap-1.5 text-sm text-neutral-500">
         <Link href="/recepciones" className="hover:text-primary-500 transition-colors duration-300">Recepciones</Link>
@@ -2438,9 +2711,19 @@ export default function ConteoORPage() {
             </p>
           </div>
 
-          {/* Desktop-only session buttons */}
+          {/* Desktop-only session buttons / closed OR actions */}
           <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
-            {!orCerrada && (
+            {orCerrada ? (
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={() => setGuiaModal(true)}
+                iconLeft={<FileText className="w-4 h-4" />}
+                className="whitespace-nowrap"
+              >
+                Ver Guía de despacho
+              </Button>
+            ) : (
               sesionActiva ? (
                 <button
                   onClick={finalizarSesion}
@@ -2460,18 +2743,34 @@ export default function ConteoORPage() {
               )
             )}
           </div>
+
+          {/* Mobile: Guía de despacho button for closed OR */}
+          {orCerrada && (
+            <div className="flex lg:hidden justify-center sm:justify-start">
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={() => setGuiaModal(true)}
+                iconLeft={<FileText className="w-4 h-4" />}
+              >
+                Ver Guía de despacho
+              </Button>
+            </div>
+          )}
         </div>
 
-        {/* ── QR Display ── */}
-        <QrDisplaySection
-          orId={id}
-          seller={baseData.seller}
-          sucursal={baseData.sucursal}
-          fechaAgendada={baseData.fechaAgendada}
-          skus={products.length}
-          uTotales={stats.totalEsperadas.toLocaleString("es-CL")}
-          sesiones={sesiones.length + (sesionActiva ? 1 : 0)}
-        />
+        {/* ── QR Display (hidden when OR closed) ── */}
+        {!orCerrada && (
+          <QrDisplaySection
+            orId={id}
+            seller={baseData.seller}
+            sucursal={baseData.sucursal}
+            fechaAgendada={baseData.fechaAgendada}
+            skus={products.length}
+            uTotales={stats.totalEsperadas.toLocaleString("es-CL")}
+            sesiones={sesiones.length + (sesionActiva ? 1 : 0)}
+          />
+        )}
 
         {/* ── Active session banner ── */}
         {sesionActiva && (
@@ -2601,12 +2900,7 @@ export default function ConteoORPage() {
               const tag = INCIDENCIA_TAGS.find(t => t.key === tagKey);
               if (!tag || total === 0) return null;
               return (
-                <span key={tagKey} className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border ${
-                  tag.color === "amber"  ? "bg-amber-50  text-amber-700  border-amber-200"  :
-                  tag.color === "orange" ? "bg-orange-50 text-orange-700 border-orange-200" :
-                  tag.color === "purple" ? "bg-purple-50 text-purple-700 border-purple-200" :
-                                           "bg-red-50    text-red-700    border-red-200"
-                }`}>
+                <span key={tagKey} className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border ${tagColorCls(tagKey)}`}>
                   {tag.label}
                   <span className="opacity-60 font-normal tabular-nums ml-0.5">· {total} uds</span>
                 </span>
@@ -2774,7 +3068,53 @@ export default function ConteoORPage() {
           );
         })()}
 
-        {/* ── Resumen (OR cerrada) ── */}
+        {/* ── Información de la OR (datos del Seller) ── */}
+        {orCerrada && (
+          <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+            <div className="px-4 py-3.5 border-b border-neutral-100">
+              <span className="text-base font-semibold text-neutral-800">Información de la OR</span>
+              <p className="text-xs text-neutral-400 mt-0.5">Datos ingresados por el seller al crear la orden</p>
+            </div>
+            <div className="p-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+                <div>
+                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">ID de OR</p>
+                  <p className="text-sm font-semibold text-neutral-800 mt-0.5 font-mono">{id}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Seller</p>
+                  <p className="text-sm font-semibold text-neutral-800 mt-0.5">{baseData.seller}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Sucursal</p>
+                  <p className="text-sm font-semibold text-neutral-800 mt-0.5">{baseData.sucursal}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Fecha agendada</p>
+                  <p className="text-sm font-semibold text-neutral-800 mt-0.5">{baseData.fechaAgendada}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">SKUs declarados</p>
+                  <p className="text-sm font-semibold text-neutral-800 mt-0.5">{products.length}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Unidades declaradas</p>
+                  <p className="text-sm font-semibold text-neutral-800 mt-0.5">{stats.totalEsperadas.toLocaleString("es-CL")}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Formato de carga</p>
+                  <p className="text-sm font-semibold text-neutral-800 mt-0.5">2 Pallets · 4 Bultos</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Comentarios del seller</p>
+                  <p className="text-sm text-neutral-600 mt-0.5 italic">"Mercancía frágil, manipular con cuidado. Entregar en andén 3."</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Resumen de recepción (OR cerrada) ── */}
         {orCerrada && (
           <ResumenOR
             id={id} baseData={baseData} orEstado={orEstado}
@@ -2851,6 +3191,120 @@ export default function ConteoORPage() {
             ))}
           </div>
         )}
+
+        {/* ── Notificaciones enviadas (OR cerrada) ── */}
+        {orCerrada && (() => {
+          const sinDif = orEstado === "Completado sin diferencias";
+          const hasInc = Object.values(incidencias).some(rows => rows.some(r => r.tag !== ""));
+          const hasQuar = quarantineRecs.length > 0;
+
+          type Notif = { titulo: string; destinatario: string; fecha: string; canal: string; icon: React.ReactNode; color: string };
+          const notifs: Notif[] = [
+            {
+              titulo: "OR creada por el seller",
+              destinatario: "Equipo de recepción",
+              fecha: "07/03/2026 14:22",
+              canal: "Email + Push",
+              icon: <PlusCircle className="w-4 h-4 text-primary-500" />,
+              color: "primary",
+            },
+            {
+              titulo: "OR programada para recepción",
+              destinatario: "Operador de andén",
+              fecha: "07/03/2026 14:25",
+              canal: "Push",
+              icon: <CalendarDays className="w-4 h-4 text-blue-500" />,
+              color: "blue",
+            },
+            {
+              titulo: "Sesión de conteo iniciada",
+              destinatario: "Supervisor",
+              fecha: "08/03/2026 16:35",
+              canal: "Push",
+              icon: <PlayCircle className="w-4 h-4 text-green-500" />,
+              color: "green",
+            },
+            {
+              titulo: sinDif ? "Recepción completada sin diferencias" : "Recepción completada con diferencias",
+              destinatario: `${baseData.seller} (Seller) + Supervisor`,
+              fecha: "08/03/2026 18:10",
+              canal: "Email + Push",
+              icon: <CheckCircle2 className="w-4 h-4 text-green-600" />,
+              color: "green",
+            },
+          ];
+
+          if (hasInc) {
+            notifs.push({
+              titulo: "Incidencias reportadas al seller",
+              destinatario: `${baseData.seller} (Seller)`,
+              fecha: "08/03/2026 18:12",
+              canal: "Email",
+              icon: <AlertTriangle className="w-4 h-4 text-amber-500" />,
+              color: "amber",
+            });
+          }
+
+          if (hasQuar) {
+            notifs.push({
+              titulo: "Gestión de cuarentena iniciada",
+              destinatario: "Equipo de calidad",
+              fecha: "08/03/2026 18:15",
+              canal: "Email + Push",
+              icon: <Shield className="w-4 h-4 text-red-500" />,
+              color: "red",
+            });
+          }
+
+          const reversed = [...notifs].reverse();
+
+          return (
+            <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+              <div className="px-4 py-3.5 border-b border-neutral-100 flex items-center justify-between">
+                <div>
+                  <span className="text-base font-semibold text-neutral-800">Notificaciones enviadas</span>
+                  <p className="text-xs text-neutral-400 mt-0.5">Comunicaciones automáticas del sistema</p>
+                </div>
+                <div className="flex items-center gap-1.5 text-sm text-neutral-400 tabular-nums flex-shrink-0">
+                  <Bell className="w-4 h-4" />
+                  {notifs.length} enviadas
+                </div>
+              </div>
+              <div className="p-4">
+                {reversed.map((n, idx) => {
+                  const isLast = idx === reversed.length - 1;
+                  return (
+                    <div key={idx} className="flex gap-3">
+                      {/* Timeline connector */}
+                      <div className="flex flex-col items-center flex-shrink-0">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          n.color === "primary" ? "bg-primary-50"  :
+                          n.color === "blue"    ? "bg-blue-50"     :
+                          n.color === "green"   ? "bg-green-50"    :
+                          n.color === "amber"   ? "bg-amber-50"    :
+                                                  "bg-red-50"
+                        }`}>
+                          {n.icon}
+                        </div>
+                        {!isLast && <div className="w-px flex-1 bg-neutral-200 min-h-[16px]" />}
+                      </div>
+                      {/* Content */}
+                      <div className={`flex-1 min-w-0 ${isLast ? "" : "pb-4"}`}>
+                        <p className="text-sm font-medium text-neutral-800">{n.titulo}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5 text-xs text-neutral-500 flex-wrap">
+                          <span>{n.destinatario}</span>
+                          <span className="text-neutral-300">·</span>
+                          <span>{n.canal}</span>
+                        </div>
+                        <p className="text-[11px] text-neutral-400 mt-0.5 tabular-nums">{n.fecha}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ── Footer: Liberar + Terminar recepción (always visible when OR open) ── */}
         {!orCerrada && (<>

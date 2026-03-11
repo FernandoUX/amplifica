@@ -70,6 +70,106 @@ export type CalOrEntry = {
   estado: string;
 };
 
+// ─── Shared OR product & session seed data ──────────────────────────────────
+// Used by the [id] detail page and the list page for dynamic progreso/sesiones
+
+type SeedProduct = { id: string; esperadas: number };
+type SeedSesionItem = { pid: string; cantidad: number };
+type SeedSesion = { id: string; items: SeedSesionItem[] };
+
+/** Products per OR (total esperadas) */
+export const OR_PRODUCTS: Record<string, SeedProduct[]> = {
+  "RO-BARRA-180": [{ id: "p1", esperadas: 100 }, { id: "p2", esperadas: 150 }],
+  "RO-BARRA-184": [{ id: "p1", esperadas: 100 }, { id: "p2", esperadas: 150 }],
+  "RO-BARRA-179": [{ id: "p1", esperadas: 80 },  { id: "p2", esperadas: 60 }],
+  "RO-BARRA-185": [{ id: "p1", esperadas: 60 },  { id: "p2", esperadas: 45 }],
+  "RO-BARRA-186": [{ id: "p1", esperadas: 1200 }, { id: "p2", esperadas: 800 }, { id: "p3", esperadas: 550 }],
+  "RO-BARRA-201": [{ id: "p1", esperadas: 600 },  { id: "p2", esperadas: 500 }, { id: "p3", esperadas: 440 }],
+  "RO-BARRA-189": [{ id: "p1", esperadas: 400 },  { id: "p2", esperadas: 350 }],
+  "RO-BARRA-200": [{ id: "p1", esperadas: 500 },  { id: "p2", esperadas: 300 }],
+  "RO-BARRA-187": [{ id: "p1", esperadas: 1200 }, { id: "p2", esperadas: 850 }, { id: "p3", esperadas: 500 }],
+  "RO-BARRA-199": [{ id: "p1", esperadas: 380 },  { id: "p2", esperadas: 400 }],
+  "RO-BARRA-212": [{ id: "p1", esperadas: 640 },  { id: "p2", esperadas: 700 }],
+  "RO-BARRA-198": [{ id: "p1", esperadas: 560 },  { id: "p2", esperadas: 560 }],
+  "RO-BARRA-219": [{ id: "p1", esperadas: 1420 }, { id: "p2", esperadas: 1420 }],
+  "RO-BARRA-220": [{ id: "p1", esperadas: 310 },  { id: "p2", esperadas: 300 }],
+  "RO-BARRA-222": [{ id: "p1", esperadas: 1100 }, { id: "p2", esperadas: 1100 }],
+  "RO-BARRA-223": [{ id: "p1", esperadas: 680 },  { id: "p2", esperadas: 680 }],
+  "RO-BARRA-214": [{ id: "p1", esperadas: 445 },  { id: "p2", esperadas: 445 }],
+  "RO-BARRA-215": [{ id: "p1", esperadas: 1050 }, { id: "p2", esperadas: 1050 }],
+};
+
+/** Counting sessions per OR */
+export const OR_SESIONES: Record<string, SeedSesion[]> = {
+  "RO-BARRA-184": [
+    { id: "SES-001", items: [{ pid: "p1", cantidad: 58 }, { pid: "p2", cantidad: 72 }] },
+  ],
+  "RO-BARRA-179": [
+    { id: "SES-001", items: [{ pid: "p1", cantidad: 40 }, { pid: "p2", cantidad: 25 }] },
+  ],
+  "RO-BARRA-185": [
+    { id: "SES-001", items: [{ pid: "p1", cantidad: 30 }, { pid: "p2", cantidad: 18 }] },
+  ],
+  "RO-BARRA-186": [
+    { id: "SES-001", items: [{ pid: "p1", cantidad: 1180 }, { pid: "p2", cantidad: 780 }, { pid: "p3", cantidad: 550 }] },
+  ],
+  "RO-BARRA-201": [
+    { id: "SES-001", items: [{ pid: "p1", cantidad: 564 }, { pid: "p2", cantidad: 500 }, { pid: "p3", cantidad: 440 }] },
+  ],
+  "RO-BARRA-189": [
+    { id: "SES-001", items: [{ pid: "p1", cantidad: 400 }, { pid: "p2", cantidad: 350 }] },
+  ],
+  "RO-BARRA-200": [
+    { id: "SES-001", items: [{ pid: "p1", cantidad: 500 }, { pid: "p2", cantidad: 300 }] },
+  ],
+  "RO-BARRA-187": [
+    { id: "SES-001", items: [{ pid: "p1", cantidad: 1200 }, { pid: "p2", cantidad: 850 }, { pid: "p3", cantidad: 500 }] },
+  ],
+  "RO-BARRA-199": [
+    { id: "SES-001", items: [{ pid: "p1", cantidad: 380 }, { pid: "p2", cantidad: 400 }] },
+  ],
+  "RO-BARRA-212": [
+    { id: "SES-001", items: [{ pid: "p1", cantidad: 640 }, { pid: "p2", cantidad: 700 }] },
+  ],
+  "RO-BARRA-198": [
+    { id: "SES-001", items: [{ pid: "p1", cantidad: 85 }] },
+  ],
+  "RO-BARRA-219": [
+    { id: "SES-001", items: [{ pid: "p1", cantidad: 150 }, { pid: "p2", cantidad: 150 }] },
+  ],
+  "RO-BARRA-220": [
+    { id: "SES-001", items: [{ pid: "p1", cantidad: 310 }, { pid: "p2", cantidad: 300 }] },
+  ],
+  "RO-BARRA-222": [
+    { id: "SES-001", items: [{ pid: "p1", cantidad: 550 }, { pid: "p2", cantidad: 550 }] },
+    { id: "SES-002", items: [{ pid: "p1", cantidad: 550 }, { pid: "p2", cantidad: 550 }] },
+  ],
+  "RO-BARRA-223": [
+    { id: "SES-001", items: [{ pid: "p1", cantidad: 680 }, { pid: "p2", cantidad: 680 }] },
+  ],
+  "RO-BARRA-214": [
+    { id: "SES-001", items: [{ pid: "p1", cantidad: 445 }, { pid: "p2", cantidad: 445 }] },
+  ],
+  "RO-BARRA-215": [
+    { id: "SES-001", items: [{ pid: "p1", cantidad: 1050 }, { pid: "p2", cantidad: 1050 }] },
+  ],
+};
+
+/**
+ * Pre-computed progress stats per OR: { contadas, total, sesiones }
+ * Used by the recepciones list to show Progreso and Sesiones columns.
+ */
+export const OR_STATS: Record<string, { contadas: number; total: number; sesiones: number }> =
+  Object.fromEntries(
+    Object.entries(OR_SESIONES).map(([orId, sesiones]) => {
+      const contadas = sesiones.reduce((sum, ses) => sum + ses.items.reduce((s, i) => s + i.cantidad, 0), 0);
+      const total    = (OR_PRODUCTS[orId] ?? []).reduce((s, p) => s + p.esperadas, 0);
+      return [orId, { contadas, total, sesiones: sesiones.length }];
+    })
+  );
+
+// ─── Calendar-relevant OR seed ──────────────────────────────────────────────
+
 export const ORDENES_SEED: CalOrEntry[] = [
   { id: "RO-BARRA-183", fechaAgendada: "20/02/2026 16:30", sucursal: "Quilicura",       seller: "Extra Life", estado: "Programado" },
   { id: "RO-BARRA-182", fechaAgendada: "20/02/2026 16:30", sucursal: "La Reina",        seller: "Extra Life", estado: "Programado" },

@@ -164,12 +164,15 @@ export default function Sidebar({ onClose }: SidebarProps) {
 
   return (
     <aside
-      className={`${collapsed ? "lg:w-14" : "lg:w-52"} w-full bg-neutral-900 text-white flex flex-col flex-shrink-0 transition-all duration-200 h-full`}
+      className={`${collapsed ? "lg:w-14" : "lg:w-52"} w-full text-white flex flex-col flex-shrink-0 transition-all duration-200 h-full`}
+      style={{ backgroundColor: "#1D1D1F" }}
     >
       {/* ── Logo ──────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-3 py-3.5 border-b border-white/10">
-        {!collapsed && <AmplificaLogo />}
-        {collapsed && <AmplificaLogo collapsed />}
+        <div className="hidden lg:block">
+          {!collapsed && <AmplificaLogo />}
+          {collapsed && <AmplificaLogo collapsed />}
+        </div>
         {/* Mobile close button */}
         {onClose && (
           <button
