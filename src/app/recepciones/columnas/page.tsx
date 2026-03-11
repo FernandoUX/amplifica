@@ -142,7 +142,7 @@ export default function ColumnEditorPage() {
     <div className="p-6 max-w-5xl mx-auto">
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between mb-7 gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-7 gap-3 sm:gap-4">
         <div className="flex items-center gap-3">
           <Link
             href="/recepciones"
@@ -157,7 +157,8 @@ export default function ColumnEditorPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Desktop buttons */}
+        <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
           <button
             onClick={handleReset}
             className="px-3 py-2 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 font-medium transition-colors duration-300"
@@ -314,6 +315,27 @@ export default function ColumnEditorPage() {
         </div>
       </div>
 
+      {/* Spacer for mobile sticky bar */}
+      <div className="h-20 sm:hidden" />
+    </div>
+
+    {/* ── Mobile sticky bottom bar ── */}
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 py-3 z-30 sm:hidden">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={handleReset}
+          className="flex-1 px-3 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 font-medium transition-colors duration-300"
+        >
+          Restablecer
+        </button>
+        <button
+          onClick={handleSave}
+          className="flex-1 flex items-center justify-center gap-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors duration-300"
+        >
+          <Check className="w-4 h-4" />
+          Guardar cambios
+        </button>
+      </div>
     </div>
     </>
   );

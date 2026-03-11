@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect, useMemo } from "react";
-import { ChevronRight, ChevronDown, Check, X, Search } from "lucide-react";
+import { ChevronRight, ChevronDown, ChevronUp, Check, X, Search, SlidersHorizontal } from "lucide-react";
 import { AlertTriangle, Clock } from "@untitled-ui/icons-react";
 import {
   QuarantineRecord, QuarantineStatus, QuarantineResolution, QuarantineCategory,
@@ -26,9 +26,9 @@ function daysSince(iso: string) {
 }
 
 function catBadge(cat: QuarantineCategory) {
-  if (cat === "interna")           return { label: "Interna (Amplifica)",  short: "Cat. A", cls: "bg-primary-50 text-primary-600 border-primary-200" };
-  if (cat === "devolucion_seller") return { label: "Devolución (Seller)",  short: "Cat. B", cls: "bg-red-50 text-red-700 border-red-200" };
-  return                                  { label: "Decisión (Seller)",    short: "Cat. C", cls: "bg-amber-50 text-amber-700 border-amber-200" };
+  if (cat === "interna")           return { label: "Resolución interna Amplifica",   short: "Res. interna", cls: "bg-primary-50 text-primary-600 border-primary-200" };
+  if (cat === "devolucion_seller") return { label: "Devolución obligatoria a seller", short: "Dev. obligatoria", cls: "bg-red-50 text-red-700 border-red-200" };
+  return                                  { label: "Decisión del seller",             short: "Dec. seller", cls: "bg-amber-50 text-amber-700 border-amber-200" };
 }
 
 function estadoBadge(estado: QuarantineStatus) {
@@ -69,6 +69,8 @@ export default function CuarentenaPage() {
   const [filterSeller,  setFilterSeller]  = useState("");
   const [filterSucursal, setFilterSucursal] = useState("");
   const [searchTerm,    setSearchTerm]    = useState("");
+  const [showFilters,   setShowFilters]   = useState(false);
+  const activeFilterCount = [filterCat !== "all", filterEstado !== "all", filterSeller !== "", filterSucursal !== ""].filter(Boolean).length;
 
   // Cat C modal
   const [catCModal,    setCatCModal]    = useState<QuarantineRecord | null>(null);
@@ -285,10 +287,9 @@ export default function CuarentenaPage() {
 
         {/* ── Filters ── */}
         <div className="bg-white border border-neutral-200 rounded-xl p-4">
-          <div className="flex items-center gap-3 flex-wrap">
-
-            {/* Search */}
-            <div className="relative flex-1 min-w-[200px]">
+          {/* Search + mobile filter toggle */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
               <input
                 type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
@@ -296,23 +297,37 @@ export default function CuarentenaPage() {
                 className="w-full pl-9 pr-4 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 placeholder-neutral-400"
               />
             </div>
+            <button
+              onClick={() => setShowFilters(f => !f)}
+              className="sm:hidden flex items-center gap-1.5 px-3 py-2 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 transition-colors flex-shrink-0"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              Filtros
+              {activeFilterCount > 0 && (
+                <span className="w-5 h-5 flex items-center justify-center bg-primary-500 text-white text-[10px] font-bold rounded-full">{activeFilterCount}</span>
+              )}
+              {showFilters ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+          </div>
 
+          {/* Dropdowns: always visible on desktop, collapsible on mobile */}
+          <div className={`flex items-center gap-3 flex-wrap mt-3 ${showFilters ? "flex" : "hidden sm:flex"}`}>
             {/* Categoría */}
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
               <select value={filterCat} onChange={e => setFilterCat(e.target.value as QuarantineCategory | "all")}
-                className="appearance-none pl-3 pr-8 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 bg-white text-neutral-700">
+                className="appearance-none w-full sm:w-auto pl-3 pr-8 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 bg-white text-neutral-700">
                 <option value="all">Todas las categorías</option>
-                <option value="interna">Cat. A — Interna</option>
-                <option value="devolucion_seller">Cat. B — Devolución</option>
-                <option value="decision_seller">Cat. C — Decisión</option>
+                <option value="interna">Resolución interna Amplifica</option>
+                <option value="devolucion_seller">Devolución obligatoria a seller</option>
+                <option value="decision_seller">Decisión del seller</option>
               </select>
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
             </div>
 
             {/* Estado */}
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
               <select value={filterEstado} onChange={e => setFilterEstado(e.target.value as QuarantineStatus | "all")}
-                className="appearance-none pl-3 pr-8 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 bg-white text-neutral-700">
+                className="appearance-none w-full sm:w-auto pl-3 pr-8 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 bg-white text-neutral-700">
                 <option value="all">Todos los estados</option>
                 <option value="pendiente">Pendiente</option>
                 <option value="en_gestion">En gestión</option>
@@ -322,9 +337,9 @@ export default function CuarentenaPage() {
             </div>
 
             {/* Seller */}
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
               <select value={filterSeller} onChange={e => setFilterSeller(e.target.value)}
-                className="appearance-none pl-3 pr-8 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 bg-white text-neutral-700">
+                className="appearance-none w-full sm:w-auto pl-3 pr-8 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 bg-white text-neutral-700">
                 <option value="">Todos los sellers</option>
                 {sellers.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
@@ -332,9 +347,9 @@ export default function CuarentenaPage() {
             </div>
 
             {/* Sucursal */}
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
               <select value={filterSucursal} onChange={e => setFilterSucursal(e.target.value)}
-                className="appearance-none pl-3 pr-8 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 bg-white text-neutral-700">
+                className="appearance-none w-full sm:w-auto pl-3 pr-8 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 bg-white text-neutral-700">
                 <option value="">Todas las sucursales</option>
                 {sucursales.map(s => <option key={s} value={s}>{s}</option>)}
               </select>

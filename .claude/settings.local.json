@@ -2,7 +2,29 @@
   "permissions": {
     "allow": [
       "Bash(claude mcp list)",
-      "Bash(npx --yes @figma/mcp --version)"
+      "Bash(npx --yes @figma/mcp --version)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(git add src/components/layout/Sidebar.tsx 'src/app/recepciones/configuracion/page.tsx')",
+      "Bash(git commit:*)",
+      "Bash(git push origin main)",
+      "Bash(vercel --prod --yes)",
+      "Bash(git add src/app/recepciones/configuracion/page.tsx)",
+      "Bash(git add src/app/recepciones/page.tsx)",
+      "Bash(git add src/app/recepciones/crear/page.tsx)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npx vercel --prod --yes)",
+      "Bash(npx next build)",
+      "Bash(npx next lint --quiet)",
+      "Bash(wc -l /Users/fernandoroblero/Documents/Amplifica.io/Amplifica/src/app/recepciones/[id]/page.tsx)",
+      "Bash(npx vercel --prod)",
+      "Bash(tail -200 ./src/app/recepciones/[id]/page.tsx)",
+      "Bash(grep \"import.*@untitled-ui\\\\|import.*lucide-react\" ./src/app/recepciones/[id]/page.tsx)",
+      "Bash(npm install qrcode.react)",
+      "Bash(npx tsc --noEmit --pretty)",
+      "Bash(git add package.json package-lock.json src/lib/qr-helpers.ts src/app/recepciones/_data.ts src/app/recepciones/page.tsx src/app/recepciones/[id]/page.tsx src/app/recepciones/layout.tsx src/app/recepciones/columnas/page.tsx src/app/recepciones/configuracion/page.tsx src/app/recepciones/crear/page.tsx src/app/recepciones/cuarentena/ src/app/globals.css src/components/recepciones/QrScannerModal.tsx src/components/recepciones/QrDisplaySection.tsx src/components/recepciones/BulkLabelsModal.tsx src/components/recepciones/ProductsModal.tsx src/components/recepciones/StatusBadge.tsx src/components/recepciones/StepIndicator.tsx src/components/layout/Sidebar.tsx src/components/ui/)",
+      "Bash(npx vercel ls amplificaio --token=\"$VERCEL_TOKEN\")",
+      "Bash(npx next build --no-lint)",
+      "Bash(git add -A)"
     ]
   }
 }

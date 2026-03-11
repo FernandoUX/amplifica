@@ -175,8 +175,43 @@ export default function QrScannerModal({ open, onClose, onConfirm, getOrInfo }: 
           {/* STEP: INPUT */}
           {step === "input" && (
             <>
+              {/* Simulated camera scanner */}
+              <div className="mb-5">
+                <div className="relative bg-neutral-900 rounded-xl overflow-hidden flex items-center justify-center" style={{ height: 180 }}>
+                  {/* Scan grid overlay */}
+                  <div className="absolute inset-4 border-2 border-white/20 rounded-lg" />
+                  <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-white/70 rounded-tl-md" />
+                  <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-white/70 rounded-tr-md" />
+                  <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-white/70 rounded-bl-md" />
+                  <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-white/70 rounded-br-md" />
+                  {/* Animated scan line */}
+                  <div className="absolute left-4 right-4 h-0.5 bg-primary-400/60 animate-pulse" style={{ top: "50%" }} />
+                  {/* Center button */}
+                  <button
+                    onClick={() => {
+                      if (programadoOrs.length > 0) doScan(programadoOrs[0].token);
+                    }}
+                    className="relative z-10 inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 transition-colors shadow-lg"
+                  >
+                    <QrCode02 className="w-4 h-4" />
+                    Escanear QR
+                  </button>
+                  {/* Subtle text */}
+                  <p className="absolute bottom-2 left-0 right-0 text-center text-[10px] text-white/40">
+                    Apunta la cámara al código QR de la orden
+                  </p>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="flex items-center gap-3 mb-5">
+                <div className="flex-1 h-px bg-neutral-200" />
+                <span className="text-xs text-neutral-400 font-medium">o ingresa manualmente</span>
+                <div className="flex-1 h-px bg-neutral-200" />
+              </div>
+
               {/* Manual input */}
-              <div className="mb-6">
+              <div className="mb-5">
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">
                   Código QR / Token UUID
                 </label>

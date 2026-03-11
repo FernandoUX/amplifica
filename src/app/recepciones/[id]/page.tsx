@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useMemo, useRef, useEffect } from "react";
 import {
-  ChevronRight, Trash2, Scan, ImageOff,
+  ChevronRight, Trash2, Scan, ScanBarcode, ImageOff,
   Clock, User, PlayCircle, StopCircle,
   ChevronDown, ChevronUp, MoreHorizontal, Package,
   X, Check, Upload, Search, HelpCircle,
@@ -14,11 +14,12 @@ import {
 } from "@untitled-ui/icons-react";
 import {
   QuarantineRecord, QuarantineStatus, QuarantineResolution, QuarantineCategory,
-  QR_STORAGE_KEY, SEED_QUARANTINE,
+  QR_STORAGE_KEY, SEED_QUARANTINE, ORDENES_SEED,
 } from "../_data";
 import FormField from "@/components/ui/FormField";
 import ProductsModal, { type AddProduct } from "@/components/recepciones/ProductsModal";
 import QrDisplaySection from "@/components/recepciones/QrDisplaySection";
+import Button from "@/components/ui/Button";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ProductConteo = {
@@ -122,6 +123,50 @@ const MOCK_ORDENES: Record<string, OrdenData> = {
       { id: "p2", sku: "GH-003", nombre: "Gohard Pre-Workout Energy 300g",       barcode: "7891234560003", esperadas: 45,  contadasSesion: 0 },
     ],
   },
+  // ─── Completado con diferencias ──────────────────────────────────────────────
+  "RO-BARRA-186": {
+    id: "RO-BARRA-186",
+    seller: "Extra Life",
+    sucursal: "Quilicura",
+    fechaAgendada: "15/02/2026 08:00",
+    products: [
+      { id: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 4 Sachets Tropical Delight",  barcode: "8500942860946", esperadas: 1200, contadasSesion: 0 },
+      { id: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",      barcode: "8500942860625", esperadas: 800,  contadasSesion: 0 },
+      { id: "p3", sku: "300078", nombre: "Extra Life Electrolitos Effervescentes 10 Tabs Limón",         barcode: "8500942860731", esperadas: 550,  contadasSesion: 0 },
+    ],
+  },
+  "RO-BARRA-201": {
+    id: "RO-BARRA-201",
+    seller: "VitaFit",
+    sucursal: "La Reina",
+    fechaAgendada: "01/03/2026 09:00",
+    products: [
+      { id: "p1", sku: "VF-101", nombre: "VitaFit Proteína Vegana 1kg Vainilla",   barcode: "7801234560101", esperadas: 600,  contadasSesion: 0 },
+      { id: "p2", sku: "VF-102", nombre: "VitaFit Omega-3 Cápsulas 120 uds",       barcode: "7801234560102", esperadas: 500,  contadasSesion: 0 },
+      { id: "p3", sku: "VF-103", nombre: "VitaFit Multivitamínico Diario 60 Tabs",  barcode: "7801234560103", esperadas: 440,  contadasSesion: 0 },
+    ],
+  },
+  // ─── Completado sin diferencias ──────────────────────────────────────────────
+  "RO-BARRA-189": {
+    id: "RO-BARRA-189",
+    seller: "Le Vice",
+    sucursal: "Santiago Centro",
+    fechaAgendada: "13/02/2026 15:30",
+    products: [
+      { id: "p1", sku: "LV-001", nombre: "Le Vice Colágeno Hidrolizado 500g",  barcode: "7891234560201", esperadas: 400, contadasSesion: 0 },
+      { id: "p2", sku: "LV-002", nombre: "Le Vice Vitamina C Liposomal 60 caps", barcode: "7891234560202", esperadas: 350, contadasSesion: 0 },
+    ],
+  },
+  "RO-BARRA-200": {
+    id: "RO-BARRA-200",
+    seller: "BioNature",
+    sucursal: "Quilicura",
+    fechaAgendada: "04/03/2026 15:00",
+    products: [
+      { id: "p1", sku: "BN-001", nombre: "BioNature Spirulina Orgánica 300g",  barcode: "7891234560301", esperadas: 500, contadasSesion: 0 },
+      { id: "p2", sku: "BN-002", nombre: "BioNature Chlorella 200 Tabs",       barcode: "7891234560302", esperadas: 300, contadasSesion: 0 },
+    ],
+  },
 };
 
 // ─── Seed sessions for ORs already "En proceso de conteo" ─────────────────────
@@ -153,6 +198,50 @@ const SEED_SESIONES: Record<string, Sesion[]> = {
       items: [
         { pid: "p1", sku: "GH-001", nombre: "Gohard Proteína Whey 1kg Chocolate", cantidad: 30 },
         { pid: "p2", sku: "GH-003", nombre: "Gohard Pre-Workout Energy 300g",      cantidad: 18 },
+      ],
+    },
+  ],
+  // ─── Completado con diferencias ──────────────────────────────────────────────
+  "RO-BARRA-186": [
+    {
+      id: "SES-001", operador: "Fernando Roblero",
+      inicio: "2026-02-15T08:10:00", fin: "2026-02-15T09:05:00",
+      items: [
+        { pid: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 4 Sachets Tropical Delight", cantidad: 1180 },
+        { pid: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",     cantidad: 780 },
+        { pid: "p3", sku: "300078", nombre: "Extra Life Electrolitos Effervescentes 10 Tabs Limón",        cantidad: 550 },
+      ],
+    },
+  ],
+  "RO-BARRA-201": [
+    {
+      id: "SES-001", operador: "Catalina Mora",
+      inicio: "2026-03-01T09:15:00", fin: "2026-03-01T10:20:00",
+      items: [
+        { pid: "p1", sku: "VF-101", nombre: "VitaFit Proteína Vegana 1kg Vainilla",  cantidad: 564 },
+        { pid: "p2", sku: "VF-102", nombre: "VitaFit Omega-3 Cápsulas 120 uds",      cantidad: 500 },
+        { pid: "p3", sku: "VF-103", nombre: "VitaFit Multivitamínico Diario 60 Tabs", cantidad: 440 },
+      ],
+    },
+  ],
+  // ─── Completado sin diferencias ──────────────────────────────────────────────
+  "RO-BARRA-189": [
+    {
+      id: "SES-001", operador: "Fernando Roblero",
+      inicio: "2026-02-13T15:35:00", fin: "2026-02-13T16:40:00",
+      items: [
+        { pid: "p1", sku: "LV-001", nombre: "Le Vice Colágeno Hidrolizado 500g",     cantidad: 400 },
+        { pid: "p2", sku: "LV-002", nombre: "Le Vice Vitamina C Liposomal 60 caps",  cantidad: 350 },
+      ],
+    },
+  ],
+  "RO-BARRA-200": [
+    {
+      id: "SES-001", operador: "Catalina Mora",
+      inicio: "2026-03-04T15:10:00", fin: "2026-03-04T16:15:00",
+      items: [
+        { pid: "p1", sku: "BN-001", nombre: "BioNature Spirulina Orgánica 300g", cantidad: 500 },
+        { pid: "p2", sku: "BN-002", nombre: "BioNature Chlorella 200 Tabs",      cantidad: 300 },
       ],
     },
   ],
@@ -253,18 +342,15 @@ function CategorizarBtn({ incidencias, onOpen, disabled }: {
   disabled?: boolean;
 }) {
   const count = incidencias.length;
+  const amberCls = count > 0 && !disabled ? "!bg-amber-50 !text-amber-700 hover:!bg-amber-100" : "";
   return (
-    <button
+    <Button
+      variant="secondary"
+      size="sm"
       onClick={disabled ? undefined : onOpen}
       disabled={disabled}
       title={disabled ? "Inicia una sesión de conteo para registrar incidencias" : undefined}
-      className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-sm font-medium transition-colors duration-300 whitespace-nowrap ${
-        disabled
-          ? "border-neutral-100 bg-neutral-50 text-neutral-300 cursor-not-allowed"
-          : count > 0
-          ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
-          : "border-neutral-200 text-neutral-600 hover:bg-neutral-50"
-      }`}
+      className={`whitespace-nowrap ${amberCls}`}
     >
       {count > 0 && !disabled && (
         <span className="w-4 h-4 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
@@ -272,7 +358,7 @@ function CategorizarBtn({ incidencias, onOpen, disabled }: {
         </span>
       )}
       Categorizar
-    </button>
+    </Button>
   );
 }
 
@@ -298,10 +384,9 @@ function ConfirmRemoveModal({ nombre, onCancel, onConfirm }: {
           de esta orden?
         </p>
         <div className="flex gap-3 pt-1">
-          <button onClick={onCancel}
-            className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 font-medium transition-colors duration-300">
+          <Button variant="secondary" size="lg" onClick={onCancel} className="flex-1">
             Cancelar
-          </button>
+          </Button>
           <button onClick={onConfirm}
             className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors duration-300">
             Sí, eliminar
@@ -358,10 +443,9 @@ function ConfirmCloseModal({ id, sesiones, totalContadas, totalEsperadas, onCanc
 
         {/* Buttons */}
         <div className="flex gap-3">
-          <button onClick={onCancel}
-            className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 font-medium transition-colors duration-300">
+          <Button variant="secondary" size="lg" onClick={onCancel} className="flex-1">
             Cancelar
-          </button>
+          </Button>
           <button onClick={() => onConfirm(outcome)}
             className="flex-1 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300 flex items-center justify-center gap-2">
             <Check className="w-4 h-4" />
@@ -397,24 +481,25 @@ function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove, inc
   const displayVal = sesionActiva ? product.contadasSesion : total;
 
   return (
-    <div className="p-4 border-b border-neutral-100 last:border-0">
-      <div className="flex items-start gap-4">
+    <div className="p-3 sm:p-4 border-b border-neutral-100 last:border-0">
+      <div className="flex items-start gap-3 sm:gap-4">
 
         {/* Image */}
-        <div className="flex-shrink-0 bg-neutral-100 rounded-lg flex items-center justify-center overflow-hidden" style={{ width: 120, height: 120 }}>
+        <div className="flex-shrink-0 bg-neutral-100 rounded-lg flex items-center justify-center overflow-hidden w-14 h-14 sm:w-[120px] sm:h-[120px]">
           {product.imagen
             ? <img src={product.imagen} alt={product.nombre} className="w-full h-full object-cover" />
-            : <ImageOff className="w-7 h-7 text-neutral-300" />}
+            : <ImageOff className="w-6 h-6 sm:w-7 sm:h-7 text-neutral-300" />}
         </div>
 
-        {/* Body */}
+        {/* Info header */}
         <div className="flex-1 min-w-0">
 
           {/* Name + trash */}
           <div className="flex items-start justify-between gap-2">
             <p className="text-sm font-semibold text-neutral-900 leading-tight">{product.nombre}</p>
             <button
-              onClick={() => onRemove(product.id)}
+              onClick={() => { if (window.confirm(`¿Eliminar "${product.nombre}" de esta OR?`)) onRemove(product.id); }}
+              title="Eliminar producto de esta OR"
               className="p-1.5 text-neutral-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors duration-300 flex-shrink-0"
             >
               <Trash2 className="w-4 h-4" />
@@ -422,19 +507,17 @@ function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove, inc
           </div>
 
           {/* SKU + barcode */}
-          <p className="text-xs text-neutral-400 mt-0.5">
+          <p className="text-xs text-neutral-400 mt-0.5 truncate">
             <span className="font-semibold text-neutral-500">SKU:</span> {product.sku}
-            <span className="mx-2 text-neutral-200">|</span>
-            <span className="font-semibold text-neutral-500">C. DE BARRA:</span> {product.barcode}
+            <span className="hidden sm:inline">
+              <span className="mx-2 text-neutral-200">|</span>
+              <span className="font-semibold text-neutral-500">C. DE BARRA:</span> {product.barcode}
+            </span>
           </p>
 
-          {/* Counter row */}
-          <div className="flex items-center gap-3 mt-3 flex-wrap">
-            <button
-              onClick={() => sesionActiva && onChange(product.id, Math.max(0, product.contadasSesion - 1))}
-              disabled={!sesionActiva}
-              className="w-8 h-8 border border-neutral-200 rounded-lg flex items-center justify-center text-neutral-600 font-bold text-lg transition-colors duration-300 hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed"
-            >−</button>
+          {/* Desktop: counter row inline */}
+          <div className="hidden sm:flex items-center gap-3 mt-3">
+            <Button variant="secondary" size="sm" onClick={() => sesionActiva && onChange(product.id, Math.max(0, product.contadasSesion - 1))} disabled={!sesionActiva} className="!p-0 w-8 h-8 !text-lg !font-bold">−</Button>
 
             <input
               type="number" min={0}
@@ -445,13 +528,8 @@ function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove, inc
                 ${sesionActiva ? "text-neutral-800 bg-white" : "text-neutral-600 bg-neutral-50 cursor-default"}`}
             />
 
-            <button
-              onClick={() => sesionActiva && onChange(product.id, product.contadasSesion + 1)}
-              disabled={!sesionActiva}
-              className="w-8 h-8 border border-neutral-200 rounded-lg flex items-center justify-center text-neutral-600 font-bold text-lg transition-colors duration-300 hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed"
-            >+</button>
+            <Button variant="secondary" size="sm" onClick={() => sesionActiva && onChange(product.id, product.contadasSesion + 1)} disabled={!sesionActiva} className="!p-0 w-8 h-8 !text-lg !font-bold">+</Button>
 
-            {/* Esperadas */}
             <span className="flex items-center gap-1.5 text-sm text-neutral-500 ml-1">
               <Package className="w-4 h-4 text-neutral-400" />
               <span className="tabular-nums font-medium text-neutral-700">
@@ -460,20 +538,67 @@ function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove, inc
               <span className="text-neutral-400">esperadas</span>
             </span>
 
-            {/* Categorizar */}
             <div className="ml-auto">
               <CategorizarBtn incidencias={incidencias} onOpen={onCategorizar} disabled={!sesionActiva} />
             </div>
           </div>
 
-          {/* Progress bar */}
+          {/* Desktop: progress bar */}
           {product.esperadas > 0 && (
-            <div className="mt-3 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+            <div className="hidden sm:block mt-3 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
               <div className={`h-full rounded-full transition-all duration-300 ${barColor}`}
                 style={{ width: `${pct}%` }} />
             </div>
           )}
         </div>
+      </div>
+
+      {/* ── Mobile-only: counter + progress ── */}
+      <div className="sm:hidden mt-3">
+        {/* Progress info + Categorizar */}
+        <div className="flex items-center justify-between mb-2.5">
+          <span className="text-xs text-neutral-500">
+            <span className="tabular-nums font-semibold text-neutral-700">{total.toLocaleString("es-CL")}</span>/{product.esperadas.toLocaleString("es-CL")} esperadas
+          </span>
+          <CategorizarBtn incidencias={incidencias} onOpen={onCategorizar} disabled={!sesionActiva} />
+        </div>
+
+        {/* Counter controls - full width, larger buttons */}
+        <div className="relative">
+          <div className={`flex items-center gap-2.5 ${!sesionActiva ? "opacity-30 pointer-events-none" : ""}`}>
+            <button
+              onClick={() => sesionActiva && onChange(product.id, Math.max(0, product.contadasSesion - 1))}
+              disabled={!sesionActiva}
+              className="w-11 h-11 flex items-center justify-center rounded-xl bg-neutral-100 text-neutral-700 text-lg font-bold disabled:opacity-40 disabled:cursor-not-allowed active:bg-neutral-200 transition-colors"
+            >−</button>
+
+            <input
+              type="number" min={0}
+              value={displayVal}
+              readOnly={!sesionActiva}
+              onChange={e => sesionActiva && onChange(product.id, Math.max(0, parseInt(e.target.value) || 0))}
+              className={`flex-1 border border-neutral-200 rounded-xl text-center text-base font-bold py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-200 tabular-nums transition-colors duration-300
+                ${sesionActiva ? "text-neutral-800 bg-white" : "text-neutral-600 bg-neutral-50 cursor-default"}`}
+            />
+
+            <button
+              onClick={() => sesionActiva && onChange(product.id, product.contadasSesion + 1)}
+              disabled={!sesionActiva}
+              className="w-11 h-11 flex items-center justify-center rounded-xl bg-primary-500 text-white text-lg font-bold disabled:opacity-40 disabled:cursor-not-allowed active:bg-primary-600 transition-colors"
+            >+</button>
+          </div>
+          {!sesionActiva && (
+            <p className="text-center text-[11px] text-neutral-400 mt-1.5">Inicia sesión para contar</p>
+          )}
+        </div>
+
+        {/* Progress bar */}
+        {product.esperadas > 0 && (
+          <div className="mt-2.5 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+            <div className={`h-full rounded-full transition-all duration-300 ${barColor}`}
+              style={{ width: `${pct}%` }} />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -829,12 +954,9 @@ function IncidenciasSKUModal({ product, initialRows, onClose, onSave, onLiveUpda
 
         {/* Footer */}
         <div className="flex items-center justify-between px-5 py-4 border-t border-neutral-100 flex-shrink-0">
-          <button
-            onClick={onClose}
-            className="px-4 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 font-medium transition-colors duration-300"
-          >
+          <Button variant="secondary" size="lg" onClick={onClose}>
             Cancelar
-          </button>
+          </Button>
           <button
             onClick={() => saveEnabled && onSave(rows)}
             disabled={!saveEnabled}
@@ -985,9 +1107,9 @@ function AddProductModal({ onCancel, onConfirm }: {
 
         {/* Footer */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-neutral-100 flex-shrink-0">
-          <button onClick={onCancel} className="px-4 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 font-medium transition-colors duration-300">
+          <Button variant="secondary" size="lg" onClick={onCancel}>
             Cancelar
-          </button>
+          </Button>
           <button
             onClick={handleConfirm} disabled={!canConfirm}
             className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors duration-300 flex items-center gap-2 ${
@@ -1058,15 +1180,17 @@ function AddProductChoiceModal({ onRecognized, onUnrecognized, onCancel }: {
 }
 
 // ─── GestionCuarentena ───────────────────────────────────────────────────────
-function GestionCuarentena({ records, onUpdate }: {
+function GestionCuarentena({ records, onUpdate, incidencias }: {
   records:  QuarantineRecord[];
   onUpdate: (id: string, patch: Partial<QuarantineRecord>) => void;
+  incidencias: Record<string, IncidenciaRow[]>;
 }) {
   const [catCModal,    setCatCModal]    = useState<QuarantineRecord | null>(null);
   const [decisionMode, setDecisionMode] = useState<"stock" | "merma" | "mixto">("stock");
   const [stockQty,     setStockQty]     = useState(0);
   const [mermaQty,     setMermaQty]     = useState(0);
   const [decisionNota, setDecisionNota] = useState("");
+  const [slideIdx,     setSlideIdx]     = useState(0);
 
   function openCatC(rec: QuarantineRecord) {
     setCatCModal(rec);
@@ -1074,6 +1198,7 @@ function GestionCuarentena({ records, onUpdate }: {
     setStockQty(rec.cantidad);
     setMermaQty(0);
     setDecisionNota("");
+    setSlideIdx(0);
   }
 
   function confirmCatC() {
@@ -1092,9 +1217,9 @@ function GestionCuarentena({ records, onUpdate }: {
   }
 
   function catBadge(cat: QuarantineCategory) {
-    if (cat === "interna")           return { label: "Cat. A · Interna",    cls: "bg-primary-50 text-primary-600 border-primary-200" };
-    if (cat === "devolucion_seller") return { label: "Cat. B · Devolución", cls: "bg-red-50 text-red-700 border-red-200" };
-    return                                  { label: "Cat. C · Decisión",   cls: "bg-amber-50 text-amber-700 border-amber-200" };
+    if (cat === "interna")           return { label: "Resolución interna Amplifica",   cls: "bg-primary-50 text-primary-600 border-primary-200" };
+    if (cat === "devolucion_seller") return { label: "Devolución obligatoria a seller", cls: "bg-red-50 text-red-700 border-red-200" };
+    return                                  { label: "Decisión del seller",             cls: "bg-amber-50 text-amber-700 border-amber-200" };
   }
 
   function estadoBadge(estado: QuarantineStatus) {
@@ -1121,108 +1246,234 @@ function GestionCuarentena({ records, onUpdate }: {
       {/* ── Cat C decision modal ── */}
       {catCModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md space-y-4">
-            <div>
-              <p className="text-base font-bold text-neutral-900">Registrar decisión del seller</p>
-              <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">
-                {catCModal.productName}
-                <span className="font-mono ml-1 text-neutral-400">· {catCModal.sku}</span>
-                <span className="ml-1 text-neutral-400">· {catCModal.cantidad} uds</span>
-              </p>
-            </div>
+          <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            {/* Two-column grid: gallery left, form right */}
+            {(() => {
+              const matchingInc = (incidencias[catCModal.skuId] ?? []).find(r => r.tag === catCModal.tag);
+              const tagInfo = INCIDENCIA_TAGS.find(t => t.key === catCModal.tag);
+              const realImages = matchingInc?.imagenes ?? [];
+              // Demo images by incidence tag — retail products with context-specific details
+              const demoImagesByTag: Record<string, string[]> = {
+                "sin-codigo-barra": [
+                  "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=480&h=360&fit=crop",
+                  "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=480&h=360&fit=crop",
+                  "https://images.unsplash.com/photo-1607082349566-187342175e2f?w=480&h=360&fit=crop",
+                ],
+                "codigo-incorrecto": [
+                  "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=480&h=360&fit=crop",
+                  "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=480&h=360&fit=crop",
+                  "https://images.unsplash.com/photo-1607082349566-187342175e2f?w=480&h=360&fit=crop",
+                ],
+                "codigo-ilegible": [
+                  "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=480&h=360&fit=crop",
+                  "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=480&h=360&fit=crop",
+                  "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=480&h=360&fit=crop",
+                ],
+                "sin-nutricional": [
+                  "https://images.unsplash.com/photo-1542838132-92c53300491e?w=480&h=360&fit=crop",
+                  "https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=480&h=360&fit=crop",
+                  "https://images.unsplash.com/photo-1625740650964-168e296f04cd?w=480&h=360&fit=crop",
+                ],
+                "sin-vencimiento": [
+                  "https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=480&h=360&fit=crop",
+                  "https://images.unsplash.com/photo-1542838132-92c53300491e?w=480&h=360&fit=crop",
+                  "https://images.unsplash.com/photo-1625740650964-168e296f04cd?w=480&h=360&fit=crop",
+                ],
+                "danio-parcial": [
+                  "https://images.unsplash.com/photo-1586769852044-692d6e3703f0?w=480&h=360&fit=crop",
+                  "https://images.unsplash.com/photo-1620706857370-e1b9770e8bb1?w=480&h=360&fit=crop",
+                  "https://images.unsplash.com/photo-1607082350899-7e105aa886ae?w=480&h=360&fit=crop",
+                ],
+                "danio-total": [
+                  "https://images.unsplash.com/photo-1586769852044-692d6e3703f0?w=480&h=360&fit=crop",
+                  "https://images.unsplash.com/photo-1620706857370-e1b9770e8bb1?w=480&h=360&fit=crop",
+                  "https://images.unsplash.com/photo-1530982011887-3cc11cc85693?w=480&h=360&fit=crop",
+                ],
+                "no-en-sistema": [
+                  "https://images.unsplash.com/photo-1607082349566-187342175e2f?w=480&h=360&fit=crop",
+                  "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=480&h=360&fit=crop",
+                  "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=480&h=360&fit=crop",
+                ],
+              };
+              const fallbackImgs = [
+                "https://images.unsplash.com/photo-1607082349566-187342175e2f?w=480&h=360&fit=crop",
+                "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=480&h=360&fit=crop",
+                "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=480&h=360&fit=crop",
+              ];
+              const imgUrls: string[] = realImages.length > 0
+                ? realImages.map(f => URL.createObjectURL(f))
+                : (demoImagesByTag[catCModal.tag] ?? fallbackImgs);
+              const total = imgUrls.length;
+              const safeIdx = Math.min(slideIdx, total - 1);
+              const operatorNote = matchingInc?.nota || catCModal.notas || "";
 
-            {/* Opciones */}
-            <div className="space-y-2">
-              {(["stock", "merma", "mixto"] as const).map(mode => (
-                <button
-                  key={mode}
-                  onClick={() => {
-                    setDecisionMode(mode);
-                    if (mode === "stock") { setStockQty(catCModal.cantidad); setMermaQty(0); }
-                    if (mode === "merma") { setStockQty(0); setMermaQty(catCModal.cantidad); }
-                    if (mode === "mixto") {
-                      const half = Math.floor(catCModal.cantidad / 2);
-                      setStockQty(half);
-                      setMermaQty(catCModal.cantidad - half);
-                    }
-                  }}
-                  className={`w-full text-left px-4 py-3 rounded-xl border text-sm transition-colors duration-300 ${
-                    decisionMode === mode
-                      ? "border-primary-300 bg-primary-50 text-primary-600 font-medium"
-                      : "border-neutral-200 text-neutral-600 hover:bg-neutral-50"
-                  }`}
-                >
-                  {mode === "stock" ? "Ingresar a stock (tal como está)" :
-                   mode === "merma" ? "Mermar (dar de baja)" :
-                                     "Dividir lote — parcial stock + parcial merma"}
-                </button>
-              ))}
-            </div>
+              return (
+                <div className="flex flex-col lg:grid lg:grid-cols-2 gap-4 lg:gap-6">
+                  {/* ── Left column: image gallery ── */}
+                  <div className="flex flex-col gap-3">
+                    <div className="relative rounded-xl overflow-hidden bg-neutral-100 border border-neutral-200 flex-1 min-h-[260px]">
+                      <img
+                        src={imgUrls[safeIdx]}
+                        alt={`Evidencia ${safeIdx + 1}`}
+                        className="w-full h-full object-cover absolute inset-0"
+                      />
+                      {total > 1 && (
+                        <button
+                          onClick={() => setSlideIdx(i => (i - 1 + total) % total)}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center transition-colors"
+                        >
+                          <ChevronRight className="w-4 h-4 text-neutral-700 rotate-180" />
+                        </button>
+                      )}
+                      {total > 1 && (
+                        <button
+                          onClick={() => setSlideIdx(i => (i + 1) % total)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center transition-colors"
+                        >
+                          <ChevronRight className="w-4 h-4 text-neutral-700" />
+                        </button>
+                      )}
+                      <span className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[11px] font-semibold text-white bg-black/50 rounded-full px-2.5 py-0.5 tabular-nums">
+                        {safeIdx + 1}/{total}
+                      </span>
+                    </div>
+                    {/* Thumbnails strip */}
+                    {total > 1 && (
+                      <div className="flex gap-1.5 justify-center">
+                        {imgUrls.map((url, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setSlideIdx(i)}
+                            className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${
+                              i === safeIdx ? "border-primary-400 ring-1 ring-primary-200" : "border-transparent opacity-60 hover:opacity-100"
+                            }`}
+                          >
+                            <img src={url} alt="" className="w-full h-full object-cover" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
-            {/* Mixto split inputs */}
-            {decisionMode === "mixto" && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-neutral-400 mb-1">Uds a stock disponible</label>
-                  <input
-                    type="number" min={0} max={catCModal.cantidad}
-                    value={stockQty}
-                    onChange={e => {
-                      const v = Math.max(0, Math.min(catCModal.cantidad, parseInt(e.target.value) || 0));
-                      setStockQty(v); setMermaQty(catCModal.cantidad - v);
-                    }}
-                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 tabular-nums"
-                  />
+                  {/* ── Right column: info + form ── */}
+                  <div className="flex flex-col gap-4">
+                    {/* Title + product */}
+                    <div>
+                      <p className="text-base font-bold text-neutral-900">Registrar decisión del seller</p>
+                      <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">
+                        {catCModal.productName}
+                        <span className="font-mono ml-1 text-neutral-400">· {catCModal.sku}</span>
+                        <span className="ml-1 text-neutral-400">· {catCModal.cantidad} uds</span>
+                      </p>
+                    </div>
+
+                    {/* Tag badge + operator note */}
+                    {tagInfo && (
+                      <div className="space-y-2 p-3 bg-neutral-50 rounded-lg border border-neutral-100">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-neutral-500">Incidencia:</span>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
+                            tagInfo.color === "amber"  ? "bg-amber-50  text-amber-700  border-amber-200"  :
+                            tagInfo.color === "orange" ? "bg-orange-50 text-orange-700 border-orange-200" :
+                            tagInfo.color === "purple" ? "bg-purple-50 text-purple-700 border-purple-200" :
+                                                         "bg-red-50    text-red-700    border-red-200"
+                          }`}>{tagInfo.label}</span>
+                        </div>
+                        {operatorNote && (
+                          <div>
+                            <p className="text-xs text-neutral-500 mb-1">Comentario del operador</p>
+                            <p className="text-sm text-neutral-700 bg-white rounded-md px-3 py-2 border border-neutral-100">
+                              {operatorNote}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Decision options */}
+                    <div className="space-y-2">
+                      {(["stock", "merma", "mixto"] as const).map(mode => (
+                        <button
+                          key={mode}
+                          onClick={() => {
+                            setDecisionMode(mode);
+                            if (mode === "stock") { setStockQty(catCModal.cantidad); setMermaQty(0); }
+                            if (mode === "merma") { setStockQty(0); setMermaQty(catCModal.cantidad); }
+                            if (mode === "mixto") {
+                              const half = Math.floor(catCModal.cantidad / 2);
+                              setStockQty(half);
+                              setMermaQty(catCModal.cantidad - half);
+                            }
+                          }}
+                          className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm transition-colors duration-300 ${
+                            decisionMode === mode
+                              ? "border-primary-300 bg-primary-50 text-primary-600 font-medium"
+                              : "border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+                          }`}
+                        >
+                          {mode === "stock" ? "Ingresar a stock (tal como está)" :
+                           mode === "merma" ? "Mermar (dar de baja)" :
+                                             "Dividir lote — parcial stock + parcial merma"}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Mixto split inputs */}
+                    {decisionMode === "mixto" && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <FormField
+                          label="Uds a stock disponible"
+                          type="number"
+                          value={String(stockQty)}
+                          onChange={v => {
+                            const n = Math.max(0, Math.min(catCModal.cantidad, parseInt(v) || 0));
+                            setStockQty(n); setMermaQty(catCModal.cantidad - n);
+                          }}
+                        />
+                        <FormField
+                          label="Uds a mermar"
+                          type="number"
+                          value={String(mermaQty)}
+                          onChange={v => {
+                            const n = Math.max(0, Math.min(catCModal.cantidad, parseInt(v) || 0));
+                            setMermaQty(n); setStockQty(catCModal.cantidad - n);
+                          }}
+                        />
+                        <p className={`col-span-2 text-xs font-medium ${
+                          stockQty + mermaQty === catCModal.cantidad ? "text-green-600" : "text-red-500"
+                        }`}>
+                          Total asignado: {(stockQty + mermaQty).toLocaleString("es-CL")} / {catCModal.cantidad.toLocaleString("es-CL")} uds
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Nota seller */}
+                    <FormField
+                      as="textarea"
+                      label="Nota / decisión del seller (opcional)"
+                      value={decisionNota}
+                      onChange={setDecisionNota}
+                      rows={2}
+                      placeholder="Ej: Seller acepta daño cosmético, autoriza venta con descuento"
+                    />
+
+                    {/* Action buttons */}
+                    <div className="flex gap-3 mt-auto">
+                      <Button variant="secondary" size="lg" onClick={() => setCatCModal(null)} className="flex-1">
+                        Cancelar
+                      </Button>
+                      <button
+                        onClick={confirmCatC}
+                        disabled={decisionMode === "mixto" && stockQty + mermaQty !== catCModal.cantidad}
+                        className="flex-1 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:bg-neutral-100 disabled:text-neutral-400 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
+                      >
+                        Confirmar
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs text-neutral-400 mb-1">Uds a mermar</label>
-                  <input
-                    type="number" min={0} max={catCModal.cantidad}
-                    value={mermaQty}
-                    onChange={e => {
-                      const v = Math.max(0, Math.min(catCModal.cantidad, parseInt(e.target.value) || 0));
-                      setMermaQty(v); setStockQty(catCModal.cantidad - v);
-                    }}
-                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 tabular-nums"
-                  />
-                </div>
-                <p className={`col-span-2 text-xs font-medium ${
-                  stockQty + mermaQty === catCModal.cantidad ? "text-green-600" : "text-red-500"
-                }`}>
-                  Total asignado: {(stockQty + mermaQty).toLocaleString("es-CL")} / {catCModal.cantidad.toLocaleString("es-CL")} uds
-                </p>
-              </div>
-            )}
-
-            {/* Nota seller */}
-            <div>
-              <label className="block text-xs text-neutral-400 mb-1">
-                Nota / decisión del seller <span className="font-normal">(opcional)</span>
-              </label>
-              <textarea
-                value={decisionNota}
-                onChange={e => setDecisionNota(e.target.value)}
-                rows={2}
-                placeholder="Ej: Seller acepta daño cosmético, autoriza venta con descuento"
-                className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 resize-none placeholder-neutral-300"
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setCatCModal(null)}
-                className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 font-medium transition-colors duration-300"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmCatC}
-                disabled={decisionMode === "mixto" && stockQty + mermaQty !== catCModal.cantidad}
-                className="flex-1 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:bg-neutral-100 disabled:text-neutral-400 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
-              >
-                Confirmar
-              </button>
-            </div>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -1236,7 +1487,7 @@ function GestionCuarentena({ records, onUpdate }: {
               {pendientes} registro{pendientes !== 1 ? "s" : ""} pendiente{pendientes !== 1 ? "s" : ""} de resolución
             </p>
           </div>
-          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
+          <span className={`whitespace-nowrap text-xs font-semibold px-2.5 py-1 rounded-full border ${
             pendientes === 0
               ? "bg-green-50 text-green-700 border-green-200"
               : "bg-amber-50 text-amber-700 border-amber-200"
@@ -1245,7 +1496,99 @@ function GestionCuarentena({ records, onUpdate }: {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile card view */}
+        <div className="sm:hidden flex flex-col divide-y divide-neutral-100">
+          {records.map(rec => {
+            const cat     = catBadge(rec.categoria);
+            const est     = estadoBadge(rec.estado);
+            const tagInfo = INCIDENCIA_TAGS.find(t => t.key === rec.tag);
+            return (
+              <div key={rec.id} className="px-4 py-3.5">
+                {/* Row 1: SKU + Estado */}
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="font-mono text-xs text-neutral-500">{rec.sku}</span>
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${est.cls}`}>
+                    {est.label}
+                  </span>
+                </div>
+                {/* Row 2: Product name + tag */}
+                <p className="text-sm text-neutral-800 font-medium leading-snug">{rec.productName}</p>
+                <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                  {tagInfo && (
+                    <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium border ${
+                      tagInfo.color === "amber"  ? "bg-amber-50 text-amber-700 border-amber-200"  :
+                      tagInfo.color === "orange" ? "bg-orange-50 text-orange-700 border-orange-200":
+                      tagInfo.color === "purple" ? "bg-purple-50 text-purple-700 border-purple-200":
+                                                   "bg-red-50 text-red-700 border-red-200"
+                    }`}>{tagInfo.label}</span>
+                  )}
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${cat.cls}`}>
+                    {cat.label}
+                  </span>
+                </div>
+                {/* Row 3: Cantidad + Resolución */}
+                <div className="flex items-center gap-4 mt-2.5 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-neutral-400">Cant.</span>
+                    <span className="text-neutral-800 font-semibold tabular-nums">{rec.cantidad}</span>
+                  </div>
+                  {rec.resolucion && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-neutral-400">Resolución</span>
+                      <span className="text-neutral-700 font-medium">{resolucionLabel(rec.resolucion, rec)}</span>
+                    </div>
+                  )}
+                </div>
+                {rec.decisionSeller && (
+                  <p className="text-[10px] text-neutral-400 italic mt-1">&quot;{rec.decisionSeller}&quot;</p>
+                )}
+                {/* Actions */}
+                <div className="mt-3">
+                  {rec.estado === "pendiente" && (
+                    <button
+                      onClick={() => onUpdate(rec.id, { estado: "en_gestion" })}
+                      className="w-full text-xs font-semibold px-3 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors duration-300"
+                    >
+                      Iniciar gestión
+                    </button>
+                  )}
+                  {rec.estado === "en_gestion" && rec.categoria === "interna" && (
+                    <button
+                      onClick={() => onUpdate(rec.id, { estado: "resuelto", resolucion: "stock_disponible", resueltoen: new Date().toISOString() })}
+                      className="w-full text-xs font-medium px-3 py-2 bg-neutral-100 text-neutral-700 rounded-lg hover:bg-neutral-200 transition-colors duration-300"
+                    >
+                      Confirmar re-etiquetado
+                    </button>
+                  )}
+                  {rec.estado === "en_gestion" && rec.categoria === "devolucion_seller" && (
+                    <button
+                      onClick={() => onUpdate(rec.id, { estado: "resuelto", resolucion: "devolucion", resueltoen: new Date().toISOString() })}
+                      className="w-full text-xs font-medium px-3 py-2 bg-neutral-100 text-neutral-700 rounded-lg hover:bg-neutral-200 transition-colors duration-300"
+                    >
+                      Confirmar retiro seller
+                    </button>
+                  )}
+                  {rec.estado === "en_gestion" && rec.categoria === "decision_seller" && (
+                    <button
+                      onClick={() => openCatC(rec)}
+                      className="w-full text-xs font-semibold px-3 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors duration-300"
+                    >
+                      Registrar decisión
+                    </button>
+                  )}
+                  {rec.estado === "resuelto" && (
+                    <span className="text-[10px] text-neutral-400 flex items-center gap-1">
+                      <Check className="w-3 h-3 text-green-500" /> Resuelto
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-sm min-w-[700px]">
             <thead>
               <tr className="bg-neutral-50/60 border-b border-neutral-100">
@@ -1289,7 +1632,7 @@ function GestionCuarentena({ records, onUpdate }: {
                         ? <span className="font-medium">{resolucionLabel(rec.resolucion, rec)}</span>
                         : <span className="text-neutral-300">—</span>}
                       {rec.decisionSeller && (
-                        <p className="text-[10px] text-neutral-400 italic mt-0.5">"{rec.decisionSeller}"</p>
+                        <p className="text-[10px] text-neutral-400 italic mt-0.5">&quot;{rec.decisionSeller}&quot;</p>
                       )}
                     </td>
                     <td className="px-4 py-3 align-top">
@@ -1444,7 +1787,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
         </div>
 
         {/* ── OR meta ── */}
-        <div className="px-5 py-3.5 bg-neutral-50 border-b border-neutral-100 grid grid-cols-3 gap-x-6 gap-y-2.5">
+        <div className="px-5 py-3.5 bg-neutral-50 border-b border-neutral-100 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2.5">
           {([
             ["ID de OR", id], ["Seller", baseData.seller], ["Sucursal", baseData.sucursal],
             ["Fecha agendada", baseData.fechaAgendada], ["Estado", orEstado ?? "—"], ["Operador", OPERADOR],
@@ -1688,8 +2031,12 @@ export default function ConteoORPage() {
   const [sesionInicio,  setSesionInicio]  = useState("");
   const [scanner,       setScanner]       = useState("");
   const [confirmClose,   setConfirmClose]   = useState(false);
+  const [noUnitsAlert,   setNoUnitsAlert]   = useState(false);
   const [pendingRemove,  setPendingRemove]  = useState<string | null>(null);
   const [showDotsMenu,   setShowDotsMenu]   = useState(false);
+  const [showStickyMenu, setShowStickyMenu] = useState(false);
+  const scannerInputRef = useRef<HTMLInputElement>(null);
+  const [showProductTable, setShowProductTable] = useState(false);
   const [orEstado,       setOrEstado]       = useState<OrOutcome | null>(null);
   const [incidencias,      setIncidencias]      = useState<Record<string, IncidenciaRow[]>>({});
   const [incidenciaTarget, setIncidenciaTarget] = useState<string | null>(null);
@@ -1706,7 +2053,7 @@ export default function ConteoORPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incidenciaTarget]); // intentionally only re-run when target changes, not incidencias
 
-  // Restore closed state from localStorage (e.g. after back-navigation)
+  // Restore closed state from localStorage OR from seed data (completed ORs)
   useEffect(() => {
     try {
       const stored = localStorage.getItem(`amplifica_or_${id}`);
@@ -1714,9 +2061,17 @@ export default function ConteoORPage() {
         const { estado } = JSON.parse(stored) as { estado: OrOutcome };
         if (estado === "Completado sin diferencias" || estado === "Completado con diferencias") {
           setOrEstado(estado);
+          return;
         }
       }
     } catch { /* ignore */ }
+    // Fallback: check seed data for ORs that are already completed
+    const seedEntry = ORDENES_SEED.find(o => o.id === id);
+    if (seedEntry) {
+      if (seedEntry.estado === "Completado sin diferencias" || seedEntry.estado === "Completado con diferencias") {
+        setOrEstado(seedEntry.estado as OrOutcome);
+      }
+    }
   }, [id]);
 
   // Load quarantine records when OR is closed
@@ -1785,10 +2140,12 @@ export default function ConteoORPage() {
 
   const totalPP = useMemo<Record<string, number>>(() => {
     const map: Record<string, number> = {};
-    for (const p of products)
-      map[p.id] = (acumulado[p.id] ?? 0) + p.contadasSesion;
+    for (const p of products) {
+      const incTotal = (incidencias[p.id] ?? []).reduce((s, r) => s + r.cantidad, 0);
+      map[p.id] = (acumulado[p.id] ?? 0) + p.contadasSesion + incTotal;
+    }
     return map;
-  }, [products, acumulado]);
+  }, [products, acumulado, incidencias]);
 
   // ── Stats ─────────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
@@ -1879,7 +2236,7 @@ export default function ConteoORPage() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen bg-white">
 
       {/* ── Modals ── */}
       {incidenciaTarget !== null && (() => {
@@ -1971,31 +2328,28 @@ export default function ConteoORPage() {
       )}
 
       {/* ── Breadcrumb ── */}
-      <div className="bg-white border-b border-neutral-100">
-        <nav className="max-w-4xl mx-auto px-6 py-3 flex items-center gap-1.5 text-sm text-neutral-500">
-          <Link href="/recepciones" className="hover:text-primary-500 transition-colors duration-300">Recepciones</Link>
-          <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
-          <span className="text-neutral-700 font-medium">Orden de Recepción</span>
-        </nav>
-      </div>
+      <nav className="max-w-4xl mx-auto px-4 lg:px-6 pt-4 pb-1 flex items-center gap-1.5 text-sm text-neutral-500">
+        <Link href="/recepciones" className="hover:text-primary-500 transition-colors duration-300">Recepciones</Link>
+        <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
+        <span className="text-neutral-700 font-medium">Orden de Recepción</span>
+      </nav>
 
-      <div className="max-w-4xl mx-auto px-6 py-6 space-y-5">
+      <div className="max-w-4xl mx-auto px-4 lg:px-6 pt-3 pb-24 lg:pb-6 space-y-5">
 
         {/* ── Title row ── */}
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-neutral-900">
+            <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">
               Orden de Recepción{" "}
               <span className="font-mono text-neutral-900">#{id}</span>
             </h1>
             <p className="text-sm text-neutral-400 mt-0.5">
-              {baseData.sucursal} - {baseData.fechaAgendada}
+              {baseData.sucursal}{baseData.fechaAgendada && baseData.fechaAgendada !== "—" ? ` - ${baseData.fechaAgendada}` : ""}
             </p>
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
-
-            {/* ── Session control button: Iniciar (primary) or Finalizar (outline) ── */}
+          {/* Desktop-only session buttons */}
+          <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
             {!orCerrada && (
               sesionActiva ? (
                 <button
@@ -2018,34 +2372,16 @@ export default function ConteoORPage() {
           </div>
         </div>
 
-        {/* ── Summary cards ── */}
-        <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
-          <div className="grid grid-cols-4 divide-x divide-neutral-100">
-            {[
-              { label: "Seller",              value: baseData.seller },
-              { label: "SKUs",                value: String(products.length) },
-              { label: "Unidades declaradas", value: stats.totalEsperadas.toLocaleString("es-CL") },
-              { label: "Sesiones",            value: String(sesiones.length + (sesionActiva ? 1 : 0)) },
-            ].map(({ label, value }) => (
-              <div key={label} className="px-5 py-4">
-                <p className="text-xs text-neutral-400 font-medium mb-1">{label}</p>
-                <p className="text-base font-bold text-neutral-900 tabular-nums">{value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── QR Display (only when OR is in Programado-equivalent state) ── */}
-        {orEstado === null && sesiones.length === 0 && !sesionActiva && (
-          <QrDisplaySection
-            orId={id}
-            seller={baseData.seller}
-            sucursal={baseData.sucursal}
-            fechaAgendada={baseData.fechaAgendada}
-            skus={products.length}
-            uTotales={stats.totalEsperadas.toLocaleString("es-CL")}
-          />
-        )}
+        {/* ── QR Display ── */}
+        <QrDisplaySection
+          orId={id}
+          seller={baseData.seller}
+          sucursal={baseData.sucursal}
+          fechaAgendada={baseData.fechaAgendada}
+          skus={products.length}
+          uTotales={stats.totalEsperadas.toLocaleString("es-CL")}
+          sesiones={sesiones.length + (sesionActiva ? 1 : 0)}
+        />
 
         {/* ── Active session banner ── */}
         {sesionActiva && (
@@ -2065,39 +2401,77 @@ export default function ConteoORPage() {
 
         {/* ── Scanner (active session only) ── */}
         {sesionActiva && (
-          <div className="bg-white border border-neutral-200 rounded-xl p-5">
-            <p className="text-base font-semibold text-neutral-800 mb-3">
-              Escanear código de barras
-            </p>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Scan className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
-                <input
-                  type="text"
-                  value={scanner}
-                  onChange={e => setScanner(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && handleScan()}
-                  placeholder="Ingresa o escanea  SKU / Código de barras"
-                  className="w-full pl-9 pr-4 py-2.5 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 placeholder-neutral-400"
-                  autoFocus
-                />
+          <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+
+            {/* Mobile: camera viewfinder + input (CTA lives in sticky bar) */}
+            <div className="sm:hidden">
+              <div className="bg-neutral-900 px-6 py-6 flex flex-col items-center gap-3">
+                <div className="relative w-44 h-24 flex items-center justify-center">
+                  {/* Corner brackets */}
+                  <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-white/25 rounded-tl-lg" />
+                  <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-white/25 rounded-tr-lg" />
+                  <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-white/25 rounded-bl-lg" />
+                  <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-white/25 rounded-br-lg" />
+                  {/* Barcode icon */}
+                  <ScanBarcode className="w-9 h-9 text-white/20" />
+                  {/* Scan line */}
+                  <div className="absolute inset-x-3 h-0.5 bg-primary-400/50 top-1/2 animate-pulse rounded-full" />
+                </div>
+                <p className="text-white/50 text-xs font-medium">Apunta al código de barras del producto</p>
               </div>
-              <button
-                onClick={handleScan}
-                className="px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
-              >
-                Registrar
-              </button>
+              <div className="p-3">
+                <label className="block text-xs font-medium text-neutral-500 mb-1.5">SKU / Código de barras</label>
+                <div className="relative">
+                  <ScanBarcode className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                  <input
+                    ref={scannerInputRef}
+                    type="text"
+                    value={scanner}
+                    onChange={e => setScanner(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && handleScan()}
+                    placeholder="Escanea o ingresa manualmente"
+                    className="w-full pl-9 pr-4 py-2.5 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 placeholder-neutral-400"
+                  />
+                </div>
+              </div>
             </div>
-            <p className="text-xs text-neutral-400 mt-2">
-              Presiona{" "}
-              <kbd className="px-1.5 py-0.5 bg-neutral-100 rounded text-[11px] font-mono border border-neutral-200">Enter</kbd>{" "}
-              o haz clic en <span className="font-semibold text-neutral-600">Registrar</span> para escanear una unidad.
-            </p>
+
+            {/* Desktop: original layout */}
+            <div className="hidden sm:block p-4 lg:p-5">
+              <p className="text-base font-semibold text-neutral-800 mb-3">
+                Escanear código de barras
+              </p>
+              <div className="flex flex-row gap-2">
+                <div className="relative flex-1">
+                  <Scan className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={scanner}
+                    onChange={e => setScanner(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && handleScan()}
+                    placeholder="Ingresa o escanea SKU / Código de barras"
+                    className="w-full pl-9 pr-4 py-2.5 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 placeholder-neutral-400"
+                    autoFocus
+                  />
+                </div>
+                <button
+                  onClick={handleScan}
+                  className="px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
+                >
+                  Registrar
+                </button>
+              </div>
+              <p className="text-xs text-neutral-400 mt-2">
+                Presiona{" "}
+                <kbd className="px-1.5 py-0.5 bg-neutral-100 rounded text-[11px] font-mono border border-neutral-200">Enter</kbd>{" "}
+                o haz clic en <span className="font-semibold text-neutral-600">Registrar</span> para escanear una unidad.
+              </p>
+            </div>
           </div>
         )}
 
-        {/* ── Progreso de conteo ── */}
+        {/* ── Progreso de conteo (solo visible mientras OR abierta) ── */}
+        {!orCerrada && (
         <div className="bg-white border border-neutral-200 rounded-xl p-5">
           <div className="flex items-center justify-between mb-3">
             <span className="text-base font-semibold text-neutral-800">Progreso de conteo</span>
@@ -2129,7 +2503,7 @@ export default function ConteoORPage() {
               </span>
             )}
             {stats.pendientes > 0 && (
-              <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 bg-neutral-50 text-neutral-500 border border-neutral-200 rounded-full">
+              <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full">
                 {stats.pendientes} pendientes
               </span>
             )}
@@ -2150,86 +2524,108 @@ export default function ConteoORPage() {
             })}
           </div>
 
-          {/* Per-product breakdown table */}
+          {/* Per-product breakdown table (collapsible) */}
           {products.length > 0 && (
-            <div className="mt-4 border border-neutral-100 rounded-lg overflow-hidden">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-neutral-50 text-neutral-500 text-left">
-                    <th className="px-3 py-2 font-medium">SKU</th>
-                    <th className="px-3 py-2 font-medium">Producto</th>
-                    <th className="px-3 py-2 font-medium text-right">Esperado</th>
-                    <th className="px-3 py-2 font-medium text-right">Contado</th>
-                    <th className="px-3 py-2 font-medium text-right">Diferencia</th>
-                    <th className="px-3 py-2 font-medium text-right">Incidencias</th>
-                    <th className="px-3 py-2 font-medium text-center">Estado</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100">
-                  {products.map(p => {
-                    const total      = totalPP[p.id] ?? 0;
-                    const diff       = total - p.esperadas;
-                    const incCount   = (incidencias[p.id] ?? []).reduce((s, r) => s + r.cantidad, 0);
-                    const status     = getProductStatus(total, p.esperadas);
-                    const statusConf = {
-                      completo:   { label: "Completo",   cls: "bg-green-50 text-green-700" },
-                      diferencia: { label: "Diferencia", cls: "bg-amber-50 text-amber-700" },
-                      exceso:     { label: "Exceso",     cls: "bg-orange-50 text-orange-700" },
-                      pendiente:  { label: "Pendiente",  cls: "bg-neutral-50 text-neutral-500" },
-                    }[status];
-                    return (
-                      <tr key={p.id} className="hover:bg-neutral-50/50">
-                        <td className="px-3 py-2 text-neutral-500 font-mono">{p.sku}</td>
-                        <td className="px-3 py-2 text-neutral-800 max-w-[180px] truncate">{p.nombre}</td>
-                        <td className="px-3 py-2 text-right tabular-nums text-neutral-600">{p.esperadas}</td>
-                        <td className="px-3 py-2 text-right tabular-nums font-semibold text-neutral-800">{total}</td>
-                        <td className={`px-3 py-2 text-right tabular-nums font-semibold ${
-                          diff === 0 ? "text-green-600" : diff > 0 ? "text-orange-600" : "text-red-600"
-                        }`}>
-                          {diff === 0 ? "—" : (diff > 0 ? "+" : "") + diff}
-                        </td>
-                        <td className={`px-3 py-2 text-right tabular-nums ${incCount > 0 ? "text-red-600 font-semibold" : "text-neutral-400"}`}>
-                          {incCount > 0 ? incCount : "—"}
-                        </td>
-                        <td className="px-3 py-2 text-center">
-                          <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusConf.cls}`}>
-                            {statusConf.label}
-                          </span>
-                        </td>
+            <div className="mt-4">
+              {showProductTable && (
+                <div className="border border-neutral-100 rounded-lg overflow-hidden mb-3">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-neutral-50 text-neutral-500 text-left">
+                        <th className="px-3 py-2 font-medium">SKU</th>
+                        <th className="px-3 py-2 font-medium">Producto</th>
+                        <th className="px-3 py-2 font-medium text-right">Esperado</th>
+                        <th className="px-3 py-2 font-medium text-right">Contado</th>
+                        <th className="px-3 py-2 font-medium text-right">Diferencia</th>
+                        <th className="px-3 py-2 font-medium text-right">Incidencias</th>
+                        <th className="px-3 py-2 font-medium text-center">Estado</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100">
+                      {products.map(p => {
+                        const total      = totalPP[p.id] ?? 0;
+                        const diff       = total - p.esperadas;
+                        const incCount   = (incidencias[p.id] ?? []).reduce((s, r) => s + r.cantidad, 0);
+                        const status     = getProductStatus(total, p.esperadas);
+                        const statusConf = {
+                          completo:   { label: "Completo",   cls: "bg-green-50 text-green-700" },
+                          diferencia: { label: "Diferencia", cls: "bg-amber-50 text-amber-700" },
+                          exceso:     { label: "Exceso",     cls: "bg-orange-50 text-orange-700" },
+                          pendiente:  { label: "Pendiente",  cls: "bg-neutral-50 text-neutral-500" },
+                        }[status];
+                        return (
+                          <tr key={p.id} className="hover:bg-neutral-50/50">
+                            <td className="px-3 py-2 text-neutral-500 font-mono">{p.sku}</td>
+                            <td className="px-3 py-2 text-neutral-800 max-w-[180px] truncate">{p.nombre}</td>
+                            <td className="px-3 py-2 text-right tabular-nums text-neutral-600">{p.esperadas}</td>
+                            <td className="px-3 py-2 text-right tabular-nums font-semibold text-neutral-800">{total}</td>
+                            <td className={`px-3 py-2 text-right tabular-nums font-semibold ${
+                              diff === 0 ? "text-green-600" : diff > 0 ? "text-orange-600" : "text-red-600"
+                            }`}>
+                              {diff === 0 ? "—" : (diff > 0 ? "+" : "") + diff}
+                            </td>
+                            <td className={`px-3 py-2 text-right tabular-nums ${incCount > 0 ? "text-red-600 font-semibold" : "text-neutral-400"}`}>
+                              {incCount > 0 ? incCount : "—"}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusConf.cls}`}>
+                                {statusConf.label}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <div className="flex justify-center">
+                <Button
+                  variant="tertiary"
+                  size="sm"
+                  onClick={() => setShowProductTable(v => !v)}
+                  iconRight={showProductTable ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                >
+                  {showProductTable ? "Ocultar detalle" : "Ver detalle de productos"}
+                </Button>
+              </div>
             </div>
           )}
         </div>
+        )}
 
         {/* ── OR closed result banner ── */}
         {orCerrada && (() => {
           const sinDif = orEstado === "Completado sin diferencias";
           return (
-            <div className={`rounded-xl px-4 py-4 flex items-center gap-4 border ${
+            <div className={`rounded-xl px-4 py-4 border ${
               sinDif ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"
             }`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-lg font-bold ${
-                sinDif ? "bg-green-100 text-green-600" : "bg-amber-100 text-amber-600"
-              }`}>✓</div>
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm font-bold ${sinDif ? "text-green-700" : "text-amber-700"}`}>
-                  Recepción cerrada
-                </p>
-                <p className={`text-xs mt-0.5 ${sinDif ? "text-green-600" : "text-amber-600"}`}>
-                  {sinDif
-                    ? "Todas las unidades fueron contadas sin diferencias."
-                    : "Se registraron diferencias entre lo declarado y lo contado."}
-                </p>
+              <div className="flex items-start gap-3 sm:items-center sm:gap-4">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-lg font-bold ${
+                  sinDif ? "bg-green-100 text-green-600" : "bg-amber-100 text-amber-600"
+                }`}>✓</div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-bold ${sinDif ? "text-green-700" : "text-amber-700"}`}>
+                    Recepción cerrada
+                  </p>
+                  <p className={`text-xs mt-0.5 ${sinDif ? "text-green-600" : "text-amber-600"}`}>
+                    {sinDif
+                      ? "Todas las unidades fueron contadas sin diferencias."
+                      : "Se registraron diferencias entre lo declarado y lo contado."}
+                  </p>
+                  <span className={`sm:hidden inline-flex mt-2 text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${
+                    sinDif ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                  }`}>
+                    {orEstado}
+                  </span>
+                </div>
+                <span className={`hidden sm:inline-flex flex-shrink-0 text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${
+                  sinDif ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                }`}>
+                  {orEstado}
+                </span>
               </div>
-              <span className={`flex-shrink-0 text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${
-                sinDif ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
-              }`}>
-                {orEstado}
-              </span>
             </div>
           );
         })()}
@@ -2286,7 +2682,7 @@ export default function ConteoORPage() {
 
         {/* ── Gestión de cuarentena (OR cerrada con registros) ── */}
         {orCerrada && quarantineRecs.length > 0 && (
-          <GestionCuarentena records={quarantineRecs} onUpdate={updateQuarantineRecord} />
+          <GestionCuarentena records={quarantineRecs} onUpdate={updateQuarantineRecord} incidencias={incidencias} />
         )}
 
         {/* ── Session history ── */}
@@ -2311,23 +2707,34 @@ export default function ConteoORPage() {
         )}
 
         {/* ── Footer: Liberar + Terminar recepción (always visible when OR open) ── */}
-        {!orCerrada && (
-          <div className="flex items-center justify-between pt-2 pb-8">
-            <button
-              onClick={liberarSesion}
-              disabled={!sesionActiva}
-              className={`flex items-center gap-2 px-5 py-2.5 border text-sm font-medium rounded-lg transition-colors duration-300 ${
-                !sesionActiva
-                  ? "border-neutral-200 bg-white text-neutral-300 cursor-not-allowed"
-                  : "border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-600"
-              }`}
-            >
-              <LockUnlocked01 className="w-4 h-4" />
+        {!orCerrada && (<>
+          {/* No-units alert */}
+          {noUnitsAlert && (
+            <div className="flex items-start gap-3 p-4 mb-2 bg-amber-50 border border-amber-200 rounded-lg">
+              <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-amber-800">No se puede terminar la recepción</p>
+                <p className="text-sm text-amber-700 mt-0.5">Debes ingresar al menos una unidad en las sesiones de conteo antes de terminar la recepción.</p>
+              </div>
+              <button onClick={() => setNoUnitsAlert(false)} className="p-1 rounded hover:bg-amber-100 transition-colors flex-shrink-0">
+                <X className="w-4 h-4 text-amber-500" />
+              </button>
+            </div>
+          )}
+
+          {/* Desktop footer actions */}
+          <div className="hidden lg:flex items-center justify-between pt-2 pb-8">
+            <Button variant="secondary" size="lg" onClick={liberarSesion} disabled={!sesionActiva} iconLeft={<LockUnlocked01 className="w-4 h-4" />}>
               Liberar
-            </button>
+            </Button>
 
             <button
-              onClick={() => !terminarDisabled && setConfirmClose(true)}
+              onClick={() => {
+                if (terminarDisabled) return;
+                if (stats.totalContadas === 0) { setNoUnitsAlert(true); return; }
+                setNoUnitsAlert(false);
+                setConfirmClose(true);
+              }}
               disabled={terminarDisabled}
               title={
                 sesiones.length === 0 ? "Registra al menos una sesión antes de terminar" :
@@ -2339,9 +2746,87 @@ export default function ConteoORPage() {
               Terminar recepción
             </button>
           </div>
-        )}
+        </>)}
 
       </div>
+
+      {/* ── Mobile sticky bottom bar ── */}
+      {!orCerrada && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 py-3 z-30 lg:hidden">
+          {sesionActiva ? (
+            <div className="flex items-center gap-2 relative">
+              {/* More menu + session counter */}
+              <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
+                <button
+                  onClick={() => setShowStickyMenu(m => !m)}
+                  className="w-11 h-11 flex items-center justify-center rounded-xl border border-neutral-200 text-neutral-500 hover:bg-neutral-50 active:bg-neutral-100 transition-colors"
+                >
+                  <MoreHorizontal className="w-5 h-5" />
+                </button>
+                <span className="text-[10px] font-semibold text-neutral-400 tabular-nums">{stats.totalSesionAct} uds</span>
+              </div>
+
+              {/* Primary: Escanear unidad */}
+              <button
+                onClick={() => {
+                  scannerInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  setTimeout(() => scannerInputRef.current?.focus(), 400);
+                }}
+                className="flex-1 flex items-center justify-center gap-2 py-3 bg-primary-500 hover:bg-primary-600 active:bg-primary-700 text-white text-sm font-semibold rounded-xl transition-colors duration-300"
+              >
+                <ScanBarcode className="w-4 h-4" />
+                Escanear unidad
+              </button>
+
+              {/* Popover menu */}
+              {showStickyMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowStickyMenu(false)} />
+                  <div className="absolute bottom-full left-0 mb-2 w-52 bg-white rounded-xl shadow-lg border border-neutral-200 py-1.5 z-50">
+                    <button
+                      onClick={() => { setShowStickyMenu(false); liberarSesion(); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+                    >
+                      <LockUnlocked01 className="w-4 h-4 text-neutral-400" />
+                      Liberar sesión
+                    </button>
+                    <button
+                      onClick={() => { setShowStickyMenu(false); finalizarSesion(); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <StopCircle className="w-4 h-4" />
+                      Finalizar sesión
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={iniciarSesion}
+                className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
+              >
+                <PlayCircle className="w-4 h-4" />
+                Iniciar sesión de conteo
+              </button>
+              {sesiones.length > 0 && (
+                <button
+                  onClick={() => {
+                    if (stats.totalContadas === 0) { setNoUnitsAlert(true); return; }
+                    setNoUnitsAlert(false);
+                    setConfirmClose(true);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-red-600 text-sm font-medium rounded-lg hover:bg-red-50 active:bg-red-100 transition-colors duration-300"
+                >
+                  <ClipboardCheck className="w-4 h-4" />
+                  Terminar recepción
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

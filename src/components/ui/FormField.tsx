@@ -140,7 +140,7 @@ export default function FormField(props: FormFieldProps) {
       {/* ── Field container ──────────────────────────────────────────────── */}
       <div
         className={`
-          relative flex items-center rounded-xl px-3.5 transition-all
+          relative flex items-center rounded-lg px-3.5 transition-all
           ${borderCls} ${bgCls}
         `}
       >

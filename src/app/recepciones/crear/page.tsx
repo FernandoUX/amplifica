@@ -34,25 +34,37 @@ type FormData = {
 function Step1({ form, setForm }: { form: FormData; setForm: React.Dispatch<React.SetStateAction<FormData>> }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  const [showAlert, setShowAlert] = useState(true);
 
   const handleFile = (file: File) => setForm(f => ({ ...f, guiaDespacho: file }));
 
   return (
     <div className="space-y-5">
       {/* Warning */}
-      <div className="flex gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
-        <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-sm font-semibold text-amber-800">Asegura tu mercancía</p>
-          <p className="text-xs text-amber-600 mt-0.5">
-            La Guía de Despacho es obligatoria para la cobertura del seguro. Evita pérdidas económicas subiendo un documento claro.
-          </p>
+      {showAlert && (
+        <div className="flex gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-amber-800">Asegura tu mercancía</p>
+            <p className="text-xs text-amber-600 mt-0.5">
+              La Guía de Despacho es obligatoria para la cobertura del seguro. Evita pérdidas económicas subiendo un documento claro.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowAlert(false)}
+            className="text-amber-400 hover:text-amber-600 transition-colors duration-300 flex-shrink-0 -mt-0.5 -mr-0.5"
+            aria-label="Cerrar alerta"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
         </div>
-      </div>
+      )}
 
       <h3 className="text-base font-semibold text-neutral-800">Seleccione sucursal y detalles de la orden</h3>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Sucursal */}
         <FormField
           as="select"
@@ -419,7 +431,7 @@ function Step3({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
       <h3 className="text-base font-semibold text-neutral-800">Seleccione día y bloque horario</h3>
 
       {/* ── 3-column layout ───────────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-4 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
 
         {/* ── Detalle de la Orden ────────────────────────────────────────── */}
         <div className="border border-neutral-200 rounded-xl p-4 space-y-3 text-xs">
@@ -710,18 +722,16 @@ function CrearORPageInner() {
   return (
     <div className="min-h-screen bg-neutral-50">
       {/* Breadcrumb */}
-      <div className="bg-white border-b border-neutral-100">
-        <nav className="max-w-5xl mx-auto px-6 py-3 flex items-center gap-2 text-sm text-neutral-500">
-          <Link href="/recepciones" className="hover:text-primary-500">Recepciones</Link>
-          <ChevronRight className="w-3.5 h-3.5" />
-          <span className="text-neutral-800 font-medium">{pageTitle}</span>
-        </nav>
-      </div>
+      <nav className="max-w-5xl mx-auto px-4 lg:px-6 pt-4 pb-1 flex items-center gap-1.5 text-sm text-neutral-500">
+        <Link href="/recepciones" className="hover:text-primary-500 transition-colors duration-300">Recepciones</Link>
+        <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
+        <span className="text-neutral-700 font-medium">{pageTitle}</span>
+      </nav>
 
-      <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="max-w-5xl mx-auto px-4 lg:px-6 pt-3 pb-28 lg:pb-8">
         {/* Title */}
         <div className="flex items-center gap-2 mb-6">
-          <h1 className="text-2xl font-bold text-neutral-900">{pageTitle}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">{pageTitle}</h1>
           <button className="text-neutral-400 hover:text-neutral-600 text-base">ⓘ</button>
         </div>
 
@@ -736,14 +746,14 @@ function CrearORPageInner() {
         </div>
 
         {/* Content card */}
-        <div className="bg-white border border-neutral-200 rounded-2xl p-6 shadow-sm">
+        <div className="bg-white border border-neutral-200 rounded-2xl p-4 sm:p-6 shadow-sm">
           {step === 1 && <Step1 form={form} setForm={setForm} />}
           {step === 2 && <Step2 form={form} setForm={setForm} />}
           {step === 3 && !isSinAgenda && <Step3 form={form} setForm={setForm} />}
         </div>
 
         {/* Footer actions */}
-        <div className="flex items-center justify-between mt-6">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 py-3 flex items-center justify-between z-30 lg:static lg:border-0 lg:px-0 lg:py-0 lg:mt-6">
           <button
             onClick={() => (step === 1 || (isReagendar && step === 3)) ? router.push("/recepciones") : setStep(s => s - 1)}
             className="px-5 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 font-medium transition-colors duration-300"

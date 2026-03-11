@@ -20,6 +20,7 @@ import {
   Calendar,
   LogOut01,
   UserCircle,
+  XClose,
 } from "@untitled-ui/icons-react";
 import AmplificaLogo from "./AmplificaLogo";
 
@@ -82,7 +83,11 @@ const MENU: MenuItem[] = [
   { label: "Conjunto de reglas", icon: LayersThree01, href: "/reglas",     hasChildren: true },
 ];
 
-export default function Sidebar() {
+type SidebarProps = {
+  onClose?: () => void;
+};
+
+export default function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed]   = useState(false);
   const [openMenus, setOpenMenus]   = useState<string[]>(["Recepciones"]);
@@ -159,15 +164,24 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`${collapsed ? "w-14" : "w-52"} bg-neutral-900 text-white flex flex-col flex-shrink-0 transition-all duration-200`}
+      className={`${collapsed ? "lg:w-14" : "lg:w-52"} w-full bg-neutral-900 text-white flex flex-col flex-shrink-0 transition-all duration-200 h-full`}
     >
       {/* ── Logo ──────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-3 py-3.5 border-b border-white/10">
         {!collapsed && <AmplificaLogo />}
         {collapsed && <AmplificaLogo collapsed />}
+        {/* Mobile close button */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="text-white/40 hover:text-white p-1 rounded flex-shrink-0 lg:hidden"
+          >
+            <XClose className="w-5 h-5" />
+          </button>
+        )}
         <button
           onClick={() => setCollapsed(c => !c)}
-          className="text-white/40 hover:text-white p-1 rounded ml-auto flex-shrink-0"
+          className="text-white/40 hover:text-white p-1 rounded ml-auto flex-shrink-0 hidden lg:block"
         >
           <ChevronLeft
             className={`w-4 h-4 transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`}
@@ -431,6 +445,7 @@ export default function Sidebar() {
                           <li key={child.href}>
                             <Link
                               href={child.href}
+                              onClick={onClose}
                               className={`block px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-200 ${
                                 pathname === child.href
                                   ? "text-white bg-white/10"
@@ -447,6 +462,7 @@ export default function Sidebar() {
                 ) : (
                   <Link
                     href={item.href}
+                    onClick={onClose}
                     className={`flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs transition-colors duration-300 ${
                       pathname === item.href
                         ? "text-white bg-white/10"
@@ -467,6 +483,7 @@ export default function Sidebar() {
       <div className="border-t border-white/10 px-2 py-2 space-y-0.5">
         <Link
           href="/configuracion"
+          onClick={onClose}
           className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs text-white/70 hover:text-white hover:bg-white/5 transition-colors duration-300"
         >
           <Settings01 className="w-4 h-4 flex-shrink-0" />

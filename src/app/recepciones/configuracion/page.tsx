@@ -496,11 +496,11 @@ export default function ConfiguracionPage() {
         </div>
 
         {/* ── Tabs ── */}
-        <div className="flex border-b border-neutral-200">
+        <div className="flex border-b border-neutral-200 overflow-x-auto scrollbar-hide">
           {([
-            { key: "sucursales",  label: "Sucursales",           icon: Building01 },
-            { key: "feriados",    label: "Feriados y bloqueos",  icon: CalendarDate },
-            { key: "calendario",  label: "Vista de calendario",  icon: Calendar },
+            { key: "sucursales",  label: "Sucursales",           shortLabel: "Sucursales",  icon: Building01 },
+            { key: "feriados",    label: "Feriados y bloqueos",  shortLabel: "Feriados",    icon: CalendarDate },
+            { key: "calendario",  label: "Vista de calendario",  shortLabel: "Calendario",  icon: Calendar },
           ] as const).map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.key;
@@ -508,14 +508,15 @@ export default function ConfiguracionPage() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors duration-300 ${
+                className={`flex items-center gap-2 px-3 sm:px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors duration-300 whitespace-nowrap flex-shrink-0 ${
                   isActive
                     ? "border-primary-500 text-primary-500"
                     : "border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300"
                 }`}
               >
                 <Icon className={`w-4 h-4 ${isActive ? "text-primary-500" : "text-neutral-400"}`} />
-                {tab.label}
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden">{tab.shortLabel}</span>
               </button>
             );
           })}
@@ -835,8 +836,8 @@ export default function ConfiguracionPage() {
               </div>
             </ConfigCard>
 
-            {/* ── Save button ── */}
-            <div className="flex items-center justify-end gap-3 pt-1 pb-8">
+            {/* ── Save button: sticky on mobile, inline on desktop ── */}
+            <div className="hidden lg:flex items-center justify-end gap-3 pt-1 pb-8">
               {savedToast && (
                 <span className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
                   <CheckCircle className="w-4 h-4" />
@@ -851,6 +852,8 @@ export default function ConfiguracionPage() {
                 Guardar configuración
               </button>
             </div>
+            {/* Spacer for sticky bar on mobile */}
+            <div className="h-20 lg:hidden" />
           </div>
         )}
 
@@ -1557,6 +1560,25 @@ export default function ConfiguracionPage() {
           </div>
         );
       })()}
+
+      {/* ── Mobile sticky save bar ── */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 py-3 z-30 lg:hidden">
+        <div className="flex items-center gap-3">
+          {savedToast && (
+            <span className="flex items-center gap-1.5 text-sm text-green-600 font-medium flex-1">
+              <CheckCircle className="w-4 h-4" />
+              Guardada
+            </span>
+          )}
+          <button
+            onClick={saveConfig}
+            className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
+          >
+            <Check className="w-4 h-4" />
+            Guardar configuración
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

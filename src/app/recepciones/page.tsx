@@ -629,6 +629,16 @@ function OrdenesPageInner() {
   const [recibirOrden,      setRecibirOrden]      = useState<Orden | null>(null);
   const [createdOrs,        setCreatedOrs]        = useState<Orden[]>([]);
   const [showQrScanner,     setShowQrScanner]     = useState(false);
+  const [cardMenuId,        setCardMenuId]        = useState<string | null>(null);
+  const [bottomMenuOpen,    setBottomMenuOpen]    = useState(false);
+
+  // Close card menu / bottom menu on outside click
+  useEffect(() => {
+    if (!cardMenuId && !bottomMenuOpen) return;
+    const close = () => { setCardMenuId(null); setBottomMenuOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [cardMenuId, bottomMenuOpen]);
 
   // Read per-OR status overrides + created ORs from localStorage
   useEffect(() => {
@@ -876,7 +886,7 @@ function OrdenesPageInner() {
 
 
   return (
-    <div className="p-6 min-w-0">
+    <div className="p-4 lg:p-6 min-w-0 pb-24 sm:pb-4 lg:pb-6">
 
       {/* Toast */}
       {showToast && (
@@ -1039,9 +1049,9 @@ function OrdenesPageInner() {
       )}
 
       {/* Page header */}
-      <div className="flex items-center justify-between mb-5 gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-5 gap-3 sm:gap-4">
         <div className="flex items-center gap-2 min-w-0">
-          <h1 className="text-2xl font-bold text-neutral-900" style={NW}>Órdenes de Recepción</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-neutral-900" style={NW}>Órdenes de Recepción</h1>
           <button
             onClick={() => setShowInfo(true)}
             className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300"
@@ -1049,16 +1059,22 @@ function OrdenesPageInner() {
             <InfoCircle className="w-5 h-5" />
           </button>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Button variant="tertiary" size="md" iconLeft={<Download01 className="w-4 h-4" />}>
-            Exportar
-          </Button>
-          <Button variant="secondary" href="/recepciones/crear?mode=sin-agenda">
-            Recepción sin agenda
-          </Button>
-          <Button variant="secondary" iconLeft={<QrCode02 className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
-            Escanear QR
-          </Button>
+        <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+          <div>
+            <Button variant="tertiary" size="md" iconLeft={<Download01 className="w-4 h-4" />}>
+              Exportar
+            </Button>
+          </div>
+          <div className="hidden lg:block">
+            <Button variant="secondary" href="/recepciones/crear?mode=sin-agenda">
+              Recepción sin agenda
+            </Button>
+          </div>
+          <div>
+            <Button variant="secondary" iconLeft={<QrCode02 className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
+              Escanear QR
+            </Button>
+          </div>
           <Button variant="primary" href="/recepciones/crear" iconLeft={<Plus className="w-4 h-4" />}>
             Crear recepción
           </Button>
@@ -1066,12 +1082,27 @@ function OrdenesPageInner() {
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-3 mb-4 min-w-0">
-        {/* ── Tabs with horizontal scroll ── */}
+      <div className="flex items-center gap-2 sm:gap-3 mb-4 min-w-0">
+        {/* ── Tabs: select on mobile, pill scroll on desktop ── */}
         <div className="relative flex-1 min-w-0">
+          {/* Mobile: select dropdown */}
+          <div className="sm:hidden">
+            <select
+              value={activeTab}
+              onChange={e => setActiveTab(e.target.value)}
+              className="w-full appearance-none bg-neutral-100 border border-neutral-200 rounded-lg px-3 py-2 pr-8 text-sm text-neutral-700 font-medium focus:outline-none focus:ring-2 focus:ring-primary-200"
+            >
+              {TABS.map(tab => (
+                <option key={tab} value={tab}>{tab}</option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+          </div>
+
+          {/* Desktop: pill tabs with horizontal scroll */}
           <div
             ref={tabsScrollRef}
-            className="tabs-scroll flex items-center gap-1 overflow-x-auto pb-0.5 select-none"
+            className="hidden sm:flex tabs-scroll items-center gap-1 overflow-x-auto pb-0.5 select-none"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
             onMouseDown={e => {
               const el = tabsScrollRef.current;
@@ -1101,10 +1132,10 @@ function OrdenesPageInner() {
           {/* Left arrow */}
           {showLeftArrow && (
             <>
-              <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-white to-transparent" />
+              <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-white to-transparent hidden sm:block" />
               <button
                 onClick={() => tabsScrollRef.current?.scrollBy({ left: -200, behavior: "smooth" })}
-                className="absolute inset-y-0 left-0 flex items-center justify-center w-8 text-neutral-500 hover:text-neutral-900 transition-colors duration-300"
+                className="hidden sm:flex absolute inset-y-0 left-0 items-center justify-center w-8 text-neutral-500 hover:text-neutral-900 transition-colors duration-300"
                 aria-label="Tabs anteriores"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -1114,10 +1145,10 @@ function OrdenesPageInner() {
           {/* Right arrow */}
           {showRightArrow && (
             <>
-              <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-white to-transparent" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-white to-transparent hidden sm:block" />
               <button
                 onClick={() => tabsScrollRef.current?.scrollBy({ left: 200, behavior: "smooth" })}
-                className="absolute inset-y-0 right-0 flex items-center justify-center w-8 text-neutral-500 hover:text-neutral-900 transition-colors duration-300"
+                className="hidden sm:flex absolute inset-y-0 right-0 items-center justify-center w-8 text-neutral-500 hover:text-neutral-900 transition-colors duration-300"
                 aria-label="Ver más tabs"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -1150,19 +1181,19 @@ function OrdenesPageInner() {
 
           <Link
             href="/recepciones/columnas"
-            className="p-2 bg-neutral-100 rounded-lg hover:bg-neutral-200 flex items-center justify-center transition-colors duration-300"
+            className="hidden sm:flex p-2 bg-neutral-100 rounded-lg hover:bg-neutral-200 items-center justify-center transition-colors duration-300"
             title="Editor de columnas"
           >
             <LayoutGrid01 className="w-4 h-4 text-neutral-500" />
           </Link>
 
-          <div className="relative">
+          <div className="hidden sm:block relative">
             <SearchLg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
             <input
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar en órdenes"
+              placeholder="Buscar OR..."
               className="pl-9 pr-8 py-2 bg-neutral-100 rounded-lg text-sm text-neutral-700 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200 w-52"
             />
             {search && (
@@ -1172,6 +1203,23 @@ function OrdenesPageInner() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Mobile search — full width below toolbar */}
+      <div className="sm:hidden relative mb-3">
+        <SearchLg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Buscar OR..."
+          className="w-full pl-9 pr-8 py-2.5 bg-neutral-100 rounded-lg text-sm text-neutral-700 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+        />
+        {search && (
+          <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       {/* Active filter chips */}
@@ -1213,9 +1261,161 @@ function OrdenesPageInner() {
         </div>
       )}
 
-      {/* Table */}
-      <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto w-full table-scroll">
+      {/* ── Mobile card view ── */}
+      <div className="sm:hidden flex flex-col gap-3">
+        {filtered.length === 0 ? (
+          <div className="bg-white border border-neutral-200 rounded-2xl py-14 text-center text-sm text-neutral-400">
+            No se encontraron órdenes{search ? ` para "${search}"` : ""}.
+          </div>
+        ) : (
+          paginatedRows.map((orden, i) => {
+            const actions = getActions(orden.estado, orden.id);
+            const PrimaryIcon = actions.primary?.icon;
+            return (
+              <div
+                key={`card-${orden.id}-${i}`}
+                className="bg-white border border-neutral-200 rounded-2xl p-4"
+              >
+                {/* Row 1: ID + Status */}
+                <div className="flex items-center justify-between gap-2 mb-2.5">
+                  <span
+                    className="inline-block bg-neutral-100 text-neutral-700 rounded px-2 py-0.5 font-medium"
+                    style={{ fontFamily: "var(--font-atkinson)", fontSize: "12px" }}
+                  >
+                    {orden.id}
+                  </span>
+                  <StatusBadge status={orden.estado} />
+                </div>
+
+                {/* Row 2: Tienda + Sucursal */}
+                <div className="flex items-center gap-3 text-sm mb-2">
+                  <span className="text-neutral-800 font-medium truncate">{orden.seller}</span>
+                  <span className="text-neutral-300">·</span>
+                  <span className="text-neutral-500 truncate">{orden.sucursal}</span>
+                </div>
+
+                {/* Row 3: Fecha agendada */}
+                <div className="flex items-center gap-2 text-xs text-neutral-500 mb-2.5">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-neutral-400 flex-shrink-0">
+                    <rect x="1" y="2" width="12" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
+                    <path d="M1 5.5h12" stroke="currentColor" strokeWidth="1.2"/>
+                    <path d="M4.5 1v2M9.5 1v2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                  </svg>
+                  {orden.fechaAgendada === "—" ? (
+                    <span className="text-neutral-400">Sin agendar</span>
+                  ) : (
+                    <span className="text-neutral-600">{orden.fechaAgendada}</span>
+                  )}
+                  {orden.fechaExtra && (
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${fechaExtraClass(orden.fechaExtra)}`}>
+                      {orden.fechaExtra}
+                    </span>
+                  )}
+                </div>
+
+                {/* Row 4: SKUs + Unidades */}
+                <div className="flex items-center gap-4 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-neutral-400">SKUs</span>
+                    <span className="text-neutral-700 font-semibold tabular-nums">{orden.skus}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-neutral-400">Unidades</span>
+                    <span className="text-neutral-700 font-semibold tabular-nums">{orden.uTotales}</span>
+                  </div>
+                </div>
+
+                {/* Tags (if any) */}
+                {orden.tags && orden.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2.5">
+                    {orden.tags.map(tag => {
+                      const TagIcon = tag.Icon;
+                      return (
+                        <span
+                          key={tag.label}
+                          className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-medium ${tag.className}`}
+                        >
+                          <TagIcon className={`w-3 h-3 flex-shrink-0 ${tag.iconClass}`} />
+                          {tag.label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Actions footer */}
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-neutral-100">
+                  {actions.primary && PrimaryIcon && (
+                    actions.primary.href ? (
+                      <Link
+                        href={actions.primary.href}
+                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors duration-200"
+                      >
+                        <PrimaryIcon className="w-4 h-4" />
+                        {actions.primary.tooltip}
+                      </Link>
+                    ) : (
+                      <button
+                        onClick={orden.estado === "Programado" ? () => setRecibirOrden(orden) : undefined}
+                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors duration-200"
+                      >
+                        <PrimaryIcon className="w-4 h-4" />
+                        {actions.primary.tooltip}
+                      </button>
+                    )
+                  )}
+                  {/* When only "Ver" action → show "Ver detalle" button; otherwise dots menu */}
+                  {!actions.primary && actions.menu.length === 1 && actions.menu[0].label === "Ver" ? (
+                    <Link
+                      href={actions.menu[0].href || `/recepciones/${encodeURIComponent(orden.id)}`}
+                      className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors duration-200"
+                    >
+                      <Eye className="w-4 h-4" />
+                      Ver detalle
+                    </Link>
+                  ) : (
+                    <div className="relative">
+                      <button
+                        onMouseDown={e => e.stopPropagation()}
+                        onClick={() => setCardMenuId(prev => prev === orden.id ? null : orden.id)}
+                        className={`p-2 rounded-lg transition-colors duration-200 ${
+                          cardMenuId === orden.id ? "bg-neutral-100 text-neutral-700" : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
+                        }`}
+                      >
+                        <DotsVertical className="w-4 h-4" />
+                      </button>
+                      {cardMenuId === orden.id && (
+                        <div onMouseDown={e => e.stopPropagation()} className="absolute bottom-full right-0 mb-1 bg-white border border-neutral-200 rounded-xl shadow-xl py-1.5 min-w-[192px] z-50">
+                          {actions.menu.map((item, mi) => {
+                            const ItemIcon = item.icon;
+                            const hasSep = mi > 0 && actions.menu[mi - 1]?.danger !== item.danger;
+                            return (
+                              <button
+                                key={item.label}
+                                onClick={() => { setCardMenuId(null); if (item.href) router.push(item.href); }}
+                                className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-colors duration-300 ${
+                                  item.danger ? "text-red-500 hover:bg-red-50" : "text-neutral-700 hover:bg-neutral-50"
+                                } ${hasSep ? "border-t border-neutral-100 mt-1 pt-2.5" : ""}`}
+                              >
+                                {ItemIcon && <ItemIcon className={`w-4 h-4 flex-shrink-0 ${item.danger ? "text-red-400" : "text-neutral-400"}`} />}
+                                {item.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Table (desktop) */}
+      <div className="hidden sm:block bg-white border border-neutral-200 rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto w-full table-scroll" style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
           <table className="text-sm border-collapse" style={{ width: "max-content", minWidth: "100%" }}>
 
             <thead>
@@ -1269,26 +1469,31 @@ function OrdenesPageInner() {
                       orden.isSubId ? "bg-neutral-50/40" : ""
                     }`}
                   >
-                    {/* Fixed: ID */}
+                    {/* Fixed: ID + status on mobile */}
                     <td className="py-3 px-4" style={NW}>
-                      {orden.isSubId ? (
-                        <span className="flex items-center gap-1">
-                          <span className="text-neutral-300 text-sm select-none pl-1">└</span>
+                      <div className="flex flex-col gap-1.5">
+                        {orden.isSubId ? (
+                          <span className="flex items-center gap-1">
+                            <span className="text-neutral-300 text-sm select-none pl-1">└</span>
+                            <span
+                              className="inline-block bg-neutral-100 text-neutral-500 rounded px-2 py-0.5"
+                              style={{ fontFamily: "var(--font-atkinson)", fontSize: "11px" }}
+                            >
+                              {orden.id}
+                            </span>
+                          </span>
+                        ) : (
                           <span
-                            className="inline-block bg-neutral-100 text-neutral-500 rounded px-2 py-0.5"
-                            style={{ fontFamily: "var(--font-atkinson)", fontSize: "11px" }}
+                            className="inline-block bg-neutral-100 text-neutral-700 rounded px-2 py-0.5"
+                            style={{ fontFamily: "var(--font-atkinson)", fontSize: "12px" }}
                           >
                             {orden.id}
                           </span>
+                        )}
+                        <span className="sm:hidden">
+                          <StatusBadge status={orden.estado} />
                         </span>
-                      ) : (
-                        <span
-                          className="inline-block bg-neutral-100 text-neutral-700 rounded px-2 py-0.5"
-                          style={{ fontFamily: "var(--font-atkinson)", fontSize: "12px" }}
-                        >
-                          {orden.id}
-                        </span>
-                      )}
+                      </div>
                     </td>
 
                     {/* Dynamic columns */}
@@ -1394,7 +1599,7 @@ function OrdenesPageInner() {
           </table>
         </div>
 
-        {/* Pagination */}
+        {/* Desktop Pagination */}
         <div className="flex items-center justify-between px-3 py-3 border-t border-neutral-100">
           <div className="flex items-center gap-2">
             <label className="flex items-center gap-1.5 bg-neutral-100 rounded-lg px-3 h-[44px] text-sm text-neutral-700 cursor-pointer">
@@ -1437,6 +1642,29 @@ function OrdenesPageInner() {
         </div>
       </div>
 
+      {/* Mobile pagination */}
+      <div className="sm:hidden flex items-center justify-between mt-3">
+        <span className="text-xs text-neutral-400 tabular-nums">
+          {fromRow}–{toRow} de {filtered.length}
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={clampedPage <= 1}
+            className="px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-700 hover:bg-neutral-50 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300"
+          >
+            ←
+          </button>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={clampedPage >= totalPages}
+            className="px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-700 hover:bg-neutral-50 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300"
+          >
+            →
+          </button>
+        </div>
+      </div>
+
       {/* QR Scanner Modal */}
       <QrScannerModal
         open={showQrScanner}
@@ -1444,6 +1672,58 @@ function OrdenesPageInner() {
         onConfirm={handleQrConfirm}
         getOrInfo={getOrInfo}
       />
+
+      {/* ── Mobile sticky bottom bar ── */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 py-3 flex items-center gap-2 z-40">
+        {/* Dots menu — tertiary (Exportar + Recepción sin agenda) */}
+        <div className="relative flex items-stretch">
+          <button
+            onMouseDown={e => e.stopPropagation()}
+            onClick={() => setBottomMenuOpen(prev => !prev)}
+            className={`inline-flex items-center justify-center px-2 py-2 rounded-lg transition-colors duration-200 ${
+              bottomMenuOpen ? "bg-neutral-100 text-neutral-700" : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
+            }`}
+          >
+            <DotsVertical className="w-5 h-5" />
+          </button>
+          {bottomMenuOpen && (
+            <div
+              onMouseDown={e => e.stopPropagation()}
+              className="absolute bottom-full left-0 mb-2 bg-white border border-neutral-200 rounded-xl shadow-xl py-1.5 min-w-[200px] z-50"
+            >
+              <button
+                onClick={() => { setBottomMenuOpen(false); /* export logic */ }}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors duration-300"
+              >
+                <Download01 className="w-4 h-4 flex-shrink-0 text-neutral-400" />
+                Exportar
+              </button>
+              <Link
+                href="/recepciones/crear?mode=sin-agenda"
+                onClick={() => setBottomMenuOpen(false)}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors duration-300"
+              >
+                <Plus className="w-4 h-4 flex-shrink-0 text-neutral-400" />
+                Recepción sin agenda
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* Escanear QR — secondary */}
+        <div className="flex-1">
+          <Button variant="secondary" className="w-full" iconLeft={<QrCode02 className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
+            Escanear QR
+          </Button>
+        </div>
+
+        {/* Crear recepción — primary */}
+        <div className="flex-1">
+          <Button variant="primary" href="/recepciones/crear" className="w-full" iconLeft={<Plus className="w-4 h-4" />}>
+            Crear recepción
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
