@@ -16,7 +16,7 @@
 
   /* ── Fonts ──────────────────────────────────────────────────────────── */
   --font-sans: var(--font-inter), "Inter", sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-mono: "Atkinson Hyperlegible", ui-monospace, monospace;
 
   /* ── Override text-sm: 14px → 13px on desktop ────────────────────────── */
   --text-sm: 0.8125rem;

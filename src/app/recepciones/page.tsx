@@ -1108,21 +1108,21 @@ function OrdenesPageInner() {
         </div>
         <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
           <div>
-            <Button variant="tertiary" size="md" iconLeft={<Download01 className="w-4 h-4" />}>
+            <Button variant="tertiary" size="md" className="h-9" iconLeft={<Download01 className="w-4 h-4" />}>
               Exportar
             </Button>
           </div>
           <div className="hidden lg:block">
-            <Button variant="secondary" href="/recepciones/crear?mode=sin-agenda">
+            <Button variant="secondary" className="h-9" href="/recepciones/crear?mode=sin-agenda">
               Recepción sin agenda
             </Button>
           </div>
           <div>
-            <Button variant="secondary" iconLeft={<QrCode02 className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
+            <Button variant="secondary" className="h-9" iconLeft={<QrCode02 className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
               Escanear QR
             </Button>
           </div>
-          <Button variant="primary" href="/recepciones/crear" iconLeft={<Plus className="w-4 h-4" />}>
+          <Button variant="primary" className="h-9" href="/recepciones/crear" iconLeft={<Plus className="w-4 h-4" />}>
             Crear recepción
           </Button>
         </div>
@@ -1326,8 +1326,7 @@ function OrdenesPageInner() {
                 {/* Row 1: ID + Status */}
                 <div className="flex items-center justify-between gap-2 mb-2.5">
                   <span
-                    className="inline-block bg-neutral-100 text-neutral-700 rounded px-2 py-0.5 font-medium"
-                    style={{ fontFamily: "var(--font-atkinson)", fontSize: "12px" }}
+                    className="inline-block bg-neutral-100 text-neutral-700 rounded px-2 py-0.5 font-medium w-fit text-xs font-mono"
                   >
                     {orden.id}
                   </span>
@@ -1400,7 +1399,7 @@ function OrdenesPageInner() {
                       return (
                         <span
                           key={tag.label}
-                          className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-medium ${tag.className}`}
+                          className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-medium w-fit ${tag.className}`}
                         >
                           <TagIcon className={`w-3 h-3 flex-shrink-0 ${tag.iconClass}`} />
                           {tag.label}
@@ -1544,16 +1543,14 @@ function OrdenesPageInner() {
                           <span className="flex items-center gap-1">
                             <span className="text-neutral-300 text-sm select-none pl-1">└</span>
                             <span
-                              className="inline-block bg-neutral-100 text-neutral-500 rounded px-2 py-0.5"
-                              style={{ fontFamily: "var(--font-atkinson)", fontSize: "11px" }}
+                              className="inline-block bg-neutral-100 text-neutral-500 rounded px-2 py-0.5 w-fit text-[11px] font-mono"
                             >
                               {orden.id}
                             </span>
                           </span>
                         ) : (
                           <span
-                            className="inline-block bg-neutral-100 text-neutral-700 rounded px-2 py-0.5"
-                            style={{ fontFamily: "var(--font-atkinson)", fontSize: "12px" }}
+                            className="inline-block bg-neutral-100 text-neutral-700 rounded px-2 py-0.5 w-fit text-xs font-mono"
                           >
                             {orden.id}
                           </span>
@@ -1658,7 +1655,7 @@ function OrdenesPageInner() {
                                     return (
                                       <span
                                         key={tag.label}
-                                        className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded font-medium ${tag.className}`}
+                                        className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded font-medium w-fit ${tag.className}`}
                                         style={NW}
                                       >
                                         <TagIcon className={`w-3 h-3 flex-shrink-0 ${tag.iconClass}`} />
