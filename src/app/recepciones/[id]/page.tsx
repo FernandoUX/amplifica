@@ -975,15 +975,16 @@ function IncidenciasSKUModal({ product, initialRows, onClose, onSave, onLiveUpda
 }
 
 // ─── AddProductModal ──────────────────────────────────────────────────────────
-const CATEGORIAS = ["Sin diferencias", "Con diferencias", "No pickeable", "Exceso"];
+const CATEGORIAS = ["Sin diferencias", "Con diferencias", "No pickeable", "Exceso", "No creado en el sistema"];
 
-function AddProductModal({ onCancel, onConfirm }: {
+function AddProductModal({ onCancel, onConfirm, defaultCategoria }: {
   onCancel: () => void;
   onConfirm: (product: ProductConteo) => void;
+  defaultCategoria?: string;
 }) {
   const [form, setForm] = useState<NewProductForm>({
     nombre: "", sku: "", barcode: "", cantidad: "1",
-    imagen: null, comentarios: "", categoria: "",
+    imagen: null, comentarios: "", categoria: defaultCategoria ?? "",
   });
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -2283,6 +2284,7 @@ export default function ConteoORPage() {
         <AddProductModal
           onCancel={() => setAddProductFlow("closed")}
           onConfirm={(product) => { setProducts(ps => [...ps, product]); setAddProductFlow("closed"); }}
+          defaultCategoria="No creado en el sistema"
         />
       )}
 
@@ -2334,7 +2336,7 @@ export default function ConteoORPage() {
         <span className="text-neutral-700 font-medium">Orden de Recepción</span>
       </nav>
 
-      <div className="max-w-4xl mx-auto px-4 lg:px-6 pt-3 pb-24 lg:pb-6 space-y-5">
+      <div className="max-w-4xl mx-auto px-4 lg:px-6 pt-3 pb-32 lg:pb-6 space-y-5">
 
         {/* ── Title row ── */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
@@ -2722,15 +2724,17 @@ export default function ConteoORPage() {
               ))
             )}
 
-            {/* Añadir producto */}
-            <div className="border-t border-dashed border-neutral-200">
-              <button onClick={() => setAddProductFlow("choice")} className="w-full flex items-center justify-center gap-2 py-3.5 text-sm text-neutral-400 hover:text-primary-500 hover:bg-primary-50/50 transition-colors duration-300 font-medium">
-                <span className="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center flex-shrink-0">
-                  <Plus className="w-3 h-3" />
-                </span>
-                Añadir producto
-              </button>
-            </div>
+            {/* Añadir producto — solo visible con sesión activa */}
+            {sesionActiva && (
+              <div className="border-t border-dashed border-neutral-200">
+                <button onClick={() => setAddProductFlow("choice")} className="w-full flex items-center justify-center gap-2 py-3.5 text-sm text-neutral-400 hover:text-primary-500 hover:bg-primary-50/50 transition-colors duration-300 font-medium">
+                  <span className="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center flex-shrink-0">
+                    <Plus className="w-3 h-3" />
+                  </span>
+                  Añadir producto
+                </button>
+              </div>
+            )}
           </div>
         )}
 

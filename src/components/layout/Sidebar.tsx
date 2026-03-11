@@ -300,14 +300,14 @@ export default function Sidebar({ onClose }: SidebarProps) {
       {/* ── Quick actions ─────────────────────────────────────────────────── */}
       {!collapsed && (
         <div className="px-2.5 py-2 space-y-0.5 border-b border-white/10">
-          <button className="w-full flex items-center gap-2.5 text-white/70 hover:text-white text-xs px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors duration-300">
+          <button className="w-full flex items-center gap-2.5 text-white/70 hover:text-white text-[14px] lg:text-[13px] px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors duration-300">
             <SearchLg className="w-4 h-4 flex-shrink-0" />
             <span>Buscar</span>
           </button>
           <div ref={dateRef} className="relative">
             <button
               onClick={() => setDatePickerOpen(o => !o)}
-              className={`w-full flex items-center gap-2.5 text-xs px-2 py-1.5 rounded-lg transition-colors duration-300 ${
+              className={`w-full flex items-center gap-2.5 text-[14px] lg:text-[13px] px-2 py-1.5 rounded-lg transition-colors duration-300 ${
                 dateFrom ? "text-white bg-white/10" : "text-white/70 hover:text-white hover:bg-white/5"
               }`}
             >
@@ -420,7 +420,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
                   <div className={`rounded-lg transition-colors duration-200 ${isOpen && !collapsed ? "bg-white/[0.04] pb-1.5" : ""}`}>
                     <button
                       onClick={() => toggleMenu(item.label)}
-                      className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs transition-colors duration-300
+                      className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-[14px] lg:text-[13px] transition-colors duration-300
                         ${isActive ? "text-white" : "text-white/70 hover:text-white hover:bg-white/5"}`}
                     >
                       <Icon className="w-4 h-4 flex-shrink-0" />
@@ -446,7 +446,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
                             <Link
                               href={child.href}
                               onClick={onClose}
-                              className={`block px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-200 ${
+                              className={`block px-3 py-1.5 rounded-lg text-[14px] lg:text-[13px] font-medium transition-colors duration-200 ${
                                 pathname === child.href
                                   ? "text-white bg-white/10"
                                   : "text-white/40 hover:text-white/70 hover:bg-white/5"
@@ -463,7 +463,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
                   <Link
                     href={item.href}
                     onClick={onClose}
-                    className={`flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs transition-colors duration-300 ${
+                    className={`flex items-center gap-2.5 px-2 py-2 rounded-lg text-[14px] lg:text-[13px] transition-colors duration-300 ${
                       pathname === item.href
                         ? "text-white bg-white/10"
                         : "text-white/70 hover:text-white hover:bg-white/5"
@@ -484,7 +484,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
         <Link
           href="/configuracion"
           onClick={onClose}
-          className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs text-white/70 hover:text-white hover:bg-white/5 transition-colors duration-300"
+          className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-[14px] lg:text-[13px] text-white/70 hover:text-white hover:bg-white/5 transition-colors duration-300"
         >
           <Settings01 className="w-4 h-4 flex-shrink-0" />
           {!collapsed && <span>Configuración</span>}
