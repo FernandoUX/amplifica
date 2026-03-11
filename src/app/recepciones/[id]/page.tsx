@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useMemo, useRef, useEffect } from "react";
 import {
-  ChevronRight, Trash2, Scan, ScanBarcode, ImageOff,
-  Clock, User, PlayCircle, StopCircle,
+  ChevronLeft, ChevronRight, Trash2, Scan, ScanBarcode, ImageOff,
+  Clock, User, PlayCircle, StopCircle, Eye,
   ChevronDown, ChevronUp, MoreHorizontal, Package,
   X, Check, Upload, Search, HelpCircle,
 } from "lucide-react";
@@ -1695,6 +1695,10 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
 }) {
   const [viewMode, setViewMode] = useState<"consolidado" | "por-sesion">("consolidado");
   const [lightbox, setLightbox] = useState<File | null>(null);
+  const [imageSlider, setImageSlider] = useState<{
+    images: { file: File; sku: string; nombre: string; cantidad: number; tag: string; nota: string }[];
+    index: number;
+  } | null>(null);
 
   const skuRows = products.map(p => {
     const acc     = acumulado[p.id] ?? 0;
@@ -1742,9 +1746,104 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
     return { badge: "Cat.C", cls: "bg-amber-100 text-amber-600" };
   }
 
+  // Build "Ver" handler for image slider
+  const openImageSlider = (p: ProductConteo, incRows: IncidenciaRow[]) => {
+    const images = incRows.flatMap(r =>
+      r.imagenes.map(file => ({
+        file,
+        sku: p.sku,
+        nombre: p.nombre,
+        cantidad: r.cantidad,
+        tag: INCIDENCIA_TAGS.find(t => t.key === r.tag)?.label ?? r.tag,
+        nota: r.nota,
+      }))
+    );
+    if (images.length > 0) setImageSlider({ images, index: 0 });
+  };
+
   return (
     <>
-      {/* Lightbox */}
+      {/* Image slider modal */}
+      {imageSlider && (() => {
+        const { images, index } = imageSlider;
+        const current = images[index];
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm px-4" onClick={() => setImageSlider(null)}>
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100">
+                <p className="text-sm font-semibold text-neutral-800">
+                  Imagen {index + 1} de {images.length}
+                </p>
+                <button onClick={() => setImageSlider(null)} className="p-1 rounded-lg hover:bg-neutral-100 transition-colors">
+                  <X className="w-4 h-4 text-neutral-500" />
+                </button>
+              </div>
+
+              {/* Image */}
+              <div className="relative bg-neutral-900 flex items-center justify-center" style={{ minHeight: 280, maxHeight: 400 }}>
+                <img
+                  src={URL.createObjectURL(current.file)} alt=""
+                  className="max-w-full max-h-[400px] object-contain"
+                />
+                {/* Nav arrows */}
+                {images.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setImageSlider({ images, index: (index - 1 + images.length) % images.length })}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => setImageSlider({ images, index: (index + 1) % images.length })}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Info */}
+              <div className="px-5 py-4 space-y-2.5">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-sm font-semibold text-neutral-800">{current.nombre}</span>
+                  <span className="font-mono text-xs text-neutral-400">{current.sku}</span>
+                </div>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-medium">
+                    {current.tag}
+                  </span>
+                  <span className="text-xs text-neutral-500">
+                    <span className="font-semibold tabular-nums">{current.cantidad.toLocaleString("es-CL")}</span> uds afectadas
+                  </span>
+                </div>
+                {current.nota && (
+                  <div className="bg-neutral-50 rounded-lg px-3 py-2">
+                    <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-0.5">Comentario del operador</p>
+                    <p className="text-sm text-neutral-700 italic">"{current.nota}"</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Dot indicators */}
+              {images.length > 1 && (
+                <div className="flex items-center justify-center gap-1.5 pb-4">
+                  {images.map((_, i) => (
+                    <button
+                      key={i} onClick={() => setImageSlider({ images, index: i })}
+                      className={`w-2 h-2 rounded-full transition-colors ${i === index ? "bg-primary-500" : "bg-neutral-200 hover:bg-neutral-300"}`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Legacy lightbox (for incidencia section thumbnails) */}
       {lightbox && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={() => setLightbox(null)}>
           <button
@@ -1870,24 +1969,13 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                       <td className="px-3 py-3 align-top">
                         {allImgs.length === 0
                           ? <span className="text-neutral-200 text-xs">—</span>
-                          : <div className="flex gap-1 flex-wrap">
-                              {allImgs.slice(0, 3).map((img, i) => (
-                                <button
-                                  key={i} onClick={() => setLightbox(img)}
-                                  className="w-8 h-8 rounded-lg overflow-hidden border border-neutral-200 hover:border-primary-400 flex-shrink-0 transition-colors duration-300"
-                                >
-                                  <img src={URL.createObjectURL(img)} alt="" className="w-full h-full object-cover" />
-                                </button>
-                              ))}
-                              {allImgs.length > 3 && (
-                                <button
-                                  onClick={() => setLightbox(allImgs[3])}
-                                  className="w-8 h-8 rounded-lg border border-neutral-200 bg-neutral-50 flex items-center justify-center text-[10px] font-bold text-neutral-500 hover:border-primary-400 flex-shrink-0 transition-colors duration-300"
-                                >
-                                  +{allImgs.length - 3}
-                                </button>
-                              )}
-                            </div>
+                          : <button
+                              onClick={() => openImageSlider(p, incRows)}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 border border-primary-200 transition-colors duration-300"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              Ver ({allImgs.length})
+                            </button>
                         }
                       </td>
                     </tr>
