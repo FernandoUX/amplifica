@@ -35,6 +35,8 @@ type Orden = {
   estado: Status;
   skus: number;
   uTotales: string;
+  progreso?: { contadas: number; total: number };  // contadas/total units
+  sesiones?: number;      // number of counting sessions
   tags?: ResultTag[];     // Feature 4: tags de resultado (Completada)
   isSubId?: boolean;      // Feature 2: sub-ID (RO-XXX-P1)
   pallets?: number;       // Seller-declared pallets (for "Programado" ORs)
@@ -99,17 +101,17 @@ const ORDENES: Orden[] = [
   { id: "RO-BARRA-197", creacion: "04/03/2026", fechaAgendada: "08/03/2026 11:00", seller: "Extra Life", sucursal: "Providencia", estado: "Recepcionado en bodega", skus: 6, uTotales: "310" },
 
   // ─── En proceso de conteo ────────────────────────────────────────────────────
-  { id: "RO-BARRA-184", creacion: "15/02/2026", fechaAgendada: "19/02/2026 10:00", seller: "Extra Life", sucursal: "Quilicura", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
-  { id: "RO-BARRA-179", creacion: "14/02/2026", fechaAgendada: "18/02/2026 09:00", seller: "Gohard", sucursal: "La Reina", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
-  { id: "RO-BARRA-185", creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "Gohard", sucursal: "Lo Barnechea", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
-  { id: "RO-BARRA-198", creacion: "03/03/2026", fechaAgendada: "07/03/2026 08:30", seller: "VitaFit", sucursal: "Santiago Centro", estado: "En proceso de conteo", skus: 15, uTotales: "1.120" },
+  { id: "RO-BARRA-184", creacion: "15/02/2026", fechaAgendada: "19/02/2026 10:00", seller: "Extra Life", sucursal: "Quilicura", estado: "En proceso de conteo", skus: 320, uTotales: "2.550", progreso: { contadas: 470, total: 500 }, sesiones: 3 },
+  { id: "RO-BARRA-179", creacion: "14/02/2026", fechaAgendada: "18/02/2026 09:00", seller: "Gohard", sucursal: "La Reina", estado: "En proceso de conteo", skus: 320, uTotales: "2.550", progreso: { contadas: 120, total: 120 }, sesiones: 1 },
+  { id: "RO-BARRA-185", creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "Gohard", sucursal: "Lo Barnechea", estado: "En proceso de conteo", skus: 320, uTotales: "2.550", progreso: { contadas: 180, total: 320 }, sesiones: 2 },
+  { id: "RO-BARRA-198", creacion: "03/03/2026", fechaAgendada: "07/03/2026 08:30", seller: "VitaFit", sucursal: "Santiago Centro", estado: "En proceso de conteo", skus: 15, uTotales: "1.120", progreso: { contadas: 85, total: 1120 }, sesiones: 1 },
 
   // ─── Pendiente de aprobación — esperando supervisor ──────────────────────────
-  { id: "RO-BARRA-187", creacion: "10/02/2026", fechaAgendada: "14/02/2026 13:00", seller: "Le Vice", sucursal: "La Reina", estado: "Pendiente de aprobación", skus: 320, uTotales: "2.550",
+  { id: "RO-BARRA-187", creacion: "10/02/2026", fechaAgendada: "14/02/2026 13:00", seller: "Le Vice", sucursal: "La Reina", estado: "Pendiente de aprobación", skus: 320, uTotales: "2.550", progreso: { contadas: 2550, total: 2550 }, sesiones: 4,
     tags: makeTags({ conDiferencias: 20 }) },
-  { id: "RO-BARRA-199", creacion: "02/03/2026", fechaAgendada: "06/03/2026 10:00", seller: "NutriPro", sucursal: "Las Condes", estado: "Pendiente de aprobación", skus: 14, uTotales: "780",
+  { id: "RO-BARRA-199", creacion: "02/03/2026", fechaAgendada: "06/03/2026 10:00", seller: "NutriPro", sucursal: "Las Condes", estado: "Pendiente de aprobación", skus: 14, uTotales: "780", progreso: { contadas: 780, total: 780 }, sesiones: 2,
     tags: makeTags({ conDiferencias: 45, noPickeables: 12 }) },
-  { id: "RO-BARRA-212", creacion: "08/03/2026", fechaAgendada: "10/03/2026 09:30", seller: "Gohard", sucursal: "Providencia", estado: "Pendiente de aprobación", skus: 22, uTotales: "1.340",
+  { id: "RO-BARRA-212", creacion: "08/03/2026", fechaAgendada: "10/03/2026 09:30", seller: "Gohard", sucursal: "Providencia", estado: "Pendiente de aprobación", skus: 22, uTotales: "1.340", progreso: { contadas: 1340, total: 1340 }, sesiones: 1,
     tags: makeTags({ conDiferencias: 8, noPickeables: 3 }) },
 
   // ─── Cancelado ───────────────────────────────────────────────────────────────
@@ -117,32 +119,32 @@ const ORDENES: Orden[] = [
   { id: "RO-BARRA-213", creacion: "20/02/2026", fechaAgendada: "24/02/2026 10:00", seller: "Le Vice", sucursal: "Providencia", estado: "Cancelado", skus: 7, uTotales: "280", comentarios: "Seller canceló envío por falta de stock." },
 
   // ─── Completado con diferencias ──────────────────────────────────────────────
-  { id: "RO-BARRA-186", creacion: "11/02/2026", fechaAgendada: "15/02/2026 08:00", seller: "Extra Life", sucursal: "Quilicura", estado: "Completado con diferencias", skus: 320, uTotales: "2.550",
+  { id: "RO-BARRA-186", creacion: "11/02/2026", fechaAgendada: "15/02/2026 08:00", seller: "Extra Life", sucursal: "Quilicura", estado: "Completado con diferencias", skus: 320, uTotales: "2.550", progreso: { contadas: 2550, total: 2550 }, sesiones: 5,
     tags: makeTags({ sinDiferencias: 2510, conDiferencias: 20, noPickeables: 20 }) },
-  { id: "RO-BARRA-201", creacion: "25/02/2026", fechaAgendada: "01/03/2026 09:00", seller: "VitaFit", sucursal: "La Reina", estado: "Completado con diferencias", skus: 20, uTotales: "1.540",
+  { id: "RO-BARRA-201", creacion: "25/02/2026", fechaAgendada: "01/03/2026 09:00", seller: "VitaFit", sucursal: "La Reina", estado: "Completado con diferencias", skus: 20, uTotales: "1.540", progreso: { contadas: 1540, total: 1540 }, sesiones: 3,
     tags: makeTags({ sinDiferencias: 1480, conDiferencias: 36, noPickeables: 24 }) },
-  { id: "RO-BARRA-214", creacion: "18/02/2026", fechaAgendada: "22/02/2026 14:00", seller: "NutriPro", sucursal: "Lo Barnechea", estado: "Completado con diferencias", skus: 16, uTotales: "890",
+  { id: "RO-BARRA-214", creacion: "18/02/2026", fechaAgendada: "22/02/2026 14:00", seller: "NutriPro", sucursal: "Lo Barnechea", estado: "Completado con diferencias", skus: 16, uTotales: "890", progreso: { contadas: 890, total: 890 }, sesiones: 2,
     tags: makeTags({ sinDiferencias: 840, conDiferencias: 32, noPickeables: 18 }) },
 
   // ─── Completado sin diferencias ──────────────────────────────────────────────
-  { id: "RO-BARRA-189", creacion: "09/02/2026", fechaAgendada: "13/02/2026 15:30", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Completado sin diferencias", skus: 320, uTotales: "2.550",
+  { id: "RO-BARRA-189", creacion: "09/02/2026", fechaAgendada: "13/02/2026 15:30", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Completado sin diferencias", skus: 320, uTotales: "2.550", progreso: { contadas: 2550, total: 2550 }, sesiones: 3,
     tags: makeTags({ sinDiferencias: 2550 }) },
-  { id: "RO-BARRA-200", creacion: "28/02/2026", fechaAgendada: "04/03/2026 15:00", seller: "BioNature", sucursal: "Quilicura", estado: "Completado sin diferencias", skus: 10, uTotales: "520",
+  { id: "RO-BARRA-200", creacion: "28/02/2026", fechaAgendada: "04/03/2026 15:00", seller: "BioNature", sucursal: "Quilicura", estado: "Completado sin diferencias", skus: 10, uTotales: "520", progreso: { contadas: 520, total: 520 }, sesiones: 1,
     tags: makeTags({ sinDiferencias: 520 }) },
-  { id: "RO-BARRA-215", creacion: "22/02/2026", fechaAgendada: "26/02/2026 08:30", seller: "Gohard", sucursal: "Las Condes", estado: "Completado sin diferencias", skus: 28, uTotales: "2.100",
+  { id: "RO-BARRA-215", creacion: "22/02/2026", fechaAgendada: "26/02/2026 08:30", seller: "Gohard", sucursal: "Las Condes", estado: "Completado sin diferencias", skus: 28, uTotales: "2.100", progreso: { contadas: 2100, total: 2100 }, sesiones: 1,
     tags: makeTags({ sinDiferencias: 2100 }) },
 
   // ─── Adicionales ────────────────────────────────────────────────────────────
   { id: "RO-BARRA-216", creacion: "05/03/2026", fechaAgendada: "—", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Creado", skus: 14, uTotales: "720", comentarios: "Seller solicita recepción urgente esta semana." },
   { id: "RO-BARRA-217", creacion: "02/03/2026", fechaAgendada: "10/03/2026 08:00", seller: "Extra Life", sucursal: "Lo Barnechea", estado: "Programado", skus: 42, uTotales: "3.200", pallets: 12, bultos: 40, comentarios: "Camión refrigerado, requiere andén 3." },
   { id: "RO-BARRA-218", creacion: "01/03/2026", fechaAgendada: "06/03/2026 15:00", seller: "VitaFit", sucursal: "Las Condes", estado: "Recepcionado en bodega", skus: 19, uTotales: "1.450", pallets: 5, bultos: 14 },
-  { id: "RO-BARRA-219", creacion: "27/02/2026", fechaAgendada: "03/03/2026 10:30", seller: "NutriPro", sucursal: "Quilicura", estado: "En proceso de conteo", skus: 36, uTotales: "2.840", comentarios: "Conteo parcial, faltan 8 SKUs por verificar." },
-  { id: "RO-BARRA-220", creacion: "26/02/2026", fechaAgendada: "02/03/2026 09:00", seller: "BioNature", sucursal: "La Reina", estado: "Pendiente de aprobación", skus: 11, uTotales: "610",
+  { id: "RO-BARRA-219", creacion: "27/02/2026", fechaAgendada: "03/03/2026 10:30", seller: "NutriPro", sucursal: "Quilicura", estado: "En proceso de conteo", skus: 36, uTotales: "2.840", progreso: { contadas: 300, total: 2840 }, sesiones: 2, comentarios: "Conteo parcial, faltan 8 SKUs por verificar." },
+  { id: "RO-BARRA-220", creacion: "26/02/2026", fechaAgendada: "02/03/2026 09:00", seller: "BioNature", sucursal: "La Reina", estado: "Pendiente de aprobación", skus: 11, uTotales: "610", progreso: { contadas: 610, total: 610 }, sesiones: 1,
     tags: makeTags({ conDiferencias: 15 }) },
   { id: "RO-BARRA-221", creacion: "24/02/2026", fechaAgendada: "28/02/2026 14:00", seller: "Gohard", sucursal: "Providencia", estado: "Cancelado", skus: 5, uTotales: "200", comentarios: "Proveedor no se presentó en la fecha acordada." },
-  { id: "RO-BARRA-222", creacion: "23/02/2026", fechaAgendada: "27/02/2026 11:00", seller: "Le Vice", sucursal: "Lo Barnechea", estado: "Completado con diferencias", skus: 30, uTotales: "2.200",
+  { id: "RO-BARRA-222", creacion: "23/02/2026", fechaAgendada: "27/02/2026 11:00", seller: "Le Vice", sucursal: "Lo Barnechea", estado: "Completado con diferencias", skus: 30, uTotales: "2.200", progreso: { contadas: 2200, total: 2200 }, sesiones: 4,
     tags: makeTags({ sinDiferencias: 2050, conDiferencias: 95, noPickeables: 55 }) },
-  { id: "RO-BARRA-223", creacion: "21/02/2026", fechaAgendada: "25/02/2026 16:00", seller: "Extra Life", sucursal: "Las Condes", estado: "Completado sin diferencias", skus: 18, uTotales: "1.360",
+  { id: "RO-BARRA-223", creacion: "21/02/2026", fechaAgendada: "25/02/2026 16:00", seller: "Extra Life", sucursal: "Las Condes", estado: "Completado sin diferencias", skus: 18, uTotales: "1.360", progreso: { contadas: 1360, total: 1360 }, sesiones: 1,
     tags: makeTags({ sinDiferencias: 1360 }) },
   { id: "RO-BARRA-224", creacion: "04/03/2026", fechaAgendada: "09/03/2026 12:00", seller: "VitaFit", sucursal: "Providencia", estado: "Recepcionado en bodega", skus: 8, uTotales: "480", pallets: 2, bultos: 5, comentarios: "Productos frágiles, manipular con cuidado." },
   { id: "RO-BARRA-225", creacion: "07/03/2026", fechaAgendada: "—", seller: "NutriPro", sucursal: "La Reina", estado: "Creado", skus: 21, uTotales: "1.580" },
@@ -1347,7 +1349,7 @@ function OrdenesPageInner() {
                   )}
                 </div>
 
-                {/* Row 4: SKUs + Unidades */}
+                {/* Row 4: SKUs + Unidades + Sesiones */}
                 <div className="flex items-center gap-4 text-xs">
                   <div className="flex items-center gap-1.5">
                     <span className="text-neutral-400">SKUs</span>
@@ -1357,7 +1359,33 @@ function OrdenesPageInner() {
                     <span className="text-neutral-400">Unidades</span>
                     <span className="text-neutral-700 font-semibold tabular-nums">{orden.uTotales}</span>
                   </div>
+                  {orden.sesiones && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-neutral-400">Sesiones</span>
+                      <span className="text-neutral-700 font-semibold tabular-nums">{orden.sesiones}</span>
+                    </div>
+                  )}
                 </div>
+
+                {/* Progreso bar (if any) */}
+                {orden.progreso && (() => {
+                  const pct = Math.round((orden.progreso.contadas / orden.progreso.total) * 100);
+                  const isComplete = pct >= 100;
+                  return (
+                    <div className="flex items-center gap-2 mt-2">
+                      <div className="flex-1 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${isComplete ? "bg-green-500" : "bg-primary-500"}`}
+                          style={{ width: `${Math.min(pct, 100)}%` }}
+                        />
+                      </div>
+                      <span className={`text-[11px] font-medium tabular-nums flex-shrink-0 ${isComplete ? "text-green-600" : "text-neutral-500"}`}>
+                        {orden.progreso.contadas.toLocaleString("es-CL")}/{orden.progreso.total.toLocaleString("es-CL")}
+                        {isComplete ? " ✓" : ` (${pct}%)`}
+                      </span>
+                    </div>
+                  );
+                })()}
 
                 {/* Tags (if any) */}
                 {orden.tags && orden.tags.length > 0 && (
@@ -1472,6 +1500,7 @@ function OrdenesPageInner() {
                   const LABELS: Record<ColumnKey, string> = {
                     creacion: "Creación", fechaAgendada: "F. agendada",
                     seller: "Tienda", sucursal: "Sucursal", estado: "Estado",
+                    progreso: "Progreso", sesiones: "Sesiones",
                     skus: "SKUs", uTotales: "U. totales", tags: "Estado productos",
                   };
                   return (
@@ -1585,6 +1614,41 @@ function OrdenesPageInner() {
                           return (
                             <td key="uTotales" className="py-3 px-4 text-neutral-700 tabular-nums" style={NW}>
                               {orden.uTotales}
+                            </td>
+                          );
+                        case "progreso":
+                          return (
+                            <td key="progreso" className="py-3 px-4" style={NW}>
+                              {orden.progreso ? (() => {
+                                const pct = Math.round((orden.progreso.contadas / orden.progreso.total) * 100);
+                                const isComplete = pct >= 100;
+                                return (
+                                  <div className="flex items-center gap-2 min-w-[140px]">
+                                    <div className="flex-1 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                                      <div
+                                        className={`h-full rounded-full transition-all ${isComplete ? "bg-green-500" : "bg-primary-500"}`}
+                                        style={{ width: `${Math.min(pct, 100)}%` }}
+                                      />
+                                    </div>
+                                    <span className={`text-xs font-medium tabular-nums ${isComplete ? "text-green-600" : "text-neutral-600"}`}>
+                                      {orden.progreso.contadas.toLocaleString("es-CL")}/{orden.progreso.total.toLocaleString("es-CL")}
+                                      {isComplete ? " ✓" : ` (${pct}%)`}
+                                    </span>
+                                  </div>
+                                );
+                              })() : (
+                                <span className="text-neutral-300 text-xs">—</span>
+                              )}
+                            </td>
+                          );
+                        case "sesiones":
+                          return (
+                            <td key="sesiones" className="py-3 px-4 text-neutral-700 tabular-nums" style={NW}>
+                              {orden.sesiones ? (
+                                <span>{orden.sesiones} {orden.sesiones === 1 ? "sesión" : "sesiones"}</span>
+                              ) : (
+                                <span className="text-neutral-300 text-xs">—</span>
+                              )}
                             </td>
                           );
                         case "tags":
@@ -1708,7 +1772,7 @@ function OrdenesPageInner() {
       />
 
       {/* ── Mobile sticky bottom bar ── */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 py-3 flex flex-col gap-2 z-40">
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 pt-3 pb-6 flex flex-col gap-2 z-40">
         {/* Crear recepción — primary full-width 48px */}
         <Button variant="primary" href="/recepciones/crear" className="w-full h-12" iconLeft={<Plus className="w-4 h-4" />}>
           Crear recepción

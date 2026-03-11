@@ -9,6 +9,8 @@ export type ColumnKey =
   | "seller"
   | "sucursal"
   | "estado"
+  | "progreso"
+  | "sesiones"
   | "skus"
   | "uTotales"
   | "tags";
@@ -19,6 +21,8 @@ export const MOVABLE_COLS: { key: ColumnKey; label: string }[] = [
   { key: "seller",        label: "Tienda"           },
   { key: "sucursal",      label: "Sucursal"         },
   { key: "estado",        label: "Estado"           },
+  { key: "progreso",      label: "Progreso"         },
+  { key: "sesiones",      label: "Sesiones"         },
   { key: "skus",          label: "SKUs"             },
   { key: "uTotales",      label: "U. Totales"       },
   { key: "tags",          label: "Estado Productos" },

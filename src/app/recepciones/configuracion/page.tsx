@@ -1562,7 +1562,7 @@ export default function ConfiguracionPage() {
       })()}
 
       {/* ── Mobile sticky save bar ── */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 py-3 z-30 lg:hidden">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 pt-3 pb-6 z-30 lg:hidden">
         <div className="flex items-center gap-3">
           {savedToast && (
             <span className="flex items-center gap-1.5 text-sm text-green-600 font-medium flex-1">

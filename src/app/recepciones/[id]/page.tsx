@@ -988,7 +988,7 @@ function AddProductModal({ onCancel, onConfirm, defaultCategoria }: {
   });
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const canConfirm = form.nombre.trim() !== "" && (parseInt(form.cantidad) || 0) >= 1;
+  const canConfirm = form.nombre.trim() !== "" && (parseInt(form.cantidad) || 0) >= 1 && form.imagen !== null;
 
   const handleConfirm = () => {
     if (!canConfirm) return;
@@ -1066,7 +1066,7 @@ function AddProductModal({ onCancel, onConfirm, defaultCategoria }: {
 
           {/* Foto */}
           <div>
-            <p className="text-[11px] font-semibold text-neutral-600 mb-1.5">Foto <span className="text-neutral-400 font-normal">(opcional · JPG o PNG · 5 MB máx)</span></p>
+            <p className="text-[11px] font-semibold text-neutral-600 mb-1.5">Foto <span className="text-red-400 font-normal">(obligatoria · JPG o PNG · 5 MB máx)</span></p>
             <input
               ref={fileRef} type="file" className="hidden"
               accept="image/jpeg,image/png" capture="environment"
@@ -1086,7 +1086,7 @@ function AddProductModal({ onCancel, onConfirm, defaultCategoria }: {
             ) : (
               <button
                 onClick={() => fileRef.current?.click()}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-neutral-200 rounded-xl text-sm text-neutral-400 hover:border-primary-300 hover:text-primary-500 hover:bg-primary-50/40 transition-colors duration-300"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-red-200 rounded-xl text-sm text-neutral-400 hover:border-primary-300 hover:text-primary-500 hover:bg-primary-50/40 transition-colors duration-300"
               >
                 <Upload className="w-4 h-4" />
                 Subir o tomar foto
@@ -2810,7 +2810,7 @@ export default function ConteoORPage() {
 
       {/* ── Mobile sticky bottom bar ── */}
       {!orCerrada && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 py-3 z-30 lg:hidden">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 pt-3 pb-6 z-30 lg:hidden">
           {sesionActiva ? (
             <div className="flex flex-col gap-2">
               {/* Primary: Escanear unidad */}

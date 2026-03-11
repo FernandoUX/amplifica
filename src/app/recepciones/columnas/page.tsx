@@ -320,7 +320,7 @@ export default function ColumnEditorPage() {
     </div>
 
     {/* ── Mobile sticky bottom bar ── */}
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 py-3 z-30 sm:hidden">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 pt-3 pb-6 z-30 sm:hidden">
       <div className="flex items-center gap-2">
         <button
           onClick={handleReset}

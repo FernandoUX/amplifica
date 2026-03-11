@@ -323,18 +323,18 @@ export default function QrScannerModal({ open, onClose, onConfirm, getOrInfo }: 
               </div>
 
               {/* Action buttons */}
-              <div className="flex gap-3 mt-auto">
-                <button
-                  onClick={onClose}
-                  className="flex-1 px-4 py-2.5 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors"
-                >
-                  Cancelar
-                </button>
+              <div className="flex flex-col gap-2 mt-auto">
                 <button
                   onClick={handleConfirm}
-                  className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 transition-colors"
+                  className="w-full h-12 px-4 text-sm font-semibold text-white bg-primary-500 rounded-xl hover:bg-primary-600 transition-colors"
                 >
                   Confirmar recepción
+                </button>
+                <button
+                  onClick={onClose}
+                  className="w-full h-12 px-4 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-xl hover:bg-neutral-50 transition-colors"
+                >
+                  Cancelar
                 </button>
               </div>
             </div>
@@ -371,19 +371,19 @@ export default function QrScannerModal({ open, onClose, onConfirm, getOrInfo }: 
               )}
 
               {/* Action buttons */}
-              <div className="flex gap-3 mt-auto">
-                <button
-                  onClick={onClose}
-                  className="flex-1 px-4 py-2.5 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors"
-                >
-                  Cerrar
-                </button>
+              <div className="flex flex-col gap-2 mt-auto">
                 <button
                   onClick={resetToInput}
-                  className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 transition-colors flex items-center justify-center gap-2"
+                  className="w-full h-12 px-4 text-sm font-semibold text-white bg-primary-500 rounded-xl hover:bg-primary-600 transition-colors flex items-center justify-center gap-2"
                 >
                   <RefreshCw01 className="w-4 h-4" />
                   Volver a escanear
+                </button>
+                <button
+                  onClick={onClose}
+                  className="w-full h-12 px-4 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-xl hover:bg-neutral-50 transition-colors"
+                >
+                  Cerrar
                 </button>
               </div>
             </div>

@@ -839,7 +839,7 @@ function CrearORPageInner() {
         </div>
 
         {/* Footer actions */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 py-3 flex flex-col gap-2 z-30 sm:flex-row-reverse sm:items-center lg:static lg:border-0 lg:px-0 lg:py-0 lg:mt-6 lg:flex-row lg:justify-between">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 pt-3 pb-6 flex flex-col gap-2 z-30 sm:flex-row-reverse sm:items-center sm:pb-3 lg:static lg:border-0 lg:px-0 lg:py-0 lg:mt-6 lg:flex-row lg:justify-between">
           {/* sin-agenda: step 2 → submit directly */}
           {isSinAgenda && step === 2 ? (
             <button
