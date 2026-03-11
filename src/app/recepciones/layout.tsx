@@ -44,7 +44,7 @@ export default function RecepcionesLayout({ children }: { children: React.ReactN
       </div>
 
       {/* ── Main content ──────────────────────────────────────────────── */}
-      <main className="flex-1 overflow-y-auto bg-white rounded-2xl mt-14 mx-2 mb-2 lg:mt-2 lg:mr-2 lg:mb-2">
+      <main className="flex-1 overflow-y-auto bg-white mt-14 lg:mt-2 lg:mr-2 lg:mb-2 lg:rounded-2xl">
         {children}
       </main>
     </div>

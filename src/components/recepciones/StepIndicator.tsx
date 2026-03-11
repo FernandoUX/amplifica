@@ -34,7 +34,7 @@ export default function StepIndicator({ current, maxReached, onStepClick, steps 
                 type="button"
                 disabled={!clickable}
                 onClick={() => clickable && onStepClick?.(step.number)}
-                className={`flex items-center gap-2 rounded-lg px-1 py-0.5 transition-colors duration-300
+                className={`flex items-center gap-2 rounded-lg px-3 py-2 transition-colors duration-300
                   ${clickable ? "cursor-pointer hover:bg-neutral-100" : "cursor-default"}
                   ${done ? "text-green-600" : active ? "text-primary-500" : "text-neutral-400"}
                 `}

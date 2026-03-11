@@ -132,7 +132,38 @@ export default function ProductsModal({ onClose, onAdd, initialSearch = "" }: Pr
         >
           {/* Scrollable area */}
           <div className="overflow-y-auto flex-1">
-            <table className="w-full text-sm">
+
+            {/* ── Mobile card list ── */}
+            <div className="sm:hidden divide-y divide-neutral-100">
+              {filtered.map((product, i) => (
+                <div
+                  key={`m-${product.sku}-${i}`}
+                  className="flex items-start gap-3 px-4 py-3.5 cursor-pointer hover:bg-neutral-50/60 transition-colors duration-300"
+                  onClick={() => toggleCheck(product.sku)}
+                >
+                  <div className="pt-0.5 flex-shrink-0">
+                    <Checkbox checked={product.checked} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-neutral-800 font-medium leading-snug">{product.nombre}</p>
+                    <p className="text-xs text-neutral-500 mt-1">
+                      {product.sku} · {product.barcode}
+                    </p>
+                    <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="number"
+                        value={product.qty}
+                        onChange={(e) => updateQty(product.sku, e.target.value)}
+                        className="w-20 px-2.5 py-1.5 bg-neutral-100 rounded-lg text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* ── Desktop table ── */}
+            <table className="hidden sm:table w-full text-sm">
               <thead className="sticky top-0 bg-white border-b border-neutral-200">
                 <tr>
                   <th className="text-left py-3 px-5 font-semibold text-neutral-900 w-24">Agregar</th>
@@ -150,21 +181,12 @@ export default function ProductsModal({ onClose, onAdd, initialSearch = "" }: Pr
                     className="border-b border-neutral-100 last:border-b-0 hover:bg-neutral-50/60 transition-colors duration-300 cursor-pointer"
                     onClick={() => toggleCheck(product.sku)}
                   >
-                    {/* Checkbox */}
                     <td className="py-4 px-5">
                       <Checkbox checked={product.checked} />
                     </td>
-
-                    {/* Nombre */}
                     <td className="py-4 px-5 text-neutral-700">{product.nombre}</td>
-
-                    {/* SKU */}
                     <td className="py-4 px-5 text-neutral-700">{product.sku}</td>
-
-                    {/* Barcode */}
                     <td className="py-4 px-5 text-neutral-700">{product.barcode}</td>
-
-                    {/* Cantidad — stop row click when editing */}
                     <td className="py-4 px-5" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="number"

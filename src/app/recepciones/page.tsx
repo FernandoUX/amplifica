@@ -315,24 +315,24 @@ function RecebirModal({ orden, onCancel, onConfirm }: {
           <p className="text-sm font-semibold text-neutral-800">Detalles de la recepción:</p>
 
           {/* Info card */}
-          <div className="border border-neutral-200 rounded-xl px-4 py-3.5 flex items-start divide-x divide-neutral-100">
-            <div className="pr-5 min-w-0">
+          <div className="border border-neutral-200 rounded-xl px-4 py-3.5 grid grid-cols-2 sm:grid-cols-5 gap-x-5 gap-y-3">
+            <div className="col-span-2 sm:col-span-1 min-w-0">
               <p className="text-xs text-neutral-400 mb-1">Seller</p>
               <p className="text-sm font-bold text-neutral-900 truncate">{orden.seller}</p>
             </div>
-            <div className="px-5">
+            <div>
               <p className="text-xs text-neutral-400 mb-1">Estado</p>
               <StatusBadge status={orden.estado} />
             </div>
-            <div className="px-5 flex-1">
+            <div>
               <p className="text-xs text-neutral-400 mb-1">Fecha programada</p>
               <p className="text-sm font-semibold text-neutral-700 whitespace-nowrap">{orden.fechaAgendada}</p>
             </div>
-            <div className="px-5">
+            <div>
               <p className="text-xs text-neutral-400 mb-1">Pallets</p>
               <p className="text-sm font-bold text-neutral-900">{declaredPallets}</p>
             </div>
-            <div className="pl-5">
+            <div>
               <p className="text-xs text-neutral-400 mb-1">Bultos</p>
               <p className="text-sm font-bold text-neutral-900">{declaredBultos}</p>
             </div>
@@ -1058,6 +1058,40 @@ function OrdenesPageInner() {
           >
             <InfoCircle className="w-5 h-5" />
           </button>
+          {/* Dots menu — mobile only (Exportar + Recepción sin agenda) */}
+          <div className="relative sm:hidden ml-auto">
+            <button
+              onMouseDown={e => e.stopPropagation()}
+              onClick={() => setBottomMenuOpen(prev => !prev)}
+              className={`inline-flex items-center justify-center p-1.5 rounded-lg transition-colors duration-200 ${
+                bottomMenuOpen ? "bg-neutral-100 text-neutral-700" : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
+              }`}
+            >
+              <DotsVertical className="w-5 h-5" />
+            </button>
+            {bottomMenuOpen && (
+              <div
+                onMouseDown={e => e.stopPropagation()}
+                className="absolute top-full right-0 mt-1 bg-white border border-neutral-200 rounded-xl shadow-xl py-1.5 min-w-[200px] z-50"
+              >
+                <button
+                  onClick={() => { setBottomMenuOpen(false); /* export logic */ }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors duration-300"
+                >
+                  <Download01 className="w-4 h-4 flex-shrink-0 text-neutral-400" />
+                  Exportar
+                </button>
+                <Link
+                  href="/recepciones/crear?mode=sin-agenda"
+                  onClick={() => setBottomMenuOpen(false)}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors duration-300"
+                >
+                  <Plus className="w-4 h-4 flex-shrink-0 text-neutral-400" />
+                  Recepción sin agenda
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
         <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
           <div>
@@ -1162,7 +1196,7 @@ function OrdenesPageInner() {
           {/* ── Filters button — opens filter modal ── */}
           <button
             onClick={() => setShowFilters(true)}
-            className={`relative p-2 rounded-lg transition-colors duration-300 ${
+            className={`relative p-2.5 border border-transparent rounded-lg transition-colors duration-300 ${
               activeFilterCount > 0
                 ? "bg-primary-50 text-primary-500 hover:bg-primary-100"
                 : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
@@ -1643,7 +1677,7 @@ function OrdenesPageInner() {
       </div>
 
       {/* Mobile pagination */}
-      <div className="sm:hidden flex items-center justify-between mt-3">
+      <div className="sm:hidden flex items-center justify-between mt-3 pb-8">
         <span className="text-xs text-neutral-400 tabular-nums">
           {fromRow}–{toRow} de {filtered.length}
         </span>
@@ -1674,55 +1708,16 @@ function OrdenesPageInner() {
       />
 
       {/* ── Mobile sticky bottom bar ── */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 py-3 flex items-center gap-2 z-40">
-        {/* Dots menu — tertiary (Exportar + Recepción sin agenda) */}
-        <div className="relative flex items-stretch">
-          <button
-            onMouseDown={e => e.stopPropagation()}
-            onClick={() => setBottomMenuOpen(prev => !prev)}
-            className={`inline-flex items-center justify-center px-2 py-2 rounded-lg transition-colors duration-200 ${
-              bottomMenuOpen ? "bg-neutral-100 text-neutral-700" : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
-            }`}
-          >
-            <DotsVertical className="w-5 h-5" />
-          </button>
-          {bottomMenuOpen && (
-            <div
-              onMouseDown={e => e.stopPropagation()}
-              className="absolute bottom-full left-0 mb-2 bg-white border border-neutral-200 rounded-xl shadow-xl py-1.5 min-w-[200px] z-50"
-            >
-              <button
-                onClick={() => { setBottomMenuOpen(false); /* export logic */ }}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors duration-300"
-              >
-                <Download01 className="w-4 h-4 flex-shrink-0 text-neutral-400" />
-                Exportar
-              </button>
-              <Link
-                href="/recepciones/crear?mode=sin-agenda"
-                onClick={() => setBottomMenuOpen(false)}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors duration-300"
-              >
-                <Plus className="w-4 h-4 flex-shrink-0 text-neutral-400" />
-                Recepción sin agenda
-              </Link>
-            </div>
-          )}
-        </div>
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 py-3 flex flex-col gap-2 z-40">
+        {/* Crear recepción — primary full-width */}
+        <Button variant="primary" href="/recepciones/crear" className="w-full" iconLeft={<Plus className="w-4 h-4" />}>
+          Crear recepción
+        </Button>
 
-        {/* Escanear QR — secondary */}
-        <div className="flex-1">
-          <Button variant="secondary" className="w-full" iconLeft={<QrCode02 className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
-            Escanear QR
-          </Button>
-        </div>
-
-        {/* Crear recepción — primary */}
-        <div className="flex-1">
-          <Button variant="primary" href="/recepciones/crear" className="w-full" iconLeft={<Plus className="w-4 h-4" />}>
-            Crear recepción
-          </Button>
-        </div>
+        {/* Escanear QR — secondary full-width */}
+        <Button variant="secondary" className="w-full" iconLeft={<QrCode02 className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
+          Escanear QR
+        </Button>
       </div>
     </div>
   );
