@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { SearchLg, X } from "@untitled-ui/icons-react";
+import Button from "@/components/ui/Button";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ModalProduct = {
@@ -19,25 +20,28 @@ export type AddProduct = {
   qty: number;
 };
 
-// ─── Mock data (matching Figma design) ────────────────────────────────────────
+// ─── Mock data ────────────────────────────────────────────────────────────────
 const MOCK_PRODUCTS: ModalProduct[] = [
-  { sku: "PAREJAS",  nombre: "100 Aventuras en Parejas", barcode: "04569432", qty: 20500, checked: true  },
-  { sku: "FAMILIA",  nombre: "100 Aventuras en Familia", barcode: "04569432", qty: 20,    checked: false },
-  { sku: "AMIGAS",   nombre: "100 Aventuras en amigos",  barcode: "04569432", qty: 500,   checked: true  },
-  { sku: "MAMA",     nombre: "100 Aventuras Mamá",       barcode: "04569432", qty: 500,   checked: false },
-  { sku: "PAPA",     nombre: "100 Aventuras Papá",       barcode: "04569432", qty: 500,   checked: false },
-  { sku: "ABUELO",   nombre: "100 Aventuras Abuelo",     barcode: "04569432", qty: 500,   checked: true  },
-  { sku: "ABUELA",   nombre: "100 Aventuras Abuela",     barcode: "04569432", qty: 500,   checked: false },
-  { sku: "CARTAS-1", nombre: "100 Aventuras en Cartas",  barcode: "04569432", qty: 500,   checked: true  },
-  { sku: "AMIGAS-2", nombre: "100 Aventuras en amigos",  barcode: "04569432", qty: 500,   checked: false },
+  { sku: "TD-10",    nombre: "Tropical Delight 10 Sachets",                    barcode: "07810001", qty: 0, checked: false },
+  { sku: "TD-20",    nombre: "Tropical Delight 20 Sachets",                    barcode: "07810002", qty: 0, checked: false },
+  { sku: "TD-40",    nombre: "Tropical Delight 40 Sachets",                    barcode: "07810003", qty: 0, checked: false },
+  { sku: "BB-10",    nombre: "Berry Blast 10 Sachets",                         barcode: "07810011", qty: 0, checked: false },
+  { sku: "BB-20",    nombre: "Berry Blast 20 Sachets",                         barcode: "07810012", qty: 0, checked: false },
+  { sku: "BB-40",    nombre: "Berry Blast 40 Sachets",                         barcode: "07810013", qty: 0, checked: false },
+  { sku: "LS-10",    nombre: "Lime Sensation 10 Sachets",                      barcode: "07810021", qty: 0, checked: false },
+  { sku: "LS-20",    nombre: "Lime Sensation 20 Sachets",                      barcode: "07810022", qty: 0, checked: false },
+  { sku: "LS-40",    nombre: "Lime Sensation 40 Sachets",                      barcode: "07810023", qty: 0, checked: false },
+  { sku: "OMFVP-10", nombre: "Orange Mango Fusion Variety Pack 10 Sachets",    barcode: "07810031", qty: 0, checked: false },
+  { sku: "OMFVP-20", nombre: "Orange Mango Fusion Variety Pack 20 Sachets",    barcode: "07810032", qty: 0, checked: false },
+  { sku: "OMFVP-40", nombre: "Orange Mango Fusion Variety Pack 40 Sachets",    barcode: "07810033", qty: 0, checked: false },
 ];
 
 // ─── Checkbox component ───────────────────────────────────────────────────────
 function Checkbox({ checked }: { checked: boolean }) {
   return (
     <span
-      className={`inline-flex w-5 h-5 rounded items-center justify-center flex-shrink-0 transition-colors ${
-        checked ? "bg-indigo-600" : "bg-white border-2 border-gray-300"
+      className={`inline-flex w-5 h-5 rounded items-center justify-center flex-shrink-0 transition-colors duration-300 ${
+        checked ? "bg-primary-500" : "bg-white border-2 border-neutral-300"
       }`}
     >
       {checked && (
@@ -101,10 +105,10 @@ export default function ProductsModal({ onClose, onAdd, initialSearch = "" }: Pr
       >
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900">Agregar productos</h2>
+          <h2 className="text-2xl font-bold text-neutral-900">Agregar productos</h2>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors"
+            className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-500 transition-colors duration-300"
           >
             <X className="w-4 h-4" />
           </button>
@@ -112,31 +116,62 @@ export default function ProductsModal({ onClose, onAdd, initialSearch = "" }: Pr
 
         {/* ── Search ──────────────────────────────────────────────────────── */}
         <div className="relative">
-          <SearchLg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          <SearchLg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Busca por SKU, nombre o código de barras"
-            className="w-full pl-10 pr-4 py-3 bg-gray-100 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            className="w-full pl-10 pr-4 py-3 bg-neutral-100 rounded-xl text-sm text-neutral-700 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
             autoFocus
           />
         </div>
 
         {/* ── Table card ──────────────────────────────────────────────────── */}
         <div
-          className="border border-gray-200 rounded-2xl overflow-hidden flex flex-col flex-1 min-h-0"
+          className="border border-neutral-200 rounded-2xl overflow-hidden flex flex-col flex-1 min-h-0"
         >
           {/* Scrollable area */}
           <div className="overflow-y-auto flex-1">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-white border-b border-gray-200">
+
+            {/* ── Mobile card list ── */}
+            <div className="sm:hidden divide-y divide-neutral-100">
+              {filtered.map((product, i) => (
+                <div
+                  key={`m-${product.sku}-${i}`}
+                  className="flex items-start gap-3 px-4 py-3.5 cursor-pointer hover:bg-neutral-50/60 transition-colors duration-300"
+                  onClick={() => toggleCheck(product.sku)}
+                >
+                  <div className="pt-0.5 flex-shrink-0">
+                    <Checkbox checked={product.checked} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-neutral-800 font-medium leading-snug">{product.nombre}</p>
+                    <p className="text-xs text-neutral-500 mt-1">
+                      {product.sku} · {product.barcode}
+                    </p>
+                    <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="number"
+                        value={product.qty}
+                        onChange={(e) => updateQty(product.sku, e.target.value)}
+                        className="w-20 px-2.5 py-1.5 bg-neutral-100 rounded-lg text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* ── Desktop table ── */}
+            <table className="hidden sm:table w-full text-sm">
+              <thead className="sticky top-0 bg-white border-b border-neutral-200">
                 <tr>
-                  <th className="text-left py-3 px-5 font-semibold text-gray-900 w-24">Agregar</th>
-                  <th className="text-left py-3 px-5 font-semibold text-gray-900">Nombre</th>
-                  <th className="text-left py-3 px-5 font-semibold text-gray-900">SKU</th>
-                  <th className="text-left py-3 px-5 font-semibold text-gray-900">C. de barras</th>
-                  <th className="text-left py-3 px-5 font-semibold text-gray-900">Cantidad</th>
+                  <th className="py-3 px-5 w-12"></th>
+                  <th className="text-left py-3 px-5 font-semibold text-neutral-900">Nombre</th>
+                  <th className="text-left py-3 px-5 font-semibold text-neutral-900">SKU</th>
+                  <th className="text-left py-3 px-5 font-semibold text-neutral-900 whitespace-nowrap">C. de barras</th>
+                  <th className="text-left py-3 px-5 font-semibold text-neutral-900">Cantidad</th>
                 </tr>
               </thead>
 
@@ -144,30 +179,21 @@ export default function ProductsModal({ onClose, onAdd, initialSearch = "" }: Pr
                 {filtered.map((product, i) => (
                   <tr
                     key={`${product.sku}-${i}`}
-                    className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/60 transition-colors cursor-pointer"
+                    className="border-b border-neutral-100 last:border-b-0 hover:bg-neutral-50/60 transition-colors duration-300 cursor-pointer"
                     onClick={() => toggleCheck(product.sku)}
                   >
-                    {/* Checkbox */}
                     <td className="py-4 px-5">
                       <Checkbox checked={product.checked} />
                     </td>
-
-                    {/* Nombre */}
-                    <td className="py-4 px-5 text-gray-700">{product.nombre}</td>
-
-                    {/* SKU */}
-                    <td className="py-4 px-5 text-gray-700">{product.sku}</td>
-
-                    {/* Barcode */}
-                    <td className="py-4 px-5 text-gray-700">{product.barcode}</td>
-
-                    {/* Cantidad — stop row click when editing */}
+                    <td className="py-4 px-5 text-neutral-700">{product.nombre}</td>
+                    <td className="py-4 px-5 text-neutral-700">{product.sku}</td>
+                    <td className="py-4 px-5 text-neutral-700">{product.barcode}</td>
                     <td className="py-4 px-5" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="number"
                         value={product.qty}
                         onChange={(e) => updateQty(product.sku, e.target.value)}
-                        className="w-24 px-3 py-1.5 bg-gray-100 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="w-24 px-3 py-1.5 bg-neutral-100 rounded-lg text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                     </td>
                   </tr>
@@ -177,7 +203,7 @@ export default function ProductsModal({ onClose, onAdd, initialSearch = "" }: Pr
           </div>
 
           {/* Selected count — pinned bottom of card */}
-          <div className="border-t border-gray-100 py-3.5 text-center text-sm text-gray-500 bg-white">
+          <div className="border-t border-neutral-100 py-3.5 text-center text-sm text-neutral-500 bg-white">
             {selected.length > 0
               ? `${selected.length} Producto${selected.length !== 1 ? "s" : ""} seleccionado${selected.length !== 1 ? "s" : ""}`
               : "Sin productos seleccionados"}
@@ -185,20 +211,13 @@ export default function ProductsModal({ onClose, onAdd, initialSearch = "" }: Pr
         </div>
 
         {/* ── Footer ──────────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={onClose}
-            className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors"
-          >
+        <div className="flex items-center gap-3">
+          <Button variant="secondary" size="lg" onClick={onClose} className="flex-1">
             Cerrar
-          </button>
-          <button
-            onClick={handleAdd}
-            disabled={selected.length === 0}
-            className="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm font-semibold rounded-lg transition-colors"
-          >
+          </Button>
+          <Button variant="primary" size="lg" onClick={handleAdd} disabled={selected.length === 0} className="flex-1">
             Agregar
-          </button>
+          </Button>
         </div>
       </div>
     </div>

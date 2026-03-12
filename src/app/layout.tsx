@@ -1,9 +1,9 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono, Atkinson_Hyperlegible } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Inter, Geist_Mono, Atkinson_Hyperlegible } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
@@ -18,6 +18,13 @@ const atkinson = Atkinson_Hyperlegible({
   weight: ["400", "700"],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export const metadata: Metadata = {
   title: "Amplifica",
   description: "Amplifica — plataforma web",
@@ -30,7 +37,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className={`${geistSans.variable} ${geistMono.variable} ${atkinson.variable} antialiased`}>
+      <body className={`${inter.variable} ${geistMono.variable} ${atkinson.variable} antialiased`}>
         {children}
       </body>
     </html>

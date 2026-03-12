@@ -5,13 +5,8 @@
       "name": "amplifica-dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 3000
-    },
-    {
-      "name": "amplifica-prod",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "start"],
-      "port": 3000
+      "port": 3000,
+      "autoPort": true
     }
   ]
 }

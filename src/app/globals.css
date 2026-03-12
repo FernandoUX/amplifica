@@ -1,8 +1,54 @@
 @import "tailwindcss";
 
+@theme {
+  /* ── Primary (brand blue-violet) ─────────────────────────────────────── */
+  --color-primary-25:  #EBF1FF;
+  --color-primary-50:  #D6E2FF;
+  --color-primary-100: #B6CBFF;
+  --color-primary-200: #8CA9FF;
+  --color-primary-300: #637BFF;
+  --color-primary-400: #4548FF;
+  --color-primary-500: #2F30FF;
+  --color-primary-600: #1F1DDE;
+  --color-primary-700: #1B1CAD;
+  --color-primary-800: #1D2084;
+  --color-primary-900: #141449;
+
+  /* ── Fonts ──────────────────────────────────────────────────────────── */
+  --font-sans: var(--font-inter), "Inter", sans-serif;
+  --font-mono: "Atkinson Hyperlegible", ui-monospace, monospace;
+
+  /* ── Override text-sm: 14px → 13px on desktop ────────────────────────── */
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.25rem;
+
+  /* ── Neutral ─────────────────────────────────────────────────────────── */
+  --color-neutral-50:  #FAFAFA;
+  --color-neutral-100: #F4F4F5;
+  --color-neutral-200: #E5E5E6;
+  --color-neutral-300: #D5D5D7;
+  --color-neutral-400: #A3A3A8;
+  --color-neutral-500: #737378;
+  --color-neutral-600: #545459;
+  --color-neutral-700: #414144;
+  --color-neutral-800: #282829;
+  --color-neutral-900: #1D1D1F;
+  --color-neutral-950: #09090B;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+}
+
+/* ── Mobile font-size bump (cards, labels, meta) ─────────────────────── */
+@media (max-width: 639px) {
+  :root {
+    --text-sm: 0.9375rem;          /* 15px (desktop: 13px) */
+    --text-sm--line-height: 1.375rem;
+    --text-xs: 0.8125rem;          /* 13px (desktop: 12px) */
+    --text-xs--line-height: 1.125rem;
+  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -15,7 +61,17 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), "Inter", sans-serif;
+}
+
+/* ── Hide default number input spinners ─────────────────────────────────── */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
 }
 
 /* ── Thin scrollbar for horizontal tab strip ────────────────────────────── */
@@ -56,4 +112,91 @@ body {
 .sidebar-scroll {
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.18) transparent;
+}
+
+/* ── Minimal scrollbar for filter panel ─────────────────────────────────── */
+.filter-scroll::-webkit-scrollbar {
+  width: 3px;
+}
+.filter-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.filter-scroll::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 999px;
+}
+.filter-scroll::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
+}
+.filter-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #e5e7eb transparent;
+}
+
+/* ── Minimal scrollbar for horizontal table overflow ─────────────────────── */
+.table-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+.table-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.table-scroll::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 999px;
+}
+.table-scroll::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
+}
+.table-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #e5e7eb transparent;
+}
+
+/* ── Scroll fade hint (right edge gradient when content overflows) ── */
+.scroll-fade-right {
+  position: relative;
+}
+.scroll-fade-right::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 48px;
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, white);
+  opacity: 1;
+  transition: opacity 0.2s ease;
+  z-index: 2;
+}
+.scroll-fade-right.scrolled-end::after {
+  opacity: 0;
+}
+
+/* ── Scan pulse animation for product cards (bounce in from bottom) ── */
+@keyframes scanPulse {
+  0%   { transform: translateY(14px); opacity: 0.4; }
+  35%  { transform: translateY(-5px); opacity: 1; }
+  60%  { transform: translateY(2px); }
+  80%  { transform: translateY(-1px); }
+  100% { transform: translateY(0); }
+}
+
+/* ── Bounce-in for scanned product image ────────────────────────────── */
+@keyframes imgBounceIn {
+  0%   { transform: scale(0.85); opacity: 0.6; }
+  50%  { transform: scale(1.08); }
+  75%  { transform: scale(0.97); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ── Head shake for scan error ───────────────────────────────────────── */
+@keyframes headShake {
+  0%   { transform: translateX(0); }
+  15%  { transform: translateX(-6px); }
+  30%  { transform: translateX(5px); }
+  45%  { transform: translateX(-4px); }
+  60%  { transform: translateX(3px); }
+  75%  { transform: translateX(-1px); }
+  100% { transform: translateX(0); }
 }

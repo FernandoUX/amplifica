@@ -9,19 +9,23 @@ export type ColumnKey =
   | "seller"
   | "sucursal"
   | "estado"
+  | "progreso"
+  | "sesiones"
   | "skus"
   | "uTotales"
   | "tags";
 
 export const MOVABLE_COLS: { key: ColumnKey; label: string }[] = [
-  { key: "creacion",      label: "Creación"          },
-  { key: "fechaAgendada", label: "F. Agendada"       },
-  { key: "seller",        label: "Seller"            },
-  { key: "sucursal",      label: "Sucursal"          },
-  { key: "estado",        label: "Estado"            },
-  { key: "skus",          label: "SKUs"              },
-  { key: "uTotales",      label: "Unidades"          },
-  { key: "tags",          label: "Tags de Resultado" },
+  { key: "creacion",      label: "Creación"         },
+  { key: "fechaAgendada", label: "F. Agendada"      },
+  { key: "seller",        label: "Tienda"           },
+  { key: "sucursal",      label: "Sucursal"         },
+  { key: "estado",        label: "Estado"           },
+  { key: "progreso",      label: "Progreso"         },
+  { key: "sesiones",      label: "Sesiones"         },
+  { key: "skus",          label: "SKUs"             },
+  { key: "uTotales",      label: "U. Totales"       },
+  { key: "tags",          label: "Estado Productos" },
 ];
 
 export const DEFAULT_ORDER: ColumnKey[] = MOVABLE_COLS.map(c => c.key);
@@ -52,14 +56,19 @@ export function readColStorage(): ColStorageData {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 export function useColumnConfig() {
-  const [colOrder,   setColOrder]   = useState<ColumnKey[]>(() => readColStorage().order);
-  const [colVisible, setColVisible] = useState<ColumnKey[]>(() => readColStorage().visible);
+  const [colOrder,   setColOrder]   = useState<ColumnKey[]>(DEFAULT_ORDER);
+  const [colVisible, setColVisible] = useState<ColumnKey[]>([...DEFAULT_ORDER]);
 
   useEffect(() => {
+    // Sync from localStorage on mount (SSR-safe)
+    const { order, visible } = readColStorage();
+    setColOrder(order);
+    setColVisible(visible);
+
     const refresh = () => {
-      const { order, visible } = readColStorage();
-      setColOrder(order);
-      setColVisible(visible);
+      const data = readColStorage();
+      setColOrder(data.order);
+      setColVisible(data.visible);
     };
     window.addEventListener(CHANGE_EVENT, refresh);
     return () => window.removeEventListener(CHANGE_EVENT, refresh);

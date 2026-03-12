@@ -2,22 +2,38 @@
 
 import Link from "next/link";
 import { createPortal } from "react-dom";
-import { useState, useMemo, useEffect, Suspense, useRef } from "react";
+import { useState, useMemo, useEffect, Suspense, useRef, useCallback } from "react";
 import { useColumnConfig, type ColumnKey } from "@/hooks/useColumnConfig";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
-  Download01, Sliders01, LayoutGrid01, SearchLg,
-  DotsVertical, CheckCircle, AlertTriangle, XCircle, ClockRefresh, InfoCircle, X,
-  SwitchVertical01, ArrowUp, ArrowDown, Plus,
+  Download01, Sliders01, LayoutGrid01, SearchLg, QrCode02,
+  DotsVertical, CheckCircle, AlertTriangle, XCircle, ClockRefresh, X,
+  SwitchVertical01, ArrowUp, ArrowDown, Plus, Minus, ChevronDown, ChevronLeft, ChevronRight,
   CalendarPlus01, PackageCheck, Play, ClipboardCheck, FastForward,
   Eye, Edit01, SlashCircle01, LockUnlocked01,
 } from "@untitled-ui/icons-react";
 import StatusBadge, { Status } from "@/components/recepciones/StatusBadge";
+import { OR_STATS } from "./_data";
+import Button from "@/components/ui/Button";
+import QrScannerModal from "@/components/recepciones/QrScannerModal";
+import PageInfoModal from "@/components/ui/PageInfoModal";
+import FormField from "@/components/ui/FormField";
+import { playScanSuccessSound, playScanErrorSound } from "@/lib/scan-sounds";
+import { type Role, getRole, can } from "@/lib/roles";
+
+// ─── Icon lookup (tree-shaking safe) ──────────────────────────────────────────
+type TagIconKey = "check" | "alert" | "x" | "clock";
+const TAG_ICON_MAP: Record<TagIconKey, React.ComponentType<{ className?: string }>> = {
+  check: CheckCircle,
+  alert: AlertTriangle,
+  x:     XCircle,
+  clock: ClockRefresh,
+};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 /** Feature 4: multi-label resultado tags (aparecen solo en "Completada") */
 type ResultTag = {
-  Icon: React.ComponentType<{ className?: string }>;
+  icon: TagIconKey;
   iconClass: string;
   label: string;
   className: string;
@@ -33,8 +49,14 @@ type Orden = {
   estado: Status;
   skus: number;
   uTotales: string;
+  progreso?: { contadas: number; total: number };  // contadas/total units
+  sesiones?: number;      // number of counting sessions
   tags?: ResultTag[];     // Feature 4: tags de resultado (Completada)
   isSubId?: boolean;      // Feature 2: sub-ID (RO-XXX-P1)
+  pallets?: number;       // Seller-declared pallets (for "Programado" ORs)
+  bultos?: number;        // Seller-declared bultos (for "Programado" ORs)
+  comentarios?: string;   // Optional comment entered when creating the OR (read-only in modals)
+  guiaDespacho?: string;  // Número de guía de despacho del seller
 };
 
 type SortField = "creacion" | "fechaAgendada" | null;
@@ -49,13 +71,13 @@ function makeTags(opts: {
 }): ResultTag[] {
   const tags: ResultTag[] = [];
   if (opts.sinDiferencias)
-    tags.push({ Icon: CheckCircle,    iconClass: "text-green-600",  label: `${opts.sinDiferencias.toLocaleString("es-CL")} sin diferencias`, className: "bg-green-50 text-green-700 border border-green-200" });
+    tags.push({ icon: "check", iconClass: "text-green-600",  label: `${opts.sinDiferencias.toLocaleString("es-CL")} sin diferencias`, className: "bg-green-50 text-green-700 border border-green-200" });
   if (opts.conDiferencias)
-    tags.push({ Icon: AlertTriangle,  iconClass: "text-amber-500",  label: `${opts.conDiferencias} con diferencias`,      className: "bg-amber-50 text-amber-700 border border-amber-200" });
+    tags.push({ icon: "alert", iconClass: "text-amber-500",  label: `${opts.conDiferencias} con diferencias`,      className: "bg-amber-50 text-amber-700 border border-amber-200" });
   if (opts.noPickeables)
-    tags.push({ Icon: XCircle,        iconClass: "text-red-500",    label: `${opts.noPickeables} no pickeables`,          className: "bg-red-50 text-red-600 border border-red-200" });
+    tags.push({ icon: "x",     iconClass: "text-red-500",    label: `${opts.noPickeables} no pickeables`,          className: "bg-red-50 text-red-600 border border-red-200" });
   if (opts.pendiente)
-    tags.push({ Icon: ClockRefresh,   iconClass: "text-orange-500", label: "Pendiente de aprobación",                     className: "bg-orange-50 text-orange-600 border border-orange-200" });
+    tags.push({ icon: "clock", iconClass: "text-orange-500", label: "Pendiente de aprobación",                     className: "bg-orange-50 text-orange-600 border border-orange-200" });
   return tags;
 }
 
@@ -63,48 +85,89 @@ function makeTags(opts: {
 const TAG_FILTER_OPTIONS: {
   label: string;
   key: string;
-  Icon: React.ComponentType<{ className?: string }>;
+  icon: TagIconKey;
   iconClass: string;
 }[] = [
-  { label: "Sin diferencias",         key: "sin diferencias",         Icon: CheckCircle,   iconClass: "text-green-600" },
-  { label: "Con diferencias",         key: "con diferencias",         Icon: AlertTriangle, iconClass: "text-amber-500" },
-  { label: "No pickeables",           key: "no pickeables",           Icon: XCircle,       iconClass: "text-red-500"   },
-  { label: "Pendiente de aprobación", key: "pendiente de aprobación", Icon: ClockRefresh,  iconClass: "text-orange-500"},
+  { label: "Sin diferencias",         key: "sin diferencias",         icon: "check", iconClass: "text-green-600" },
+  { label: "Con diferencias",         key: "con diferencias",         icon: "alert", iconClass: "text-amber-500" },
+  { label: "No pickeables",           key: "no pickeables",           icon: "x",     iconClass: "text-red-500"   },
+  { label: "Pendiente de aprobación", key: "pendiente de aprobación", icon: "clock", iconClass: "text-orange-500"},
 ];
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const ORDENES: Orden[] = [
-  // Creado — sin fecha agendada aún
-  { id: "RO-BARRA-191", creacion: "01/03/2026", fechaAgendada: "—", seller: "100 Aventuras", sucursal: "Quilicura", estado: "Creado", skus: 5, uTotales: "100" },
+  // ─── Creado — sin fecha agendada aún ─────────────────────────────────────────
+  { id: "RO-BARRA-191", creacion: "01/03/2026", fechaAgendada: "—", seller: "Extra Life", sucursal: "Quilicura", estado: "Creado", skus: 5, uTotales: "100" },
+  { id: "RO-BARRA-192", creacion: "08/03/2026", fechaAgendada: "—", seller: "NutriPro", sucursal: "Providencia", estado: "Creado", skus: 12, uTotales: "640" },
+  { id: "RO-BARRA-193", creacion: "09/03/2026", fechaAgendada: "—", seller: "BioNature", sucursal: "Las Condes", estado: "Creado", skus: 8, uTotales: "380", comentarios: "Primer envío del seller, coordinar recepción con KAM Carolina." },
+  { id: "RO-BARRA-210", creacion: "10/03/2026", fechaAgendada: "—", seller: "Gohard", sucursal: "Lo Barnechea", estado: "Creado", skus: 3, uTotales: "150" },
 
-  // Programado
-  { id: "RO-BARRA-183", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "100 Aventuras", sucursal: "Quilicura", estado: "Programado", skus: 320, uTotales: "2.550" },
-  { id: "RO-BARRA-182", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", fechaExtra: "Expirado hace 4 horas", seller: "100 Aventuras", sucursal: "La Reina", estado: "Programado", skus: 320, uTotales: "2.550" },
-  { id: "RO-BARRA-190", creacion: "17/02/2026", fechaAgendada: "21/02/2026 09:00", fechaExtra: "Expira en 28 minutos", seller: "Naturela", sucursal: "Lo Barnechea", estado: "Programado", skus: 15, uTotales: "450" },
+  // ─── Programado ──────────────────────────────────────────────────────────────
+  { id: "RO-BARRA-183", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "Extra Life", sucursal: "Quilicura", estado: "Programado", skus: 320, uTotales: "2.550", pallets: 10, bultos: 32, comentarios: "Llegará en un camión blanco patente XXNN33, preguntar por Carlos." },
+  { id: "RO-BARRA-182", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", fechaExtra: "Expirado hace 4 horas", seller: "Extra Life", sucursal: "La Reina", estado: "Programado", skus: 320, uTotales: "2.550", pallets: 8, bultos: 28, guiaDespacho: "GD-2026-004821" },
+  { id: "RO-BARRA-190", creacion: "17/02/2026", fechaAgendada: "21/02/2026 09:00", fechaExtra: "Expira en 28 minutos", seller: "Le Vice", sucursal: "Lo Barnechea", estado: "Programado", skus: 15, uTotales: "450", pallets: 3, bultos: 15, comentarios: "Entrega parcial, solo 2 pallets llegarán hoy. El resto el miércoles.", guiaDespacho: "GD-2026-005130" },
+  { id: "RO-BARRA-194", creacion: "07/03/2026", fechaAgendada: "11/03/2026 10:00", seller: "VitaFit", sucursal: "Quilicura", estado: "Programado", skus: 24, uTotales: "1.800", pallets: 6, bultos: 18, comentarios: "Incluye 4 pallets de colágeno que requieren temperatura controlada.", guiaDespacho: "GD-2026-007845" },
+  { id: "RO-BARRA-195", creacion: "06/03/2026", fechaAgendada: "12/03/2026 14:30", seller: "NutriPro", sucursal: "La Reina", estado: "Programado", skus: 18, uTotales: "960", pallets: 4, bultos: 12, guiaDespacho: "GD-2026-008102" },
+  { id: "RO-BARRA-211", creacion: "09/03/2026", fechaAgendada: "13/03/2026 11:00", seller: "BioNature", sucursal: "Santiago Centro", estado: "Programado", skus: 9, uTotales: "420", pallets: 2, bultos: 6, guiaDespacho: "GD-2026-008390" },
+  { id: "RO-BARRA-226", creacion: "10/03/2026", fechaAgendada: "14/03/2026 09:00", seller: "Gohard", sucursal: "Las Condes", estado: "Programado", skus: 14, uTotales: "780", pallets: 3, bultos: 10, guiaDespacho: "GD-2026-008501" },
+  { id: "RO-BARRA-227", creacion: "10/03/2026", fechaAgendada: "15/03/2026 08:30", seller: "Le Vice", sucursal: "Providencia", estado: "Programado", skus: 22, uTotales: "1.640", pallets: 5, bultos: 16, comentarios: "Carga incluye productos de temporada, priorizar descarga.", guiaDespacho: "GD-2026-008612" },
+  { id: "RO-BARRA-228", creacion: "11/03/2026", fechaAgendada: "15/03/2026 14:00", seller: "VitaFit", sucursal: "Quilicura", estado: "Programado", skus: 30, uTotales: "2.100", pallets: 8, bultos: 24, guiaDespacho: "GD-2026-008720" },
+  { id: "RO-BARRA-229", creacion: "11/03/2026", fechaAgendada: "16/03/2026 10:00", seller: "NutriPro", sucursal: "Lo Barnechea", estado: "Programado", skus: 11, uTotales: "540", pallets: 2, bultos: 8, comentarios: "Segundo envío del mes, verificar contra OC anterior.", guiaDespacho: "GD-2026-008835" },
+  { id: "RO-BARRA-230", creacion: "11/03/2026", fechaAgendada: "17/03/2026 11:30", seller: "Extra Life", sucursal: "La Reina", estado: "Programado", skus: 16, uTotales: "1.200", pallets: 4, bultos: 14, guiaDespacho: "GD-2026-008940" },
 
-  // Recepcionado en bodega
-  { id: "RO-BARRA-180", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "Naturela", sucursal: "Santiago Centro", estado: "Recepcionado en bodega", skus: 2, uTotales: "200" },
+  // ─── Recepcionado en bodega ──────────────────────────────────────────────────
+  { id: "RO-BARRA-180", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Recepcionado en bodega", skus: 2, uTotales: "200" },
+  { id: "RO-BARRA-196", creacion: "05/03/2026", fechaAgendada: "09/03/2026 09:00", seller: "BioNature", sucursal: "Lo Barnechea", estado: "Recepcionado en bodega", skus: 10, uTotales: "520", pallets: 2, bultos: 8, comentarios: "Bultos paletizados, descargar con grúa horquilla." },
+  { id: "RO-BARRA-197", creacion: "04/03/2026", fechaAgendada: "08/03/2026 11:00", seller: "Extra Life", sucursal: "Providencia", estado: "Recepcionado en bodega", skus: 6, uTotales: "310" },
 
-  // En proceso de conteo
-  { id: "RO-BARRA-184", creacion: "15/02/2026", fechaAgendada: "19/02/2026 10:00", seller: "100 Aventuras", sucursal: "Quilicura", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
-  { id: "RO-BARRA-179", creacion: "14/02/2026", fechaAgendada: "18/02/2026 09:00", seller: "SportZone", sucursal: "La Reina", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
+  // ─── En proceso de conteo ────────────────────────────────────────────────────
+  { id: "RO-BARRA-184", creacion: "15/02/2026", fechaAgendada: "19/02/2026 10:00", seller: "Extra Life", sucursal: "Quilicura", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
+  { id: "RO-BARRA-179", creacion: "14/02/2026", fechaAgendada: "18/02/2026 09:00", seller: "Gohard", sucursal: "La Reina", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
+  { id: "RO-BARRA-185", creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "Gohard", sucursal: "Lo Barnechea", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
+  { id: "RO-BARRA-198", creacion: "03/03/2026", fechaAgendada: "07/03/2026 08:30", seller: "VitaFit", sucursal: "Santiago Centro", estado: "En proceso de conteo", skus: 15, uTotales: "1.120" },
 
-  // Feature 2 — Parcialmente recepcionada: padre + sub-IDs
-  { id: "RO-BARRA-185",    creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "SportZone", sucursal: "Lo Barnechea", estado: "Parcialmente recepcionada", skus: 320, uTotales: "2.550" },
-  { id: "RO-BARRA-185-P1", creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "SportZone", sucursal: "Lo Barnechea", estado: "Completada", skus: 160, uTotales: "1.200", isSubId: true,
-    tags: makeTags({ sinDiferencias: 1150, conDiferencias: 50 }) },
-  { id: "RO-BARRA-185-P2", creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "SportZone", sucursal: "Lo Barnechea", estado: "En proceso de conteo", skus: 160, uTotales: "1.350", isSubId: true },
+  // ─── Pendiente de aprobación — esperando supervisor ──────────────────────────
+  { id: "RO-BARRA-187", creacion: "10/02/2026", fechaAgendada: "14/02/2026 13:00", seller: "Le Vice", sucursal: "La Reina", estado: "Pendiente de aprobación", skus: 320, uTotales: "2.550",
+    tags: makeTags({ conDiferencias: 20 }) },
+  { id: "RO-BARRA-199", creacion: "02/03/2026", fechaAgendada: "06/03/2026 10:00", seller: "NutriPro", sucursal: "Las Condes", estado: "Pendiente de aprobación", skus: 14, uTotales: "780",
+    tags: makeTags({ conDiferencias: 45, noPickeables: 12 }) },
+  { id: "RO-BARRA-212", creacion: "08/03/2026", fechaAgendada: "10/03/2026 09:30", seller: "Gohard", sucursal: "Providencia", estado: "Pendiente de aprobación", skus: 22, uTotales: "1.340",
+    tags: makeTags({ conDiferencias: 8, noPickeables: 3 }) },
 
-  // Cancelada
-  { id: "RO-BARRA-188", creacion: "12/02/2026", fechaAgendada: "16/02/2026 11:30", seller: "100 Aventuras", sucursal: "Santiago Centro", estado: "Cancelada", skus: 320, uTotales: "2.550" },
+  // ─── Cancelado ───────────────────────────────────────────────────────────────
+  { id: "RO-BARRA-188", creacion: "12/02/2026", fechaAgendada: "16/02/2026 11:30", seller: "Extra Life", sucursal: "Santiago Centro", estado: "Cancelado", skus: 320, uTotales: "2.550" },
+  { id: "RO-BARRA-213", creacion: "20/02/2026", fechaAgendada: "24/02/2026 10:00", seller: "Le Vice", sucursal: "Providencia", estado: "Cancelado", skus: 7, uTotales: "280", comentarios: "Seller canceló envío por falta de stock." },
 
-  // Feature 4 — Completadas con tags de resultado
-  { id: "RO-BARRA-186", creacion: "11/02/2026", fechaAgendada: "15/02/2026 08:00", seller: "100 Aventuras", sucursal: "Quilicura", estado: "Completada", skus: 320, uTotales: "2.550",
+  // ─── Completada ─────────────────────────────────────────────────────────────
+  { id: "RO-BARRA-186", creacion: "11/02/2026", fechaAgendada: "15/02/2026 08:00", seller: "Extra Life", sucursal: "Quilicura", estado: "Completada", skus: 320, uTotales: "2.550",
     tags: makeTags({ sinDiferencias: 2510, conDiferencias: 20, noPickeables: 20 }) },
-  { id: "RO-BARRA-187", creacion: "10/02/2026", fechaAgendada: "14/02/2026 13:00", seller: "Naturela", sucursal: "La Reina", estado: "Completada", skus: 320, uTotales: "2.550",
-    tags: makeTags({ conDiferencias: 20, pendiente: true }) },
-  { id: "RO-BARRA-189", creacion: "09/02/2026", fechaAgendada: "13/02/2026 15:30", seller: "Naturela", sucursal: "Santiago Centro", estado: "Completada", skus: 320, uTotales: "2.550",
+  { id: "RO-BARRA-201", creacion: "25/02/2026", fechaAgendada: "01/03/2026 09:00", seller: "VitaFit", sucursal: "La Reina", estado: "Completada", skus: 20, uTotales: "1.540",
+    tags: makeTags({ sinDiferencias: 1480, conDiferencias: 36, noPickeables: 24 }) },
+  { id: "RO-BARRA-214", creacion: "18/02/2026", fechaAgendada: "22/02/2026 14:00", seller: "NutriPro", sucursal: "Lo Barnechea", estado: "Completada", skus: 16, uTotales: "890",
+    tags: makeTags({ sinDiferencias: 840, conDiferencias: 32, noPickeables: 18 }) },
+
+  // ─── Completada (continuación) ──────────────────────────────────────────────
+  { id: "RO-BARRA-189", creacion: "09/02/2026", fechaAgendada: "13/02/2026 15:30", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Completada", skus: 320, uTotales: "2.550",
     tags: makeTags({ sinDiferencias: 2550 }) },
+  { id: "RO-BARRA-200", creacion: "28/02/2026", fechaAgendada: "04/03/2026 15:00", seller: "BioNature", sucursal: "Quilicura", estado: "Completada", skus: 10, uTotales: "520",
+    tags: makeTags({ sinDiferencias: 520 }) },
+  { id: "RO-BARRA-215", creacion: "22/02/2026", fechaAgendada: "26/02/2026 08:30", seller: "Gohard", sucursal: "Las Condes", estado: "Completada", skus: 28, uTotales: "2.100",
+    tags: makeTags({ sinDiferencias: 2100 }) },
+
+  // ─── Adicionales ────────────────────────────────────────────────────────────
+  { id: "RO-BARRA-216", creacion: "05/03/2026", fechaAgendada: "—", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Creado", skus: 14, uTotales: "720", comentarios: "Seller solicita recepción urgente esta semana." },
+  { id: "RO-BARRA-217", creacion: "02/03/2026", fechaAgendada: "10/03/2026 08:00", seller: "Extra Life", sucursal: "Lo Barnechea", estado: "Programado", skus: 42, uTotales: "3.200", pallets: 12, bultos: 40, comentarios: "Camión refrigerado, requiere andén 3." },
+  { id: "RO-BARRA-218", creacion: "01/03/2026", fechaAgendada: "06/03/2026 15:00", seller: "VitaFit", sucursal: "Las Condes", estado: "Recepcionado en bodega", skus: 19, uTotales: "1.450", pallets: 5, bultos: 14 },
+  { id: "RO-BARRA-219", creacion: "27/02/2026", fechaAgendada: "03/03/2026 10:30", seller: "NutriPro", sucursal: "Quilicura", estado: "En proceso de conteo", skus: 36, uTotales: "2.840", comentarios: "Conteo parcial, faltan 8 SKUs por verificar." },
+  { id: "RO-BARRA-220", creacion: "26/02/2026", fechaAgendada: "02/03/2026 09:00", seller: "BioNature", sucursal: "La Reina", estado: "Pendiente de aprobación", skus: 11, uTotales: "610",
+    tags: makeTags({ conDiferencias: 15 }) },
+  { id: "RO-BARRA-221", creacion: "24/02/2026", fechaAgendada: "28/02/2026 14:00", seller: "Gohard", sucursal: "Providencia", estado: "Cancelado", skus: 5, uTotales: "200", comentarios: "Proveedor no se presentó en la fecha acordada." },
+  { id: "RO-BARRA-222", creacion: "23/02/2026", fechaAgendada: "27/02/2026 11:00", seller: "Le Vice", sucursal: "Lo Barnechea", estado: "Completada", skus: 30, uTotales: "2.200",
+    tags: makeTags({ sinDiferencias: 2050, conDiferencias: 95, noPickeables: 55 }) },
+  { id: "RO-BARRA-223", creacion: "21/02/2026", fechaAgendada: "25/02/2026 16:00", seller: "Extra Life", sucursal: "Las Condes", estado: "Completada", skus: 18, uTotales: "1.360",
+    tags: makeTags({ sinDiferencias: 1360 }) },
+  { id: "RO-BARRA-224", creacion: "04/03/2026", fechaAgendada: "09/03/2026 12:00", seller: "VitaFit", sucursal: "Providencia", estado: "Recepcionado en bodega", skus: 8, uTotales: "480", pallets: 2, bultos: 5, comentarios: "Productos frágiles, manipular con cuidado." },
+  { id: "RO-BARRA-225", creacion: "07/03/2026", fechaAgendada: "—", seller: "NutriPro", sucursal: "La Reina", estado: "Creado", skus: 21, uTotales: "1.580" },
 ];
 
 // ─── Tabs — alineados con estados del Notion spec ─────────────────────────────
@@ -112,26 +175,27 @@ const TABS = [
   "Todas",
   "Creado",
   "Programado",
-  "Recepcionado en bodega",
+  "Recepción en bodega",
   "En proceso de conteo",
-  "Parcialmente recepcionada",
+  "Pendiente de aprobación",
   "Completada",
   "Cancelada",
 ] as const;
 
 const TAB_STATUS: Record<string, Status | null> = {
-  "Todas":                      null,
-  "Creado":                     "Creado",
-  "Programado":                 "Programado",
-  "Recepcionado en bodega":     "Recepcionado en bodega",
-  "En proceso de conteo":       "En proceso de conteo",
-  "Parcialmente recepcionada":  "Parcialmente recepcionada",
-  "Completada":                 "Completada",
-  "Cancelada":                  "Cancelada",
+  "Todas":                        null,
+  "Creado":                       "Creado",
+  "Programado":                   "Programado",
+  "Recepción en bodega":          "Recepcionado en bodega",
+  "En proceso de conteo":         "En proceso de conteo",
+  "Pendiente de aprobación":      "Pendiente de aprobación",
+  "Completada":                   "Completada",
+  "Cancelada":                    "Cancelado",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const NW: React.CSSProperties = { whiteSpace: "nowrap" };
+
 
 function parseDate(str: string): number {
   if (str === "—") return 0;
@@ -144,10 +208,10 @@ function parseDate(str: string): number {
 function SortIcon({ field, sortField, sortDir }: {
   field: SortField; sortField: SortField; sortDir: SortDir;
 }) {
-  if (sortField !== field) return <SwitchVertical01 className="w-3 h-3 text-gray-400 inline ml-1 align-middle" />;
+  if (sortField !== field) return <SwitchVertical01 className="w-3 h-3 text-neutral-400 inline ml-1 align-middle" />;
   return sortDir === "asc"
-    ? <ArrowUp   className="w-3 h-3 text-indigo-500 inline ml-1 align-middle" />
-    : <ArrowDown className="w-3 h-3 text-indigo-500 inline ml-1 align-middle" />;
+    ? <ArrowUp   className="w-3 h-3 text-primary-500 inline ml-1 align-middle" />
+    : <ArrowDown className="w-3 h-3 text-primary-500 inline ml-1 align-middle" />;
 }
 
 // Sticky shadow for the Acciones column
@@ -160,7 +224,9 @@ const stickyRight: React.CSSProperties = {
 // ─── Badge helper for fechaExtra ──────────────────────────────────────────────
 function fechaExtraClass(label: string): string {
   const lower = label.toLowerCase();
-  if (lower.startsWith("expirado")) return "bg-red-50 text-red-500";
+  if (lower.startsWith("expirado")) return "bg-red-50 text-red-600";
+  // "Expira en X minutos" → less than 1 hour → warning
+  if (lower.includes("minutos") || lower.includes("min ")) return "bg-amber-50 text-amber-600";
   return "bg-orange-50 text-orange-500";
 }
 
@@ -170,74 +236,389 @@ type MenuItem = {
   icon?: React.ComponentType<{ className?: string }>;
   danger?: boolean;
   href?: string;
+  onClick?: () => void;
 };
 type PrimaryAction = {
   tooltip: string;                                         // 1-2 words shown on hover
   icon: React.ComponentType<{ className?: string }>;
   href?: string;                                           // navigation target (uses Link)
+  showLabel?: boolean;                                     // show text label next to icon
 };
 type ActionConfig = { primary?: PrimaryAction; menu: MenuItem[] };
 
-function getActions(estado: Status): ActionConfig {
+function getActions(estado: Status, id: string, orden?: Orden, onCancel?: (id: string) => void, role?: Role): ActionConfig {
+  const r = role ?? "Super Admin";
+  const cancelItem: MenuItem = { label: "Cancelar", icon: SlashCircle01, danger: true, onClick: () => onCancel?.(id) };
+  const canCancelRole = can(r, "or:cancel");
+
   switch (estado) {
-    case "Creado":
+    case "Creado": {
+      const params = new URLSearchParams({ startStep: "2", mode: "completar", orId: id });
+      if (orden?.sucursal) params.set("sucursal", orden.sucursal);
+      if (orden?.seller)   params.set("seller", orden.seller);
+      const menu: MenuItem[] = [
+        { label: "Ver",      icon: Eye,    href: `/recepciones/${id}` },
+        { label: "Editar",   icon: Edit01, href: `/recepciones/${id}` },
+      ];
+      if (canCancelRole) menu.push(cancelItem);
       return {
-        primary: { tooltip: "Agendar", icon: CalendarPlus01, href: "/recepciones/crear?startStep=2" },
-        menu: [
-          { label: "Ver",      icon: Eye },
-          { label: "Editar",   icon: Edit01 },
-          { label: "Cancelar", icon: SlashCircle01, danger: true },
-        ],
+        primary: can(r, "or:complete") ? { tooltip: "Completar", icon: CalendarPlus01, href: `/recepciones/crear?${params}` } : undefined,
+        menu,
       };
-    case "Programado":
+    }
+    case "Programado": {
+      const menu: MenuItem[] = [
+        { label: "Ver",       icon: Eye },
+        { label: "Editar",    icon: Edit01 },
+      ];
+      if (can(r, "or:complete")) menu.push({ label: "Reagendar", icon: CalendarPlus01, href: "/recepciones/crear?startStep=3&mode=reagendar" });
+      if (canCancelRole) menu.push(cancelItem);
       return {
-        primary: { tooltip: "Recibir", icon: PackageCheck },
-        menu: [
-          { label: "Ver",       icon: Eye },
-          { label: "Editar",    icon: Edit01 },
-          { label: "Reagendar", icon: CalendarPlus01, href: "/recepciones/crear?startStep=3&mode=reagendar" },
-          { label: "Cancelar",  icon: SlashCircle01, danger: true },
-        ],
+        primary: can(r, "or:receive") ? { tooltip: "Recibir", icon: PackageCheck } : undefined,
+        menu,
       };
-    case "Recepcionado en bodega":
+    }
+    case "Recepcionado en bodega": {
+      const menu: MenuItem[] = [
+        { label: "Ver",      icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
+        { label: "Editar",   icon: Edit01 },
+      ];
+      if (canCancelRole) menu.push(cancelItem);
       return {
-        primary: { tooltip: "Empezar", icon: Play },
-        menu: [
-          { label: "Ver",      icon: Eye },
-          { label: "Editar",   icon: Edit01 },
-          { label: "Cancelar", icon: SlashCircle01, danger: true },
-        ],
+        primary: can(r, "session:start") ? { tooltip: "Empezar conteo", icon: Play, href: `/recepciones/${encodeURIComponent(id)}` } : { tooltip: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
+        menu,
       };
+    }
     case "En proceso de conteo":
       return {
-        primary: { tooltip: "Resumir", icon: ClipboardCheck },
+        primary: can(r, "session:start") ? { tooltip: "Continuar", icon: ClipboardCheck, href: `/recepciones/${encodeURIComponent(id)}` } : { tooltip: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
         menu: [
-          { label: "Ver", icon: Eye },
+          { label: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
         ],
       };
-    case "Parcialmente recepcionada":
+    case "Pendiente de aprobación": {
+      const menu: MenuItem[] = [
+        { label: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
+      ];
+      if (can(r, "or:approve")) {
+        menu.push({ label: "Aprobar con diferencias", icon: CheckCircle });
+        menu.push({ label: "Devolver a conteo",       icon: LockUnlocked01 });
+      }
       return {
-        primary: { tooltip: "Continuar", icon: FastForward },
-        menu: [
-          { label: "Resumir picking",  icon: ClipboardCheck },
-          { label: "Liberar picking",  icon: LockUnlocked01 },
-          { label: "Ver",              icon: Eye },
-        ],
+        primary: { tooltip: can(r, "or:approve") ? "Revisar" : "Ver", icon: can(r, "or:approve") ? ClipboardCheck : Eye, href: `/recepciones/${encodeURIComponent(id)}` },
+        menu,
       };
-    default: // Completada, Cancelada
-      return { menu: [{ label: "Ver", icon: Eye }] };
+    }
+    case "Completada":
+      return {
+        primary: { tooltip: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
+        menu: [],
+      };
+    default: // Cancelado
+      return { menu: [{ label: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` }] };
   }
 }
 
+// ─── Stepper ([-] value [+]) ──────────────────────────────────────────────────
+function Stepper({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  return (
+    <div className="flex flex-col items-center">
+      <p className="text-sm font-semibold text-neutral-700 mb-1.5">{label}</p>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => onChange(Math.max(0, value - 1))}
+          className="w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700 transition-colors active:scale-95"
+        >
+          <Minus className="w-4 h-4" />
+        </button>
+        <input
+          type="number"
+          min={0}
+          value={value}
+          onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v) && v >= 0) onChange(v); }}
+          className="w-14 px-1 py-1 text-center text-sm font-bold text-neutral-900 bg-white border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-200 tabular-nums"
+        />
+        <button
+          type="button"
+          onClick={() => onChange(value + 1)}
+          className="w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700 transition-colors active:scale-95"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Recibir Modal ────────────────────────────────────────────────────────────
+type ScanStatus = "ok" | "duplicate" | "unknown";
+type ScanEntry = { code: string; type: "Pallet" | "Bulto"; status: ScanStatus };
+
+function RecebirModal({ orden, onCancel, onConfirm }: {
+  orden: Orden;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const declaredPallets = orden.pallets ?? 0;
+  const declaredBultos  = orden.bultos  ?? 0;
+
+  // Registros escaneados
+  const [entries, setEntries] = useState<ScanEntry[]>([]);
+  const [showDiffAlert, setShowDiffAlert] = useState(false);
+
+  // Solo contar entries válidos (ok) para progreso
+  const validEntries     = entries.filter(e => e.status === "ok");
+  const palletsRecibidos = validEntries.filter(e => e.type === "Pallet").length;
+  const bultosRecibidos  = validEntries.filter(e => e.type === "Bulto").length;
+
+  const palletsPct = declaredPallets > 0 ? Math.min(100, (palletsRecibidos / declaredPallets) * 100) : 0;
+  const bultosPct  = declaredBultos  > 0 ? Math.min(100, (bultosRecibidos  / declaredBultos)  * 100) : 0;
+
+  // Diferencias
+  const palletsDiff = palletsRecibidos - declaredPallets;
+  const bultosDiff  = bultosRecibidos  - declaredBultos;
+  const coincide    = palletsDiff === 0 && bultosDiff === 0;
+  const hasDiff     = validEntries.length > 0 && !coincide;
+
+  // Texto de diferencias para la alerta
+  const diffParts: string[] = [];
+  if (palletsDiff !== 0) diffParts.push(`${palletsDiff > 0 ? "+" : ""}${palletsDiff} pallet${Math.abs(palletsDiff) !== 1 ? "s" : ""}`);
+  if (bultosDiff !== 0)  diffParts.push(`${bultosDiff > 0 ? "+" : ""}${bultosDiff} bulto${Math.abs(bultosDiff) !== 1 ? "s" : ""}`);
+
+  const handleConfirm = () => {
+    if (hasDiff) {
+      setShowDiffAlert(true);
+    } else {
+      onConfirm();
+    }
+  };
+
+  // Mock scan — simula ~80% ok, ~10% duplicado, ~10% desconocido
+  const handleScan = (type: "Pallet" | "Bulto") => {
+    const prefix = type === "Pallet" ? "PLT" : "BLT";
+    const next = entries.filter(e => e.type === type && e.status === "ok").length + 1;
+    const code = `${prefix}-${String(next).padStart(3, "0")}`;
+    const rand = Math.random();
+
+    if (rand < 0.1) {
+      // Simular código desconocido
+      const unknownCode = `UNK-${String(Math.floor(Math.random() * 999)).padStart(3, "0")}`;
+      setEntries(prev => [...prev, { code: unknownCode, type, status: "unknown" }]);
+      playScanErrorSound();
+    } else if (rand < 0.2 && entries.some(e => e.type === type && e.status === "ok")) {
+      // Simular duplicado — reusar último código válido
+      const lastValid = [...entries].reverse().find(e => e.type === type && e.status === "ok");
+      if (lastValid) {
+        setEntries(prev => [...prev, { code: lastValid.code, type, status: "duplicate" }]);
+        playScanErrorSound();
+      } else {
+        setEntries(prev => [...prev, { code, type, status: "ok" }]);
+        playScanSuccessSound();
+      }
+    } else {
+      setEntries(prev => [...prev, { code, type, status: "ok" }]);
+      playScanSuccessSound();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden">
+
+        {/* ── Header ──────────────────────────────────────────── */}
+        <div className="flex items-start justify-between px-5 pt-5 pb-3 flex-shrink-0">
+          <div>
+            <p className="text-xs font-medium text-neutral-500">Recepción</p>
+            <h3 className="text-base font-bold text-neutral-900 font-sans leading-tight">{orden.id}</h3>
+            <p className="text-xs font-semibold text-neutral-700 mt-0.5">{orden.seller}</p>
+          </div>
+          <button onClick={onCancel} className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300 ml-4 flex-shrink-0 mt-0.5">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* ── Scrollable body ─────────────────────────────────── */}
+        <div className="overflow-y-auto flex-1 min-h-0">
+
+          {/* ── Carga esperada (progress bars en grid) ────────── */}
+          <div className="px-5 pb-4 pt-1">
+            <div className="grid grid-cols-2 gap-4">
+              {/* Pallets */}
+              <div>
+                <div className="flex items-baseline justify-between mb-1">
+                  <p className="text-xs font-semibold text-neutral-500">Pallets</p>
+                  <p className="text-xs tabular-nums">
+                    <span className="font-bold text-neutral-900">{palletsRecibidos}</span>
+                    <span className="text-neutral-400 mx-0.5">/</span>
+                    <span className="text-neutral-400">{declaredPallets}</span>
+                  </p>
+                </div>
+                <div className="w-full h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${palletsPct >= 100 ? "bg-green-500" : "bg-primary-500"}`}
+                    style={{ width: `${palletsPct}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Bultos */}
+              <div>
+                <div className="flex items-baseline justify-between mb-1">
+                  <p className="text-xs font-semibold text-neutral-500">Bultos</p>
+                  <p className="text-xs tabular-nums">
+                    <span className="font-bold text-neutral-900">{bultosRecibidos}</span>
+                    <span className="text-neutral-400 mx-0.5">/</span>
+                    <span className="text-neutral-400">{declaredBultos}</span>
+                  </p>
+                </div>
+                <div className="w-full h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${bultosPct >= 100 ? "bg-green-500" : "bg-primary-500"}`}
+                    style={{ width: `${bultosPct}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Divider ─ */}
+          <div className="border-t border-neutral-100" />
+
+          {/* ── Escanear QR (cámara simulada + botones) ────────── */}
+          <div className="px-5 py-4 space-y-3">
+            <p className="text-xs font-semibold text-neutral-500">Escanear QR</p>
+
+            {/* Cámara simulada — compacta */}
+            <div className="w-full aspect-[16/9] bg-neutral-900 rounded-xl flex flex-col items-center justify-center gap-2 relative overflow-hidden">
+              <div className="absolute inset-4 border-2 border-white/15 rounded-lg" />
+              <div className="absolute inset-4 flex items-center justify-center">
+                <div className="w-24 h-24 border-2 border-white/40 rounded-lg" />
+              </div>
+              <QrCode02 className="w-8 h-8 text-white/40 relative z-10" />
+              <p className="text-[11px] text-white/40 relative z-10">Escanea QR de pallet o bulto</p>
+            </div>
+
+            {/* Botones de simulación */}
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="secondary" size="sm" onClick={() => handleScan("Bulto")} iconLeft={<QrCode02 className="w-3.5 h-3.5" />}>
+                Escanear bulto
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => handleScan("Pallet")} iconLeft={<QrCode02 className="w-3.5 h-3.5" />}>
+                Escanear pallet
+              </Button>
+            </div>
+          </div>
+
+          {/* ── Divider ─ */}
+          <div className="border-t border-neutral-100" />
+
+          {/* ── Carga registrada ───────────────────────────────── */}
+          <div className="px-5 py-4">
+            <p className="text-xs font-semibold text-neutral-500 mb-2">Carga registrada</p>
+            {entries.length === 0 ? (
+              <p className="text-xs text-neutral-400">Sin registros escaneados</p>
+            ) : (
+              <div className={`space-y-1.5 ${entries.length > 3 ? "max-h-[5.5rem] overflow-y-auto table-scroll" : ""}`}>
+                {[...entries].reverse().map((entry, i) => (
+                  <div key={`${entry.code}-${i}`} className="flex items-center gap-1.5">
+                    {entry.status === "ok" && (
+                      <>
+                        <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                        <p className="text-xs text-neutral-700">
+                          <span className="font-medium">{entry.type}</span>{" "}
+                          <span className="font-sans font-semibold text-neutral-800">{entry.code}</span>{" "}
+                          <span className="text-neutral-500">registrado</span>
+                        </p>
+                      </>
+                    )}
+                    {entry.status === "duplicate" && (
+                      <>
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                        <p className="text-xs text-amber-600 font-medium">Código ya escaneado</p>
+                      </>
+                    )}
+                    {entry.status === "unknown" && (
+                      <>
+                        <XCircle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
+                        <p className="text-xs text-red-600 font-medium">Código no pertenece a esta orden</p>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+        </div>
+
+        {/* ── Status + Footer ─────────────────────────────────── */}
+        <div className="border-t border-neutral-100 px-5 pt-3 pb-5 flex-shrink-0 space-y-2.5">
+          {/* Status message */}
+          {entries.length > 0 && (
+            coincide ? (
+              <div className="flex items-center gap-1.5 justify-center">
+                <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                <p className="text-xs font-medium text-green-600">Coincide con la orden</p>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 justify-center">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                <p className="text-xs font-medium text-amber-600">
+                  Diferencia con lo esperado
+                </p>
+              </div>
+            )
+          )}
+
+          <Button variant="primary" size="md" onClick={handleConfirm} disabled={validEntries.length === 0} className="w-full" iconLeft={<CheckCircle className="w-4 h-4" />}>
+            Confirmar recepción
+          </Button>
+        </div>
+
+        {/* ── Alerta de diferencias ───────────────────────────── */}
+        {showDiffAlert && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-amber-500" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-neutral-900">Recepción con diferencias</h4>
+                  <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
+                    ¿Estás seguro de finalizar la recepción a bodega con{" "}
+                    <span className="font-semibold text-neutral-700">{diffParts.join(" y ")}</span>
+                    {" "}de diferencia?
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="secondary" size="md" onClick={() => setShowDiffAlert(false)} className="flex-1">
+                  Cancelar
+                </Button>
+                <Button variant="primary" size="md" onClick={() => { setShowDiffAlert(false); onConfirm(); }} className="flex-1">
+                  Confirmar
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
 // ─── Actions cell ─────────────────────────────────────────────────────────────
-function ActionsCell({ orden }: { orden: Orden }) {
+function ActionsCell({ orden, onPrimaryAction, onCancel, role }: { orden: Orden; onPrimaryAction?: () => void; onCancel?: (id: string) => void; role?: Role }) {
   const router        = useRouter();
   const [menuPos,    setMenuPos]    = useState<{ top: number; right: number } | null>(null);
   const [tipVisible, setTipVisible] = useState(false);
   const [mounted,    setMounted]    = useState(false);
   const dotsRef       = useRef<HTMLButtonElement>(null);
   const primaryWrap   = useRef<HTMLDivElement>(null);
-  const { primary, menu } = getActions(orden.estado);
+  const { primary, menu } = getActions(orden.estado, orden.id, orden, onCancel, role);
   const Icon = primary?.icon;
 
   // Portal only works client-side
@@ -266,7 +647,7 @@ function ActionsCell({ orden }: { orden: Orden }) {
       })()
     : null;
 
-  const btnCls = "flex items-center justify-center p-1.5 border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-gray-600 rounded-lg transition-colors";
+  const btnCls = "flex items-center justify-center p-1.5 font-medium whitespace-nowrap transition-colors duration-200 outline-none select-none rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200";
 
   return (
     <div className="flex items-center gap-1">
@@ -276,27 +657,33 @@ function ActionsCell({ orden }: { orden: Orden }) {
           onMouseEnter={() => setTipVisible(true)}
           onMouseLeave={() => setTipVisible(false)}
         >
-          {primary.href ? (
+          {primary.showLabel ? (
+            <Button variant="secondary" size="sm" href={primary.href} iconLeft={<Icon className="w-3.5 h-3.5" />}>
+              {primary.tooltip}
+            </Button>
+          ) : primary.href ? (
             <Link href={primary.href} className={btnCls}>
               <Icon className="w-4 h-4" />
             </Link>
           ) : (
-            <button className={btnCls}>
+            <button className={btnCls} onClick={onPrimaryAction}>
               <Icon className="w-4 h-4" />
             </button>
           )}
         </div>
       )}
 
-      <button
-        ref={dotsRef}
-        onClick={toggleMenu}
-        className={`p-1.5 rounded-lg transition-colors ${
-          menuPos ? "bg-gray-100 text-gray-700" : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-        }`}
-      >
-        <DotsVertical className="w-4 h-4" />
-      </button>
+      {menu.length > 0 && (
+        <button
+          ref={dotsRef}
+          onMouseDown={toggleMenu}
+          className={`p-1.5 rounded-lg transition-colors duration-300 ${
+            menuPos ? "bg-neutral-100 text-neutral-700" : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
+          }`}
+        >
+          <DotsVertical className="w-4 h-4" />
+        </button>
+      )}
 
       {/* ── Tooltip — portal to body so sticky/overflow never clips it ── */}
       {mounted && tipPos && primary && createPortal(
@@ -310,10 +697,10 @@ function ActionsCell({ orden }: { orden: Orden }) {
             pointerEvents: "none",
           }}
         >
-          <div className="bg-gray-900 text-white text-xs font-medium px-2 py-1 rounded-lg" style={NW}>
+          <div className="bg-neutral-900 text-white text-xs font-medium px-2 py-1 rounded-lg" style={NW}>
             {primary.tooltip}
           </div>
-          <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-gray-900" />
+          <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-neutral-900" />
         </div>,
         document.body
       )}
@@ -322,7 +709,7 @@ function ActionsCell({ orden }: { orden: Orden }) {
       {mounted && menuPos && createPortal(
         <div
           style={{ position: "fixed", top: menuPos.top, right: menuPos.right, zIndex: 2147483647 }}
-          className="bg-white border border-gray-200 rounded-xl shadow-xl py-1.5 min-w-[192px]"
+          className="bg-white border border-neutral-200 rounded-xl shadow-xl py-1.5 min-w-[192px]"
           onMouseDown={e => e.stopPropagation()}
         >
           {menu.map((item, i) => {
@@ -331,13 +718,13 @@ function ActionsCell({ orden }: { orden: Orden }) {
             return (
               <button
                 key={item.label}
-                onClick={() => { setMenuPos(null); if (item.href) router.push(item.href); }}
-                className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-colors ${
-                  item.danger ? "text-red-500 hover:bg-red-50" : "text-gray-700 hover:bg-gray-50"
-                } ${hasSeparator ? "border-t border-gray-100 mt-1 pt-2.5" : ""}`}
+                onClick={() => { setMenuPos(null); if (item.href) router.push(item.href); item.onClick?.(); }}
+                className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-colors duration-300 ${
+                  item.danger ? "text-red-500 hover:bg-red-50" : "text-neutral-700 hover:bg-neutral-50"
+                } ${hasSeparator ? "border-t border-neutral-100 mt-1 pt-2.5" : ""}`}
               >
                 {ItemIcon && (
-                  <ItemIcon className={`w-4 h-4 flex-shrink-0 ${item.danger ? "text-red-400" : "text-gray-400"}`} />
+                  <ItemIcon className={`w-4 h-4 flex-shrink-0 ${item.danger ? "text-red-400" : "text-neutral-400"}`} />
                 )}
                 {item.label}
               </button>
@@ -350,41 +737,62 @@ function ActionsCell({ orden }: { orden: Orden }) {
   );
 }
 
-// ─── Filter Section component ─────────────────────────────────────────────────
+// ─── Filter Section component (accordion) ────────────────────────────────────
 function FilterSection({
   title,
   options,
   selected,
   onToggle,
   renderOption,
+  defaultOpen = true,
 }: {
   title: string;
   options: string[];
   selected: Set<string>;
   onToggle: (val: string) => void;
   renderOption?: (val: string) => React.ReactNode;
+  defaultOpen?: boolean;
 }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const scrollable = options.length >= 4;
+  const count = selected.size;
   return (
     <div>
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{title}</p>
-      <div className="space-y-1">
-        {options.map(opt => (
-          <label
-            key={opt}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors group"
-          >
-            <input
-              type="checkbox"
-              checked={selected.has(opt)}
-              onChange={() => onToggle(opt)}
-              className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-            />
-            {renderOption ? renderOption(opt) : (
-              <span className="text-sm text-gray-700">{opt}</span>
-            )}
-          </label>
-        ))}
-      </div>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center justify-between w-full group"
+      >
+        <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide flex items-center gap-2">
+          {title}
+          {count > 0 && (
+            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold leading-none">
+              {count}
+            </span>
+          )}
+        </span>
+        <ChevronDown className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-200 ${open ? "" : "-rotate-90"}`} />
+      </button>
+      {open && (
+        <div className={`space-y-1 mt-2 ${scrollable ? "overflow-y-auto max-h-[176px] pr-1 filter-scroll" : ""}`}>
+          {options.map(opt => (
+            <label
+              key={opt}
+              className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-neutral-50 transition-colors duration-300 group"
+            >
+              <input
+                type="checkbox"
+                checked={selected.has(opt)}
+                onChange={() => onToggle(opt)}
+                className="w-4 h-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500 cursor-pointer"
+              />
+              {renderOption ? renderOption(opt) : (
+                <span className="text-sm text-neutral-700">{opt}</span>
+              )}
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -398,24 +806,143 @@ function OrdenesPageInner() {
   const { colOrder, colVisible } = useColumnConfig();
   const activeColumns = colOrder.filter(k => colVisible.includes(k));
 
-  const [activeTab,   setActiveTab]   = useState<string>("Todas");
-  const [showToast,   setShowToast]   = useState(false);
-  const [toastMsg,    setToastMsg]    = useState({ title: "", subtitle: "" });
-  const [showInfo,    setShowInfo]    = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
-  const [search,      setSearch]      = useState("");
+  const tabsScrollRef = useRef<HTMLDivElement>(null);
+  const tabsDragRef   = useRef({ active: false, startX: 0, scrollLeft: 0, moved: false });
+  const [showLeftArrow, setShowLeftArrow]   = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
+
+  const [activeTab,         setActiveTab]         = useState<string>("Todas");
+  const [showToast,         setShowToast]         = useState(false);
+  const [toastMsg,          setToastMsg]          = useState({ title: "", subtitle: "" });
+  const [showFilters,       setShowFilters]       = useState(false);
+  const [search,            setSearch]            = useState("");
+  const [orStatusOverrides, setOrStatusOverrides] = useState<Record<string, { estado: Status; fechaAgendada?: string }>>({});
+  const [recibirOrden,      setRecibirOrden]      = useState<Orden | null>(null);
+  const [createdOrs,        setCreatedOrs]        = useState<Orden[]>([]);
+  const [showQrScanner,     setShowQrScanner]     = useState(false);
+  const [cardMenuId,        setCardMenuId]        = useState<string | null>(null);
+  const [bottomMenuOpen,    setBottomMenuOpen]    = useState(false);
+  const [cancelTarget,      setCancelTarget]      = useState<string | null>(null);
+
+  // ── Role (initialise with SSR-safe default, sync from localStorage on mount) ──
+  const [currentRole, setCurrentRole] = useState<Role>("Super Admin");
+  useEffect(() => {
+    setCurrentRole(getRole());
+    const sync = () => setCurrentRole(getRole());
+    window.addEventListener("amplifica-role-change", sync);
+    return () => window.removeEventListener("amplifica-role-change", sync);
+  }, []);
+
+  const canCreate  = can(currentRole, "or:create");
+  const canScanQr  = can(currentRole, "or:scan_qr");
+  const canReceive = can(currentRole, "or:receive");
+
+  // Close card menu / bottom menu on outside click
+  useEffect(() => {
+    if (!cardMenuId && !bottomMenuOpen) return;
+    const close = () => { setCardMenuId(null); setBottomMenuOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [cardMenuId, bottomMenuOpen]);
+
+  // Read per-OR status overrides + created ORs from localStorage
+  useEffect(() => {
+    const overrides: Record<string, { estado: Status; fechaAgendada?: string }> = {};
+
+    // Overrides for static mock ORs
+    for (const orden of ORDENES) {
+      try {
+        const stored = localStorage.getItem(`amplifica_or_${orden.id}`);
+        if (stored) {
+          const parsed = JSON.parse(stored) as { estado: Status; fechaAgendada?: string };
+          if (parsed.estado) overrides[orden.id] = parsed;
+        }
+      } catch { /* ignore */ }
+    }
+
+    // Read ORs created via /recepciones/crear
+    try {
+      const raw = localStorage.getItem("amplifica_created_ors");
+      if (raw) {
+        const parsed = JSON.parse(raw) as Orden[];
+        // Also apply any state-override saved for these ORs
+        for (const or of parsed) {
+          try {
+            const stored = localStorage.getItem(`amplifica_or_${or.id}`);
+            if (stored) {
+              const p = JSON.parse(stored) as { estado: Status; fechaAgendada?: string };
+              if (p.estado) overrides[or.id] = p;
+            }
+          } catch { /* ignore */ }
+        }
+        setCreatedOrs(parsed);
+      }
+    } catch { /* ignore */ }
+
+    setOrStatusOverrides(overrides);
+
+    // Show pending toast written by [id]/page.tsx after OR closure + redirect
+    try {
+      const pending = localStorage.getItem("amplifica_pending_toast");
+      if (pending) {
+        const { title, subtitle } = JSON.parse(pending) as { title: string; subtitle: string };
+        localStorage.removeItem("amplifica_pending_toast");
+        setToastMsg({ title, subtitle });
+        setShowToast(true);
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   // ── Filter state ──
   const [filterSellers,    setFilterSellers]    = useState<Set<string>>(new Set());
   const [filterSucursales, setFilterSucursales] = useState<Set<string>>(new Set());
   const [filterTagTypes,   setFilterTagTypes]   = useState<Set<string>>(new Set());
 
+  // Merge created ORs with static data (dedup by id), apply localStorage overrides, and enrich with OR_STATS
+  const ordenesEffective = useMemo(() => {
+    const seen = new Set<string>();
+    const merged = [...createdOrs, ...ORDENES].filter(o => {
+      if (seen.has(o.id)) return false;
+      seen.add(o.id);
+      return true;
+    });
+    return merged.map(o => {
+      const override = orStatusOverrides[o.id];
+      const enriched = override ? { ...o, estado: override.estado, ...(override.fechaAgendada ? { fechaAgendada: override.fechaAgendada } : {}) } : { ...o };
+      const stats = OR_STATS[o.id];
+      if (stats && !enriched.progreso) {
+        enriched.progreso = { contadas: stats.contadas, total: stats.total };
+      }
+      if (stats && enriched.sesiones === undefined) {
+        enriched.sesiones = stats.sesiones;
+      }
+      return enriched;
+    });
+  }, [orStatusOverrides, createdOrs]);
+
+  // ── QR scanner helpers ──
+  const getOrInfo = useCallback((orId: string) => {
+    const o = ordenesEffective.find(x => x.id === orId);
+    if (!o) return undefined;
+    return { id: o.id, seller: o.seller, sucursal: o.sucursal, fechaAgendada: o.fechaAgendada, estado: o.estado, skus: o.skus, uTotales: o.uTotales, pallets: o.pallets, bultos: o.bultos };
+  }, [ordenesEffective]);
+
+  const handleQrConfirm = useCallback((orId: string, labelCount: number) => {
+    localStorage.setItem(`amplifica_or_${orId}`, JSON.stringify({ estado: "Recepcionado en bodega" }));
+    setOrStatusOverrides(prev => ({ ...prev, [orId]: { estado: "Recepcionado en bodega" as Status } }));
+    setToastMsg({
+      title: "Orden recepcionada en bodega",
+      subtitle: `${orId} — ${labelCount} etiqueta${labelCount !== 1 ? "s" : ""} QR enviada${labelCount !== 1 ? "s" : ""} a impresión`,
+    });
+    setShowToast(true);
+  }, []);
+
   // ── Filter options (unique values from data) ──
-  const allSellers    = useMemo(() => [...new Set(ORDENES.map(o => o.seller))].sort(), []);
-  const allSucursales = useMemo(() => [...new Set(ORDENES.map(o => o.sucursal))].sort(), []);
+  const allSellers    = useMemo(() => [...new Set(ordenesEffective.map(o => o.seller))].sort(),    [ordenesEffective]);
+  const allSucursales = useMemo(() => [...new Set(ordenesEffective.map(o => o.sucursal))].sort(), [ordenesEffective]);
 
   // ── Active filter count (for badge) ──
-  const activeFilterCount = filterSellers.size + filterSucursales.size + filterTagTypes.size;
+  const activeFilterCount = filterTagTypes.size;
 
   // ── Toggle helper ──
   const toggleInSet = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, val: string) => {
@@ -427,8 +954,6 @@ function OrdenesPageInner() {
   };
 
   const clearAllFilters = () => {
-    setFilterSellers(new Set());
-    setFilterSucursales(new Set());
     setFilterTagTypes(new Set());
   };
 
@@ -442,8 +967,34 @@ function OrdenesPageInner() {
       setToastMsg({ title: "Orden de recepción reagendada", subtitle: "La fecha y hora han sido actualizadas" });
       setShowToast(true);
       router.replace("/recepciones");
+    } else if (searchParams.get("completed") === "1") {
+      setToastMsg({ title: "Orden completada", subtitle: "La orden ha sido completada y programada correctamente" });
+      setShowToast(true);
+      router.replace("/recepciones");
     }
   }, [searchParams, router]);
+
+  // ── Sidebar global filters (synced via localStorage) ──
+  const [sidebarSucursal, setSidebarSucursal] = useState<string | null>(null);
+  const [sidebarSeller, setSidebarSeller]     = useState<string | null>(null);
+  const [sidebarDateFrom, setSidebarDateFrom] = useState<string | null>(null);
+  const [sidebarDateTo, setSidebarDateTo]     = useState<string | null>(null);
+
+  useEffect(() => {
+    const sync = () => {
+      const s = localStorage.getItem("amplifica_filter_sucursal");
+      const t = localStorage.getItem("amplifica_filter_seller");
+      const df = localStorage.getItem("amplifica_filter_date_from");
+      const dt = localStorage.getItem("amplifica_filter_date_to");
+      setSidebarSucursal(s || null);
+      setSidebarSeller(t || null);
+      setSidebarDateFrom(df || null);
+      setSidebarDateTo(dt || null);
+    };
+    sync();
+    window.addEventListener("amplifica-filter-change", sync);
+    return () => window.removeEventListener("amplifica-filter-change", sync);
+  }, []);
 
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDir,   setSortDir]   = useState<SortDir>("asc");
@@ -456,9 +1007,24 @@ function OrdenesPageInner() {
   };
 
   const filtered = useMemo(() => {
-    let rows = [...ORDENES];
+    let rows = [...ordenesEffective];
     const statusFilter = TAB_STATUS[activeTab];
     if (statusFilter) rows = rows.filter(o => o.estado === statusFilter);
+
+    // ── Sidebar global filters ──
+    if (sidebarSucursal) rows = rows.filter(o => o.sucursal === sidebarSucursal);
+    if (sidebarSeller)   rows = rows.filter(o => o.seller === sidebarSeller);
+
+    // ── Sidebar date range filter (creacion is DD/MM/YYYY, localStorage is YYYY-MM-DD) ──
+    if (sidebarDateFrom || sidebarDateTo) {
+      rows = rows.filter(o => {
+        const [d, m, y] = o.creacion.split("/").map(Number);
+        const iso = `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+        if (sidebarDateFrom && iso < sidebarDateFrom) return false;
+        if (sidebarDateTo   && iso > sidebarDateTo)   return false;
+        return true;
+      });
+    }
 
     // ── Apply multiselect filters ──
     if (filterSellers.size > 0)    rows = rows.filter(o => filterSellers.has(o.seller));
@@ -492,10 +1058,48 @@ function OrdenesPageInner() {
       });
     }
     return rows;
-  }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes]);
+  }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes, ordenesEffective, sidebarSucursal, sidebarSeller, sidebarDateFrom, sidebarDateTo]);
 
   // Reset to page 1 whenever filters/tabs/search change
   useEffect(() => { setPage(1); }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes, pageSize]);
+
+  // Detect tabs overflow → show/hide left/right arrows
+  useEffect(() => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    const update = () => {
+      setShowLeftArrow(el.scrollLeft > 4);
+      setShowRightArrow(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+    };
+    update();
+    el.addEventListener("scroll", update);
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", update);
+      ro.disconnect();
+    };
+  }, []);
+
+  // Drag-to-scroll for tabs
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const d = tabsDragRef.current;
+      if (!d.active || !tabsScrollRef.current) return;
+      const dx = e.clientX - d.startX;
+      if (Math.abs(dx) > 4) {
+        d.moved = true;
+        tabsScrollRef.current.scrollLeft = d.scrollLeft - dx;
+      }
+    };
+    const onUp = () => { tabsDragRef.current.active = false; };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    return () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+  }, []);
 
   // ── Paginated slice ──
   const totalPages   = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -505,53 +1109,92 @@ function OrdenesPageInner() {
   const fromRow      = filtered.length === 0 ? 0 : startIdx + 1;
   const toRow        = Math.min(startIdx + pageSize, filtered.length);
 
+
   return (
-    <div className="p-6 min-w-0">
+    <div className="p-4 lg:p-6 min-w-0 pb-36 sm:pb-4 lg:pb-6 max-w-[1680px] mx-auto">
 
       {/* Toast */}
       {showToast && (
-        <div className="fixed top-5 right-5 z-50 bg-white border border-green-200 rounded-xl shadow-xl p-4 flex items-start gap-3 max-w-xs">
+        <div className="fixed top-5 left-4 right-4 sm:left-auto sm:right-5 sm:w-auto z-50 bg-white border border-green-200 rounded-xl shadow-xl p-4 flex items-start gap-3 sm:max-w-xs">
           <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-gray-800">{toastMsg.title}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{toastMsg.subtitle}</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-neutral-800">{toastMsg.title}</p>
+            <p className="text-xs text-neutral-500 mt-0.5">{toastMsg.subtitle}</p>
           </div>
-          <button onClick={() => setShowToast(false)} className="text-gray-400 hover:text-gray-600 flex-shrink-0">
+          <button onClick={() => setShowToast(false)} className="text-neutral-400 hover:text-neutral-600 flex-shrink-0">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* ── Info modal ── */}
-      {showInfo && (
+      {/* ── Recibir OR modal ── */}
+      {recibirOrden && (
+        <RecebirModal
+          orden={recibirOrden}
+          onCancel={() => setRecibirOrden(null)}
+          onConfirm={() => {
+            const targetId = recibirOrden.id;
+            const newStatus: Status = "Recepcionado en bodega";
+            try {
+              localStorage.setItem(`amplifica_or_${targetId}`, JSON.stringify({ estado: newStatus }));
+            } catch { /* ignore */ }
+            setOrStatusOverrides(prev => ({ ...prev, [targetId]: { estado: newStatus } }));
+            setRecibirOrden(null);
+            setToastMsg({
+              title: "Orden recepcionada en bodega",
+              subtitle: `${targetId} fue recibida y está lista para el conteo`,
+            });
+            setShowToast(true);
+          }}
+        />
+      )}
+
+      {/* ── Cancel OR modal ── */}
+      {cancelTarget && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ background: "rgba(0,0,0,0.35)" }}
-          onMouseDown={() => setShowInfo(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ background: "rgba(0,0,0,0.4)" }}
+          onClick={() => setCancelTarget(null)}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4"
-            onMouseDown={e => e.stopPropagation()}
+            className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6"
+            onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <InfoCircle className="w-5 h-5 text-indigo-600" />
-                </div>
-                <h2 className="text-base font-semibold text-gray-900">Órdenes de Recepción</h2>
-              </div>
-              <button onClick={() => setShowInfo(false)} className="text-gray-400 hover:text-gray-600 flex-shrink-0 mt-0.5">
+            <div className="flex justify-end mb-2">
+              <button onClick={() => setCancelTarget(null)} className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              Las <strong>Órdenes de Recepción (OR)</strong> gestionan la entrada de mercancía al centro de distribución. Cada OR registra el proceso completo: desde la programación de fecha de entrega hasta la verificación del inventario recibido.
+            <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-4 mx-auto">
+              <SlashCircle01 className="w-7 h-7 text-red-500" />
+            </div>
+            <h3 className="text-lg font-bold text-neutral-900 text-center mb-1">¿Cancelar esta orden?</h3>
+            <p className="text-sm text-neutral-500 text-center mb-6">
+              La orden <span className="font-semibold text-neutral-700">{cancelTarget}</span> se cancelará de forma permanente. Esta acción no se puede deshacer.
             </p>
-            <ul className="mt-3 space-y-1.5 text-sm text-gray-500">
-              <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" /> Programa citas de descarga con horario</li>
-              <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" /> Declara SKUs y unidades antes de la recepción</li>
-              <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" /> Rastrea diferencias y productos no pickeables</li>
-            </ul>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  try {
+                    localStorage.setItem(`amplifica_or_${cancelTarget}`, JSON.stringify({ estado: "Cancelado" }));
+                  } catch { /* ignore */ }
+                  setOrStatusOverrides(prev => ({ ...prev, [cancelTarget]: { estado: "Cancelado" as Status } }));
+                  setToastMsg({ title: "Orden cancelada", subtitle: `${cancelTarget} fue cancelada correctamente` });
+                  setShowToast(true);
+                  setCancelTarget(null);
+                }}
+                className="w-full h-11 flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
+              >
+                <SlashCircle01 className="w-4 h-4" />
+                Sí, cancelar orden
+              </button>
+              <button
+                onClick={() => setCancelTarget(null)}
+                className="w-full h-11 flex items-center justify-center text-neutral-600 text-sm font-medium hover:bg-neutral-50 rounded-lg transition-colors duration-300"
+              >
+                Volver
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -568,21 +1211,21 @@ function OrdenesPageInner() {
             onMouseDown={e => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Sliders01 className="w-4 h-4 text-gray-600" />
+                <div className="w-8 h-8 bg-neutral-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Sliders01 className="w-4 h-4 text-neutral-600" />
                 </div>
-                <h2 className="text-base font-semibold text-gray-900">Filtros</h2>
+                <h2 className="text-base font-semibold text-neutral-900">Filtros</h2>
                 {activeFilterCount > 0 && (
-                  <span className="inline-flex items-center justify-center w-5 h-5 bg-indigo-600 text-white text-[10px] font-bold rounded-full">
+                  <span className="inline-flex items-center justify-center w-5 h-5 bg-primary-500 text-white text-[10px] font-bold rounded-full">
                     {activeFilterCount}
                   </span>
                 )}
               </div>
               <button
                 onClick={() => setShowFilters(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -590,22 +1233,6 @@ function OrdenesPageInner() {
 
             {/* Body */}
             <div className="p-5 space-y-5 overflow-y-auto max-h-[60vh]">
-              {/* Seller */}
-              <FilterSection
-                title="Seller"
-                options={allSellers}
-                selected={filterSellers}
-                onToggle={v => toggleInSet(setFilterSellers, v)}
-              />
-
-              {/* Sucursales */}
-              <FilterSection
-                title="Sucursal"
-                options={allSucursales}
-                selected={filterSucursales}
-                onToggle={v => toggleInSet(setFilterSucursales, v)}
-              />
-
               {/* Tags de resultado */}
               <FilterSection
                 title="Estado de productos"
@@ -614,12 +1241,12 @@ function OrdenesPageInner() {
                 onToggle={v => toggleInSet(setFilterTagTypes, v)}
                 renderOption={key => {
                   const opt = TAG_FILTER_OPTIONS.find(t => t.key === key);
-                  if (!opt) return <span className="text-sm text-gray-700">{key}</span>;
-                  const OptIcon = opt.Icon;
+                  if (!opt) return <span className="text-sm text-neutral-700">{key}</span>;
+                  const OptIcon = TAG_ICON_MAP[opt.icon];
                   return (
                     <span className="flex items-center gap-2">
-                      <OptIcon className={`w-4 h-4 flex-shrink-0 ${opt.iconClass}`} />
-                      <span className="text-sm text-gray-700">{opt.label}</span>
+                      {OptIcon && <OptIcon className={`w-4 h-4 flex-shrink-0 ${opt.iconClass}`} />}
+                      <span className="text-sm text-neutral-700">{opt.label}</span>
                     </span>
                   );
                 }}
@@ -627,17 +1254,17 @@ function OrdenesPageInner() {
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100 bg-gray-50">
+            <div className="flex items-center justify-between px-5 py-4 border-t border-neutral-100 bg-neutral-50">
               <button
                 onClick={clearAllFilters}
-                className="text-sm text-gray-500 hover:text-gray-700 font-medium transition-colors disabled:opacity-40"
+                className="text-sm text-neutral-500 hover:text-neutral-700 font-medium transition-colors duration-300 disabled:opacity-40"
                 disabled={activeFilterCount === 0}
               >
                 Limpiar filtros
               </button>
               <button
                 onClick={() => setShowFilters(false)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                className="bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors duration-300"
               >
                 Aplicar
               </button>
@@ -647,55 +1274,140 @@ function OrdenesPageInner() {
       )}
 
       {/* Page header */}
-      <div className="flex items-center justify-between mb-5 gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-5 gap-3 sm:gap-4">
         <div className="flex items-center gap-2 min-w-0">
-          <h1 className="text-2xl font-bold text-gray-900" style={NW}>Órdenes de Recepción</h1>
-          <button
-            onClick={() => setShowInfo(true)}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <InfoCircle className="w-5 h-5" />
-          </button>
+          <h1 className="text-xl sm:text-2xl font-bold text-neutral-900" style={NW}>Órdenes de Recepción</h1>
+          <PageInfoModal
+            title="Órdenes de Recepción"
+            description={<>Las <strong>Órdenes de Recepción (OR)</strong> gestionan la entrada de mercancía al centro de distribución. Cada OR registra el proceso completo: desde la programación de fecha de entrega hasta la verificación del inventario recibido.</>}
+            features={[
+              "Programa citas de descarga con horario",
+              "Declara SKUs y unidades antes de la recepción",
+              "Rastrea diferencias y productos no pickeables",
+            ]}
+          />
+          {/* Dots menu — mobile only (Exportar + Recepción sin agenda) */}
+          <div className="relative sm:hidden ml-auto">
+            <button
+              onMouseDown={e => e.stopPropagation()}
+              onClick={() => setBottomMenuOpen(prev => !prev)}
+              className={`inline-flex items-center justify-center p-1.5 rounded-lg transition-colors duration-200 ${
+                bottomMenuOpen ? "bg-neutral-100 text-neutral-700" : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
+              }`}
+            >
+              <DotsVertical className="w-5 h-5" />
+            </button>
+            {bottomMenuOpen && (
+              <div
+                onMouseDown={e => e.stopPropagation()}
+                className="absolute top-full right-0 mt-1 bg-white border border-neutral-200 rounded-xl shadow-xl py-1.5 min-w-[200px] z-50"
+              >
+                <button
+                  onClick={() => { setBottomMenuOpen(false); /* export logic */ }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors duration-300"
+                >
+                  <Download01 className="w-4 h-4 flex-shrink-0 text-neutral-400" />
+                  Exportar
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm text-gray-600 font-medium transition-colors"
-            style={NW}
-          >
-            <Download01 className="w-4 h-4" /> Exportar
-          </button>
-          <button
-            className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm text-gray-600 font-medium transition-colors"
-            style={NW}
-          >
-            Recepción sin agenda
-          </button>
-          <Link
-            href="/recepciones/crear"
-            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-            style={NW}
-          >
-            <Plus className="w-4 h-4" /> Crear OR
-          </Link>
+        <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+          <div>
+            <Button variant="tertiary" size="md" className="h-9" iconLeft={<Download01 className="w-4 h-4" />}>
+              Exportar
+            </Button>
+          </div>
+          {canScanQr && (
+            <div>
+              <Button variant={canCreate ? "secondary" : "primary"} className="h-9" iconLeft={<QrCode02 className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
+                Escanear QR
+              </Button>
+            </div>
+          )}
+          {canCreate && (
+            <Button variant="primary" className="h-9" href="/recepciones/crear" iconLeft={<Plus className="w-4 h-4" />}>
+              Crear recepción
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-3 mb-4 min-w-0">
-        {/* ── Tabs with horizontal scroll ── */}
-        <div className="tabs-scroll flex items-center gap-1 flex-1 min-w-0 overflow-x-auto pb-0.5">
-          {TABS.map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              style={NW}
-              className={`px-3 py-1.5 rounded-lg text-sm transition-colors flex-shrink-0 ${
-                activeTab === tab ? "bg-gray-900 text-white font-medium" : "text-gray-600 hover:bg-gray-100"
-              }`}
+      <div className="flex items-center gap-2 sm:gap-3 mb-4 min-w-0">
+        {/* ── Tabs: select on mobile, pill scroll on desktop ── */}
+        <div className="relative flex-1 min-w-0">
+          {/* Mobile: select dropdown */}
+          <div className="sm:hidden">
+            <select
+              value={activeTab}
+              onChange={e => setActiveTab(e.target.value)}
+              className="w-full appearance-none bg-neutral-100 border border-neutral-200 rounded-lg px-3 py-2 pr-8 text-sm text-neutral-700 font-medium focus:outline-none focus:ring-2 focus:ring-primary-200"
             >
-              {tab}
-            </button>
-          ))}
+              {TABS.map(tab => (
+                <option key={tab} value={tab}>{tab}</option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+          </div>
+
+          {/* Desktop: pill tabs with horizontal scroll */}
+          <div
+            ref={tabsScrollRef}
+            className="hidden sm:flex tabs-scroll items-center gap-1 overflow-x-auto pb-0.5 select-none"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+            onMouseDown={e => {
+              const el = tabsScrollRef.current;
+              if (!el) return;
+              tabsDragRef.current = { active: true, startX: e.clientX, scrollLeft: el.scrollLeft, moved: false };
+            }}
+            onClickCapture={e => {
+              if (tabsDragRef.current.moved) {
+                e.stopPropagation();
+                tabsDragRef.current.moved = false;
+              }
+            }}
+          >
+            {TABS.map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                style={NW}
+                className={`px-3 py-1.5 rounded-lg text-sm transition-colors duration-300 flex-shrink-0 ${
+                  activeTab === tab ? "bg-neutral-900 text-white font-medium" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+          {/* Left arrow */}
+          {showLeftArrow && (
+            <>
+              <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-white to-transparent hidden sm:block" />
+              <button
+                onClick={() => tabsScrollRef.current?.scrollBy({ left: -200, behavior: "smooth" })}
+                className="hidden sm:flex absolute inset-y-0 left-0 items-center justify-center w-8 text-neutral-500 hover:text-neutral-900 transition-colors duration-300"
+                aria-label="Tabs anteriores"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </>
+          )}
+          {/* Right arrow */}
+          {showRightArrow && (
+            <>
+              <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-white to-transparent hidden sm:block" />
+              <button
+                onClick={() => tabsScrollRef.current?.scrollBy({ left: 200, behavior: "smooth" })}
+                className="hidden sm:flex absolute inset-y-0 right-0 items-center justify-center w-8 text-neutral-500 hover:text-neutral-900 transition-colors duration-300"
+                aria-label="Ver más tabs"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </>
+          )}
         </div>
 
         {/* Right controls */}
@@ -703,16 +1415,16 @@ function OrdenesPageInner() {
           {/* ── Filters button — opens filter modal ── */}
           <button
             onClick={() => setShowFilters(true)}
-            className={`relative p-2 border rounded-lg transition-colors ${
+            className={`relative h-9 w-9 flex items-center justify-center border border-transparent rounded-lg transition-colors duration-300 ${
               activeFilterCount > 0
-                ? "border-indigo-300 bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
-                : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                ? "bg-primary-50 text-primary-500 hover:bg-primary-100"
+                : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
             }`}
           >
             <Sliders01 className="w-4 h-4" />
             {activeFilterCount > 0 && (
               <span
-                className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-indigo-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center"
+                className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-primary-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center"
                 style={{ lineHeight: 1 }}
               >
                 {activeFilterCount}
@@ -722,23 +1434,23 @@ function OrdenesPageInner() {
 
           <Link
             href="/recepciones/columnas"
-            className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center justify-center transition-colors"
+            className="hidden sm:flex h-9 w-9 bg-neutral-100 rounded-lg hover:bg-neutral-200 items-center justify-center transition-colors duration-300"
             title="Editor de columnas"
           >
-            <LayoutGrid01 className="w-4 h-4 text-gray-500" />
+            <LayoutGrid01 className="w-4 h-4 text-neutral-500" />
           </Link>
 
-          <div className="relative">
-            <SearchLg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          <div className="hidden sm:block relative">
+            <SearchLg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
             <input
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar en órdenes"
-              className="pl-9 pr-8 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 w-52"
+              placeholder="Buscar OR..."
+              className="pl-9 pr-8 py-2 h-9 bg-neutral-100 rounded-lg text-sm text-neutral-700 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200 w-52"
             />
             {search && (
-              <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
@@ -746,90 +1458,280 @@ function OrdenesPageInner() {
         </div>
       </div>
 
+      {/* Mobile search — full width below toolbar */}
+      <div className="sm:hidden relative mb-3">
+        <SearchLg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Buscar OR..."
+          className="w-full pl-9 pr-8 py-2.5 bg-neutral-100 rounded-lg text-sm text-neutral-700 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+        />
+        {search && (
+          <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
       {/* Active filter chips */}
       {activeFilterCount > 0 && (
         <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <span className="text-xs text-gray-500 font-medium">Filtros activos:</span>
-          {[...filterSellers].map(s => (
-            <span key={s} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full font-medium">
-              {s}
-              <button onClick={() => toggleInSet(setFilterSellers, s)} className="ml-0.5 text-indigo-400 hover:text-indigo-600">
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
-          {[...filterSucursales].map(s => (
-            <span key={s} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full font-medium">
-              {s}
-              <button onClick={() => toggleInSet(setFilterSucursales, s)} className="ml-0.5 text-indigo-400 hover:text-indigo-600">
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
+          <span className="text-xs text-neutral-500 font-medium">Filtros activos:</span>
           {[...filterTagTypes].map(k => {
             const opt = TAG_FILTER_OPTIONS.find(t => t.key === k);
-            const ChipIcon = opt?.Icon;
+            const ChipIcon = opt ? TAG_ICON_MAP[opt.icon] : null;
             return (
-              <span key={k} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full font-medium">
+              <span key={k} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-primary-50 text-primary-600 border border-primary-200 rounded-full font-medium">
                 {ChipIcon && <ChipIcon className={`w-3 h-3 ${opt?.iconClass}`} />}
                 {opt?.label ?? k}
-                <button onClick={() => toggleInSet(setFilterTagTypes, k)} className="ml-0.5 text-indigo-400 hover:text-indigo-600">
+                <button onClick={() => toggleInSet(setFilterTagTypes, k)} className="ml-0.5 text-primary-400 hover:text-primary-500">
                   <X className="w-3 h-3" />
                 </button>
               </span>
             );
           })}
-          <button onClick={clearAllFilters} className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2">
+          <button onClick={clearAllFilters} className="text-xs text-neutral-400 hover:text-neutral-600 underline underline-offset-2">
             Limpiar todo
           </button>
         </div>
       )}
 
-      {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <div className="overflow-x-auto w-full">
+      {/* ── Mobile card view ── */}
+      <div className="sm:hidden flex flex-col gap-3">
+        {filtered.length === 0 ? (
+          <div className="bg-white border border-neutral-200 rounded-2xl py-14 text-center text-sm text-neutral-400">
+            No se encontraron órdenes{search ? ` para "${search}"` : ""}.
+          </div>
+        ) : (
+          paginatedRows.map((orden, i) => {
+            const actions = getActions(orden.estado, orden.id, orden, setCancelTarget, currentRole);
+            const PrimaryIcon = actions.primary?.icon;
+            return (
+              <div
+                key={`card-${orden.id}-${i}`}
+                className="bg-white border border-neutral-200 rounded-2xl p-4"
+              >
+                {/* Row 1: ID + Status */}
+                <div className="flex items-center justify-between gap-2 mb-2.5">
+                  <span
+                    className="inline-block bg-neutral-100 text-neutral-700 rounded px-2 py-0.5 font-medium w-fit text-xs"
+                  >
+                    {orden.id}
+                  </span>
+                  <StatusBadge status={orden.estado} />
+                </div>
+
+                {/* Row 2: Tienda + Sucursal */}
+                <div className="flex items-center gap-3 text-sm mb-2">
+                  <span className="text-neutral-800 font-medium truncate">{orden.seller}</span>
+                  <span className="text-neutral-300">·</span>
+                  <span className="text-neutral-500 truncate">{orden.sucursal}</span>
+                </div>
+
+                {/* Row 3: Fecha agendada */}
+                <div className="flex items-center gap-2 text-xs text-neutral-500 mb-2.5">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-neutral-400 flex-shrink-0">
+                    <rect x="1" y="2" width="12" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
+                    <path d="M1 5.5h12" stroke="currentColor" strokeWidth="1.2"/>
+                    <path d="M4.5 1v2M9.5 1v2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                  </svg>
+                  {orden.fechaAgendada === "—" ? (
+                    <span className="text-neutral-400">Sin agendar</span>
+                  ) : (
+                    <span className="text-neutral-600">{orden.fechaAgendada}</span>
+                  )}
+                  {orden.fechaExtra && (
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${fechaExtraClass(orden.fechaExtra)}`}>
+                      {orden.fechaExtra}
+                    </span>
+                  )}
+                </div>
+
+                {/* Row 4: SKUs + Unidades + Sesiones */}
+                <div className="flex items-center gap-4 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-neutral-400">SKUs</span>
+                    <span className="text-neutral-700 font-semibold tabular-nums">{orden.skus}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-neutral-400">Unidades</span>
+                    <span className="text-neutral-700 font-semibold tabular-nums">{orden.uTotales}</span>
+                  </div>
+                  {orden.sesiones && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-neutral-400">Sesiones</span>
+                      <span className="text-neutral-700 font-semibold tabular-nums">{orden.sesiones}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Progreso (if any) */}
+                {orden.progreso && (() => {
+                  const pct = Math.round((orden.progreso.contadas / orden.progreso.total) * 100);
+                  const isComplete = pct >= 100;
+                  return (
+                    <div className="mt-2 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-[11px] font-medium tabular-nums ${isComplete ? "text-green-600" : "text-neutral-500"}`}>
+                          {orden.progreso.contadas.toLocaleString("es-CL")}/{orden.progreso.total.toLocaleString("es-CL")}
+                        </span>
+                        <span className={`text-[11px] font-medium tabular-nums ${isComplete ? "text-green-600" : "text-neutral-500"}`}>
+                          {pct}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${isComplete ? "bg-green-500" : "bg-primary-500"}`}
+                          style={{ width: `${Math.min(pct, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Tags (if any) */}
+                {orden.tags && orden.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2.5">
+                    {orden.tags.map((tag, ti) => {
+                      const TagIcon = TAG_ICON_MAP[tag.icon];
+                      if (!TagIcon) return null;
+                      return (
+                        <span
+                          key={tag.label ?? ti}
+                          className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-medium w-fit ${tag.className}`}
+                        >
+                          <TagIcon className={`w-3 h-3 flex-shrink-0 ${tag.iconClass}`} />
+                          {tag.label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Actions footer */}
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-neutral-100">
+                  {actions.primary && PrimaryIcon && (
+                    actions.primary.href ? (
+                      <Link
+                        href={actions.primary.href}
+                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors duration-200"
+                      >
+                        <PrimaryIcon className="w-4 h-4" />
+                        {actions.primary.tooltip}
+                      </Link>
+                    ) : (
+                      <button
+                        onClick={orden.estado === "Programado" ? () => setRecibirOrden(orden) : undefined}
+                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors duration-200"
+                      >
+                        <PrimaryIcon className="w-4 h-4" />
+                        {actions.primary.tooltip}
+                      </button>
+                    )
+                  )}
+                  {/* When only "Ver" action → show "Ver detalle" button; otherwise dots menu */}
+                  {!actions.primary && actions.menu.length === 1 && actions.menu[0].label === "Ver" ? (
+                    <Link
+                      href={actions.menu[0].href || `/recepciones/${encodeURIComponent(orden.id)}`}
+                      className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors duration-200"
+                    >
+                      <Eye className="w-4 h-4" />
+                      Ver detalle
+                    </Link>
+                  ) : (
+                    <div className="relative">
+                      <button
+                        onMouseDown={e => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation(); }}
+                        onClick={() => setCardMenuId(prev => prev === orden.id ? null : orden.id)}
+                        className={`p-2 rounded-lg transition-colors duration-200 ${
+                          cardMenuId === orden.id ? "bg-neutral-100 text-neutral-700" : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
+                        }`}
+                      >
+                        <DotsVertical className="w-4 h-4" />
+                      </button>
+                      {cardMenuId === orden.id && (
+                        <div onMouseDown={e => e.stopPropagation()} className="absolute bottom-full right-0 mb-1 bg-white border border-neutral-200 rounded-xl shadow-xl py-1.5 min-w-[192px] z-50">
+                          {actions.menu.map((item, mi) => {
+                            const ItemIcon = item.icon;
+                            const hasSep = mi > 0 && actions.menu[mi - 1]?.danger !== item.danger;
+                            return (
+                              <button
+                                key={item.label}
+                                onClick={() => { setCardMenuId(null); if (item.href) router.push(item.href); item.onClick?.(); }}
+                                className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-colors duration-300 ${
+                                  item.danger ? "text-red-500 hover:bg-red-50" : "text-neutral-700 hover:bg-neutral-50"
+                                } ${hasSep ? "border-t border-neutral-100 mt-1 pt-2.5" : ""}`}
+                              >
+                                {ItemIcon && <ItemIcon className={`w-4 h-4 flex-shrink-0 ${item.danger ? "text-red-400" : "text-neutral-400"}`} />}
+                                {item.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Table (desktop) */}
+      <div className="hidden sm:block bg-white border border-neutral-200 rounded-2xl overflow-hidden relative">
+        <div
+          className="overflow-x-auto w-full table-scroll scroll-fade-right"
+          style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+          onScroll={e => {
+            const el = e.currentTarget;
+            el.classList.toggle("scrolled-end", el.scrollLeft + el.clientWidth >= el.scrollWidth - 2);
+          }}>
           <table className="text-sm border-collapse" style={{ width: "max-content", minWidth: "100%" }}>
 
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
+              <tr className="border-b border-neutral-100 bg-neutral-50">
                 {/* Fixed: ID */}
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide" style={NW}>ID</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-500" style={NW}>ID</th>
 
                 {/* Dynamic columns */}
                 {activeColumns.map(key => {
                   if (key === "creacion") return (
-                    <th key="creacion" className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:text-gray-700 select-none" style={NW} onClick={() => toggleSort("creacion")}>
+                    <th key="creacion" className="text-left py-3 px-4 text-xs font-semibold text-neutral-500 cursor-pointer hover:text-neutral-700 select-none" style={NW} onClick={() => toggleSort("creacion")}>
                       Creación <SortIcon field="creacion" sortField={sortField} sortDir={sortDir} />
                     </th>
                   );
                   if (key === "fechaAgendada") return (
-                    <th key="fechaAgendada" className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:text-gray-700 select-none" style={NW} onClick={() => toggleSort("fechaAgendada")}>
-                      F. Agendada <SortIcon field="fechaAgendada" sortField={sortField} sortDir={sortDir} />
+                    <th key="fechaAgendada" className="text-left py-3 px-4 text-xs font-semibold text-neutral-500 cursor-pointer hover:text-neutral-700 select-none" style={NW} onClick={() => toggleSort("fechaAgendada")}>
+                      F. agendada <SortIcon field="fechaAgendada" sortField={sortField} sortDir={sortDir} />
                     </th>
                   );
                   const LABELS: Record<ColumnKey, string> = {
-                    creacion: "Creación", fechaAgendada: "F. Agendada",
-                    seller: "Seller", sucursal: "Sucursal", estado: "Estado",
-                    skus: "SKUs", uTotales: "Unidades", tags: "Tags de Resultado",
+                    creacion: "Creación", fechaAgendada: "F. agendada",
+                    seller: "Tienda", sucursal: "Sucursal", estado: "Estado",
+                    progreso: "Progreso", sesiones: "Sesiones",
+                    skus: "SKUs", uTotales: "U. totales", tags: "Estado productos",
                   };
                   return (
-                    <th key={key} className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide" style={NW}>
+                    <th key={key} className="text-left py-3 px-4 text-xs font-semibold text-neutral-500" style={NW}>
                       {LABELS[key]}
                     </th>
                   );
                 })}
 
                 {/* Fixed: Acciones */}
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide bg-gray-50" style={{ ...NW, ...stickyRight }}>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-500 bg-neutral-50" style={{ ...NW, ...stickyRight }}>
                   Acciones
                 </th>
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-neutral-50">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={activeColumns.length + 2} className="py-14 text-center text-sm text-gray-400" style={NW}>
+                  <td colSpan={activeColumns.length + 2} className="py-14 text-center text-sm text-neutral-400" style={NW}>
                     No se encontraron órdenes{search ? ` para "${search}"` : ""}.
                   </td>
                 </tr>
@@ -837,30 +1739,33 @@ function OrdenesPageInner() {
                 paginatedRows.map((orden, i) => (
                   <tr
                     key={`${orden.id}-${i}`}
-                    className={`hover:bg-gray-50/60 transition-colors group ${
-                      orden.isSubId ? "bg-gray-50/40" : ""
+                    className={`hover:bg-neutral-50/60 transition-colors duration-300 group ${
+                      orden.isSubId ? "bg-neutral-50/40" : ""
                     }`}
                   >
-                    {/* Fixed: ID */}
+                    {/* Fixed: ID + status on mobile */}
                     <td className="py-3 px-4" style={NW}>
-                      {orden.isSubId ? (
-                        <span className="flex items-center gap-1">
-                          <span className="text-gray-300 text-sm select-none pl-1">└</span>
+                      <div className="flex flex-col gap-1.5">
+                        {orden.isSubId ? (
+                          <span className="flex items-center gap-1">
+                            <span className="text-neutral-300 text-sm select-none pl-1">└</span>
+                            <span
+                              className="inline-block bg-neutral-100 text-neutral-500 rounded px-2 py-0.5 w-fit text-[11px] font-sans"
+                            >
+                              {orden.id}
+                            </span>
+                          </span>
+                        ) : (
                           <span
-                            className="inline-block bg-gray-100 text-gray-500 rounded px-2 py-0.5"
-                            style={{ fontFamily: "var(--font-atkinson)", fontSize: "11px" }}
+                            className="inline-block bg-neutral-100 text-neutral-700 rounded px-2 py-0.5 w-fit text-xs font-sans"
                           >
                             {orden.id}
                           </span>
+                        )}
+                        <span className="sm:hidden">
+                          <StatusBadge status={orden.estado} />
                         </span>
-                      ) : (
-                        <span
-                          className="inline-block bg-gray-100 text-gray-700 rounded px-2 py-0.5"
-                          style={{ fontFamily: "var(--font-atkinson)", fontSize: "12px" }}
-                        >
-                          {orden.id}
-                        </span>
-                      )}
+                      </div>
                     </td>
 
                     {/* Dynamic columns */}
@@ -868,16 +1773,16 @@ function OrdenesPageInner() {
                       switch (key) {
                         case "creacion":
                           return (
-                            <td key="creacion" className="py-3 px-4 text-gray-600" style={NW}>
+                            <td key="creacion" className="py-3 px-4 text-neutral-600" style={NW}>
                               {orden.creacion}
                             </td>
                           );
                         case "fechaAgendada":
                           return (
                             <td key="fechaAgendada" className="py-3 px-4">
-                              <p className="text-gray-700" style={NW}>
+                              <p className="text-neutral-700" style={NW}>
                                 {orden.fechaAgendada === "—"
-                                  ? <span className="text-gray-400">Sin agendar</span>
+                                  ? <span className="text-neutral-400">Sin agendar</span>
                                   : orden.fechaAgendada
                                 }
                               </p>
@@ -892,13 +1797,13 @@ function OrdenesPageInner() {
                           );
                         case "seller":
                           return (
-                            <td key="seller" className="py-3 px-4 text-gray-600" style={NW}>
+                            <td key="seller" className="py-3 px-4 text-neutral-600" style={NW}>
                               {orden.seller}
                             </td>
                           );
                         case "sucursal":
                           return (
-                            <td key="sucursal" className="py-3 px-4 text-gray-600" style={NW}>
+                            <td key="sucursal" className="py-3 px-4 text-neutral-600" style={NW}>
                               {orden.sucursal}
                             </td>
                           );
@@ -910,14 +1815,41 @@ function OrdenesPageInner() {
                           );
                         case "skus":
                           return (
-                            <td key="skus" className="py-3 px-4 text-gray-700 tabular-nums" style={NW}>
+                            <td key="skus" className="py-3 px-4 text-neutral-700 tabular-nums" style={NW}>
                               {orden.skus}
                             </td>
                           );
                         case "uTotales":
                           return (
-                            <td key="uTotales" className="py-3 px-4 text-gray-700 tabular-nums" style={NW}>
+                            <td key="uTotales" className="py-3 px-4 text-neutral-700 tabular-nums" style={NW}>
                               {orden.uTotales}
+                            </td>
+                          );
+                        case "progreso":
+                          return (
+                            <td key="progreso" className="py-3 px-4" style={NW}>
+                              {orden.progreso ? (() => {
+                                const pct = Math.round((orden.progreso.contadas / orden.progreso.total) * 100);
+                                const isComplete = pct >= 100;
+                                return (
+                                  <span className={`text-xs font-medium tabular-nums ${isComplete ? "text-green-600" : "text-neutral-600"}`}>
+                                    {orden.progreso.contadas.toLocaleString("es-CL")}/{orden.progreso.total.toLocaleString("es-CL")}
+                                    {` (${pct}%)`}
+                                  </span>
+                                );
+                              })() : (
+                                <span className="text-neutral-300 text-xs">—</span>
+                              )}
+                            </td>
+                          );
+                        case "sesiones":
+                          return (
+                            <td key="sesiones" className="py-3 px-4 text-neutral-700 tabular-nums" style={NW}>
+                              {orden.sesiones ? (
+                                <span>{orden.sesiones}</span>
+                              ) : (
+                                <span className="text-neutral-300 text-xs">—</span>
+                              )}
                             </td>
                           );
                         case "tags":
@@ -925,12 +1857,13 @@ function OrdenesPageInner() {
                             <td key="tags" className="py-3 px-4">
                               {orden.tags && orden.tags.length > 0 ? (
                                 <div className="flex flex-col gap-1">
-                                  {orden.tags.map(tag => {
-                                    const TagIcon = tag.Icon;
+                                  {orden.tags.map((tag, ti) => {
+                                    const TagIcon = TAG_ICON_MAP[tag.icon];
+                                    if (!TagIcon) return null;
                                     return (
                                       <span
-                                        key={tag.label}
-                                        className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded font-medium ${tag.className}`}
+                                        key={tag.label ?? ti}
+                                        className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded font-medium w-fit ${tag.className}`}
                                         style={NW}
                                       >
                                         <TagIcon className={`w-3 h-3 flex-shrink-0 ${tag.iconClass}`} />
@@ -940,7 +1873,7 @@ function OrdenesPageInner() {
                                   })}
                                 </div>
                               ) : (
-                                <span className="text-gray-300 text-xs">—</span>
+                                <span className="text-neutral-300 text-xs">—</span>
                               )}
                             </td>
                           );
@@ -951,10 +1884,15 @@ function OrdenesPageInner() {
 
                     {/* Fixed: Acciones */}
                     <td
-                      className="py-3 px-4 bg-white group-hover:bg-gray-50/60"
+                      className="py-3 px-4 bg-white group-hover:bg-neutral-50/60"
                       style={{ ...NW, ...stickyRight }}
                     >
-                      <ActionsCell orden={orden} />
+                      <ActionsCell
+                        orden={orden}
+                        onPrimaryAction={orden.estado === "Programado" && canReceive ? () => setRecibirOrden(orden) : undefined}
+                        onCancel={setCancelTarget}
+                        role={currentRole}
+                      />
                     </td>
                   </tr>
                 ))
@@ -963,20 +1901,22 @@ function OrdenesPageInner() {
           </table>
         </div>
 
-        {/* Pagination */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+        {/* Desktop Pagination */}
+        <div className="flex items-center justify-between px-3 py-3 border-t border-neutral-100">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500" style={NW}>Mostrar</span>
-            <select
-              value={pageSize}
-              onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
-              className="border border-gray-200 rounded-lg px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            >
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-            </select>
-            <span className="text-sm text-gray-400" style={NW}>
+            <label className="flex items-center gap-1.5 bg-neutral-100 rounded-lg px-3 h-[44px] text-sm text-neutral-700 cursor-pointer">
+              <span className="text-neutral-500">Mostrar</span>
+              <select
+                value={pageSize}
+                onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
+                className="bg-transparent font-medium focus:outline-none cursor-pointer"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+              </select>
+            </label>
+            <span className="text-sm text-neutral-400" style={NW}>
               {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
             </span>
           </div>
@@ -984,18 +1924,18 @@ function OrdenesPageInner() {
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={clampedPage <= 1}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="px-3 h-[44px] bg-neutral-100 rounded-lg text-sm text-neutral-700 hover:bg-neutral-200 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300"
               style={NW}
             >
               ← Anterior
             </button>
-            <span className="text-sm text-gray-500 tabular-nums" style={NW}>
+            <span className="text-sm text-neutral-500 tabular-nums" style={NW}>
               {fromRow}–{toRow} de {filtered.length}
             </span>
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={clampedPage >= totalPages}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="px-3 h-[44px] bg-neutral-100 rounded-lg text-sm text-neutral-700 hover:bg-neutral-200 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300"
               style={NW}
             >
               Siguiente →
@@ -1003,6 +1943,53 @@ function OrdenesPageInner() {
           </div>
         </div>
       </div>
+
+      {/* Mobile pagination */}
+      <div className="sm:hidden flex items-center justify-between mt-3 pb-8">
+        <span className="text-xs text-neutral-400 tabular-nums">
+          {fromRow}–{toRow} de {filtered.length}
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={clampedPage <= 1}
+            className="px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-700 hover:bg-neutral-50 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300"
+          >
+            ←
+          </button>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={clampedPage >= totalPages}
+            className="px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-700 hover:bg-neutral-50 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300"
+          >
+            →
+          </button>
+        </div>
+      </div>
+
+      {/* QR Scanner Modal */}
+      <QrScannerModal
+        open={showQrScanner}
+        onClose={() => setShowQrScanner(false)}
+        onConfirm={handleQrConfirm}
+        getOrInfo={getOrInfo}
+      />
+
+      {/* ── Mobile sticky bottom bar ── */}
+      {(canCreate || canScanQr) && (
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 pt-3 pb-6 flex flex-col gap-2 z-40">
+          {canCreate && (
+            <Button variant="primary" href="/recepciones/crear" className="w-full h-12" iconLeft={<Plus className="w-4 h-4" />}>
+              Crear recepción
+            </Button>
+          )}
+          {canScanQr && (
+            <Button variant={canCreate ? "secondary" : "primary"} className="w-full h-12" iconLeft={<QrCode02 className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
+              Escanear QR
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
