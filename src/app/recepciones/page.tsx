@@ -1681,8 +1681,14 @@ function OrdenesPageInner() {
       </div>
 
       {/* Table (desktop) */}
-      <div className="hidden sm:block bg-white border border-neutral-200 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto w-full table-scroll" style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
+      <div className="hidden sm:block bg-white border border-neutral-200 rounded-2xl overflow-hidden relative">
+        <div
+          className="overflow-x-auto w-full table-scroll scroll-fade-right"
+          style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+          onScroll={e => {
+            const el = e.currentTarget;
+            el.classList.toggle("scrolled-end", el.scrollLeft + el.clientWidth >= el.scrollWidth - 2);
+          }}>
           <table className="text-sm border-collapse" style={{ width: "max-content", minWidth: "100%" }}>
 
             <thead>

@@ -152,6 +152,27 @@ input[type="number"] {
   scrollbar-color: #e5e7eb transparent;
 }
 
+/* ── Scroll fade hint (right edge gradient when content overflows) ── */
+.scroll-fade-right {
+  position: relative;
+}
+.scroll-fade-right::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 48px;
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, white);
+  opacity: 1;
+  transition: opacity 0.2s ease;
+  z-index: 2;
+}
+.scroll-fade-right.scrolled-end::after {
+  opacity: 0;
+}
+
 /* ── Scan pulse animation for product cards (bounce in from bottom) ── */
 @keyframes scanPulse {
   0%   { transform: translateY(14px); opacity: 0.4; }

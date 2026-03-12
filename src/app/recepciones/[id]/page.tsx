@@ -643,12 +643,12 @@ function ConfirmCloseModal({ id, sesiones, totalContadas, totalEsperadas, onCanc
         </div>
 
         {/* Title + subtitle */}
-        <h3 className="text-lg font-bold text-neutral-900 mb-1">Terminar recepción</h3>
+        <h3 className="text-lg font-bold text-neutral-900 mb-1">Completar OR</h3>
         <p className="text-sm text-neutral-500 mb-5">Esta acción es definitiva y no puede deshacerse</p>
 
         {/* Body */}
         <p className="text-sm text-neutral-700 mb-7 leading-relaxed">
-          ¿Confirmas el cierre de la orden{" "}
+          ¿Confirmas completar la orden{" "}
           <span className="font-bold text-neutral-900">{id}</span>?{" "}
           Se registrarán{" "}
           <span className="font-bold text-neutral-900">
@@ -668,7 +668,7 @@ function ConfirmCloseModal({ id, sesiones, totalContadas, totalEsperadas, onCanc
           <button onClick={() => onConfirm(outcome)}
             className="flex-1 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300 flex items-center justify-center gap-2">
             <Check className="w-4 h-4" />
-            Sí, terminar
+            Sí, completar
           </button>
         </div>
       </div>
@@ -2983,8 +2983,19 @@ export default function ConteoORPage() {
   const id       = decodeURIComponent(rawId);
   const baseData = MOCK_ORDENES[id] ?? getFallbackOrden(id);
 
-  // Original estado from seed (Creado, Programado, etc.) — used for conditional header buttons
-  const originalEstado = baseData.estado ?? ORDENES_SEED.find(o => o.id === id)?.estado ?? "Programado";
+  // Original estado: check localStorage override first (synced from list actions), then seed data
+  const originalEstado = (() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(`amplifica_or_${id}`);
+        if (stored) {
+          const parsed = JSON.parse(stored) as { estado?: string };
+          if (parsed.estado) return parsed.estado;
+        }
+      } catch { /* ignore */ }
+    }
+    return baseData.estado ?? ORDENES_SEED.find(o => o.id === id)?.estado ?? "Programado";
+  })();
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [products,      setProducts]      = useState<ProductConteo[]>(baseData.products);
@@ -3267,7 +3278,7 @@ export default function ConteoORPage() {
   const totalAcumUds     = sesiones.reduce((s, ses) => s + ses.items.reduce((a, i) => a + i.cantidad, 0), 0);
   const pendingProduct   = products.find(p => p.id === pendingRemove);
 
-  // Terminar recepción button styles
+  // Completar OR button styles
   const orCerrada        = orEstado !== null;
   const terminarDisabled = sesionActiva || orCerrada || sesiones.length === 0;
   const terminarClass = terminarDisabled
@@ -3801,6 +3812,9 @@ export default function ConteoORPage() {
             <span className="text-lg font-black text-neutral-900 tabular-nums leading-none w-12 flex-shrink-0">
               {stats.pct}%
             </span>
+            {stats.pct === 0 && sesiones.length === 0 && (
+              <span className="text-xs text-neutral-400 italic">Sin conteo iniciado</span>
+            )}
             <div className="flex-1">
               <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
                 <div
@@ -4352,7 +4366,7 @@ export default function ConteoORPage() {
           );
         })()}
 
-        {/* ── Footer: Liberar + Terminar recepción (always visible when OR open, hidden for Creado) ── */}
+        {/* ── Footer: Liberar + Completar OR (always visible when OR open, hidden for Creado) ── */}
         {!orCerrada && originalEstado !== "Creado" && (<>
           {/* No-units alert modal */}
           {noUnitsAlert && (
@@ -4390,13 +4404,13 @@ export default function ConteoORPage() {
               }}
               disabled={terminarDisabled}
               title={
-                sesiones.length === 0 ? "Registra al menos una sesión antes de terminar" :
-                sesionActiva ? "Finaliza la sesión activa antes de terminar" : undefined
+                sesiones.length === 0 ? "Registra al menos una sesión antes de completar" :
+                sesionActiva ? "Finaliza la sesión activa antes de completar" : undefined
               }
               className={`flex items-center gap-2 px-5 py-2.5 border text-sm font-medium rounded-lg transition-colors duration-300 ${terminarClass}`}
             >
               <ClipboardCheck className="w-4 h-4" />
-              Terminar recepción
+              Completar OR
             </button>
           </div>
         </>)}
@@ -4455,7 +4469,7 @@ export default function ConteoORPage() {
                     className="w-full h-12 flex items-center justify-center gap-2 px-4 py-2.5 text-red-600 text-sm font-medium rounded-lg hover:bg-red-50 active:bg-red-100 transition-colors duration-300"
                   >
                     <ClipboardCheck className="w-4 h-4" />
-                    Terminar recepción
+                    Completar OR
                   </button>
                 )}
               </div>
