@@ -97,6 +97,11 @@ export const OR_PRODUCTS: Record<string, SeedProduct[]> = {
   "RO-BARRA-223": [{ id: "p1", esperadas: 680 },  { id: "p2", esperadas: 680 }],
   "RO-BARRA-214": [{ id: "p1", esperadas: 445 },  { id: "p2", esperadas: 445 }],
   "RO-BARRA-215": [{ id: "p1", esperadas: 1050 }, { id: "p2", esperadas: 1050 }],
+  "RO-BARRA-226": [{ id: "p1", esperadas: 390 },  { id: "p2", esperadas: 390 }],
+  "RO-BARRA-227": [{ id: "p1", esperadas: 820 },  { id: "p2", esperadas: 820 }],
+  "RO-BARRA-228": [{ id: "p1", esperadas: 1050 }, { id: "p2", esperadas: 1050 }],
+  "RO-BARRA-229": [{ id: "p1", esperadas: 270 },  { id: "p2", esperadas: 270 }],
+  "RO-BARRA-230": [{ id: "p1", esperadas: 600 },  { id: "p2", esperadas: 600 }],
 };
 
 /** Counting sessions per OR */
@@ -171,11 +176,24 @@ export const OR_STATS: Record<string, { contadas: number; total: number; sesione
 // ─── Calendar-relevant OR seed ──────────────────────────────────────────────
 
 export const ORDENES_SEED: CalOrEntry[] = [
+  // ─── Creado ─────────────────────────────────────────────────────────────────
+  { id: "RO-BARRA-191", fechaAgendada: "—",                sucursal: "Quilicura",       seller: "Extra Life", estado: "Creado" },
+  { id: "RO-BARRA-192", fechaAgendada: "—",                sucursal: "Providencia",     seller: "NutriPro",   estado: "Creado" },
+  { id: "RO-BARRA-193", fechaAgendada: "—",                sucursal: "Las Condes",      seller: "BioNature",  estado: "Creado" },
+  { id: "RO-BARRA-210", fechaAgendada: "—",                sucursal: "Lo Barnechea",    seller: "Gohard",     estado: "Creado" },
+  { id: "RO-BARRA-216", fechaAgendada: "—",                sucursal: "Santiago Centro",  seller: "Le Vice",    estado: "Creado" },
+  { id: "RO-BARRA-225", fechaAgendada: "—",                sucursal: "La Reina",        seller: "NutriPro",   estado: "Creado" },
+  // ─── Programado ─────────────────────────────────────────────────────────────
   { id: "RO-BARRA-183", fechaAgendada: "20/02/2026 16:30", sucursal: "Quilicura",       seller: "Extra Life", estado: "Programado" },
   { id: "RO-BARRA-182", fechaAgendada: "20/02/2026 16:30", sucursal: "La Reina",        seller: "Extra Life", estado: "Programado" },
   { id: "RO-BARRA-190", fechaAgendada: "21/02/2026 09:00", sucursal: "Lo Barnechea",    seller: "Le Vice",    estado: "Programado" },
   { id: "RO-BARRA-194", fechaAgendada: "11/03/2026 10:00", sucursal: "Quilicura",       seller: "VitaFit",    estado: "Programado" },
   { id: "RO-BARRA-195", fechaAgendada: "12/03/2026 14:30", sucursal: "La Reina",        seller: "NutriPro",   estado: "Programado" },
+  { id: "RO-BARRA-226", fechaAgendada: "14/03/2026 09:00", sucursal: "Las Condes",      seller: "Gohard",     estado: "Programado" },
+  { id: "RO-BARRA-227", fechaAgendada: "15/03/2026 08:30", sucursal: "Providencia",     seller: "Le Vice",    estado: "Programado" },
+  { id: "RO-BARRA-228", fechaAgendada: "15/03/2026 14:00", sucursal: "Quilicura",       seller: "VitaFit",    estado: "Programado" },
+  { id: "RO-BARRA-229", fechaAgendada: "16/03/2026 10:00", sucursal: "Lo Barnechea",    seller: "NutriPro",   estado: "Programado" },
+  { id: "RO-BARRA-230", fechaAgendada: "17/03/2026 11:30", sucursal: "La Reina",        seller: "Extra Life", estado: "Programado" },
   { id: "RO-BARRA-180", fechaAgendada: "20/02/2026 16:30", sucursal: "Santiago Centro",  seller: "Le Vice",    estado: "Recepcionado en bodega" },
   { id: "RO-BARRA-196", fechaAgendada: "09/03/2026 09:00", sucursal: "Lo Barnechea",    seller: "BioNature",  estado: "Recepcionado en bodega" },
   { id: "RO-BARRA-197", fechaAgendada: "08/03/2026 11:00", sucursal: "Providencia",     seller: "Extra Life", estado: "Recepcionado en bodega" },
@@ -185,8 +203,8 @@ export const ORDENES_SEED: CalOrEntry[] = [
   { id: "RO-BARRA-198", fechaAgendada: "07/03/2026 08:30", sucursal: "Santiago Centro",  seller: "VitaFit",    estado: "En proceso de conteo" },
   { id: "RO-BARRA-187", fechaAgendada: "14/02/2026 13:00", sucursal: "La Reina",        seller: "Le Vice",    estado: "Pendiente de aprobación" },
   { id: "RO-BARRA-199", fechaAgendada: "06/03/2026 10:00", sucursal: "Las Condes",      seller: "NutriPro",   estado: "Pendiente de aprobación" },
-  { id: "RO-BARRA-186", fechaAgendada: "15/02/2026 08:00", sucursal: "Quilicura",       seller: "Extra Life", estado: "Completado con diferencias" },
-  { id: "RO-BARRA-201", fechaAgendada: "01/03/2026 09:00", sucursal: "La Reina",        seller: "VitaFit",    estado: "Completado con diferencias" },
-  { id: "RO-BARRA-189", fechaAgendada: "13/02/2026 15:30", sucursal: "Santiago Centro",  seller: "Le Vice",    estado: "Completado sin diferencias" },
-  { id: "RO-BARRA-200", fechaAgendada: "04/03/2026 15:00", sucursal: "Quilicura",       seller: "BioNature",  estado: "Completado sin diferencias" },
+  { id: "RO-BARRA-186", fechaAgendada: "15/02/2026 08:00", sucursal: "Quilicura",       seller: "Extra Life", estado: "Completada" },
+  { id: "RO-BARRA-201", fechaAgendada: "01/03/2026 09:00", sucursal: "La Reina",        seller: "VitaFit",    estado: "Completada" },
+  { id: "RO-BARRA-189", fechaAgendada: "13/02/2026 15:30", sucursal: "Santiago Centro",  seller: "Le Vice",    estado: "Completada" },
+  { id: "RO-BARRA-200", fechaAgendada: "04/03/2026 15:00", sucursal: "Quilicura",       seller: "BioNature",  estado: "Completada" },
 ];

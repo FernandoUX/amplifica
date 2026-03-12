@@ -164,7 +164,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
 
   return (
     <aside
-      className={`${collapsed ? "lg:w-14" : "lg:w-52"} w-full text-white flex flex-col flex-shrink-0 transition-all duration-200 h-full`}
+      className={`${collapsed ? "lg:w-14" : "lg:w-60"} w-full text-white flex flex-col flex-shrink-0 transition-all duration-200 h-full`}
       style={{ backgroundColor: "#1D1D1F" }}
     >
       {/* ── Logo ──────────────────────────────────────────────────────────── */}
@@ -297,37 +297,31 @@ export default function Sidebar({ onClose }: SidebarProps) {
               </div>
             )}
           </div>
-        </div>
-      )}
 
-      {/* ── Quick actions ─────────────────────────────────────────────────── */}
-      {!collapsed && (
-        <div className="px-2.5 py-2 space-y-0.5 border-b border-white/10">
-          <button className="w-full flex items-center gap-2.5 text-white/70 hover:text-white text-[14px] lg:text-[13px] px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors duration-300">
-            <SearchLg className="w-4 h-4 flex-shrink-0" />
-            <span>Buscar</span>
-          </button>
+          {/* ── Date filter (same card style) ────────────────────────────── */}
           <div ref={dateRef} className="relative">
             <button
-              onClick={() => setDatePickerOpen(o => !o)}
-              className={`w-full flex items-center gap-2.5 text-[14px] lg:text-[13px] px-2 py-1.5 rounded-lg transition-colors duration-300 ${
-                dateFrom ? "text-white bg-white/10" : "text-white/70 hover:text-white hover:bg-white/5"
-              }`}
+              onClick={() => { setDatePickerOpen(o => !o); setSucursalOpen(false); setSellerOpen(false); setSellerSearch(""); }}
+              className="w-full flex items-center justify-between bg-white/5 hover:bg-white/10 rounded-lg px-3 py-1.5 text-xs transition-colors duration-300"
             >
-              <Calendar className="w-4 h-4 flex-shrink-0" />
-              <span>{dateFrom && dateTo
-                ? `${dateFrom.slice(8)}/${dateFrom.slice(5,7)}/${dateFrom.slice(0,4)} - ${dateTo.slice(8)}/${dateTo.slice(5,7)}/${dateTo.slice(0,4)}`
-                : dateFrom
-                ? `Desde ${dateFrom.slice(8)}/${dateFrom.slice(5,7)}/${dateFrom.slice(0,4)}`
-                : "Filtrar por fecha"}</span>
-              {dateFrom && (
+              <div className="text-left min-w-0 flex-1">
+                <p className="text-white/40 text-[10px] leading-none mb-0.5">Fecha</p>
+                <p className="text-white font-medium truncate">{dateFrom && dateTo
+                  ? `${dateFrom.slice(8)}/${dateFrom.slice(5,7)} - ${dateTo.slice(8)}/${dateTo.slice(5,7)}/${dateTo.slice(0,4)}`
+                  : dateFrom
+                  ? `Desde ${dateFrom.slice(8)}/${dateFrom.slice(5,7)}/${dateFrom.slice(0,4)}`
+                  : "Todas"}</p>
+              </div>
+              {dateFrom ? (
                 <span
                   role="button"
                   onClick={e => { e.stopPropagation(); setDateRange(null, null); }}
-                  className="ml-auto text-white/40 hover:text-white cursor-pointer"
+                  className="text-white/40 hover:text-white cursor-pointer flex-shrink-0"
                 >
-                  ✕
+                  <XClose className="w-3.5 h-3.5" />
                 </span>
+              ) : (
+                <ChevronSelectorVertical className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
               )}
             </button>
 
@@ -401,6 +395,16 @@ export default function Sidebar({ onClose }: SidebarProps) {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ── Quick actions ─────────────────────────────────────────────────── */}
+      {!collapsed && (
+        <div className="px-2.5 py-2 space-y-0.5 border-b border-white/10">
+          <button className="w-full flex items-center gap-2.5 text-white/70 hover:text-white text-[14px] lg:text-[13px] px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors duration-300">
+            <SearchLg className="w-4 h-4 flex-shrink-0" />
+            <span>Buscar</span>
+          </button>
         </div>
       )}
 

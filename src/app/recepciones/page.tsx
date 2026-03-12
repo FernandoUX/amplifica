@@ -7,8 +7,8 @@ import { useColumnConfig, type ColumnKey } from "@/hooks/useColumnConfig";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   Download01, Sliders01, LayoutGrid01, SearchLg, QrCode02,
-  DotsVertical, CheckCircle, AlertTriangle, XCircle, ClockRefresh, InfoCircle, X,
-  SwitchVertical01, ArrowUp, ArrowDown, Plus, ChevronDown, ChevronLeft, ChevronRight,
+  DotsVertical, CheckCircle, AlertTriangle, XCircle, ClockRefresh, X,
+  SwitchVertical01, ArrowUp, ArrowDown, Plus, Minus, ChevronDown, ChevronLeft, ChevronRight,
   CalendarPlus01, PackageCheck, Play, ClipboardCheck, FastForward,
   Eye, Edit01, SlashCircle01, LockUnlocked01,
 } from "@untitled-ui/icons-react";
@@ -16,6 +16,8 @@ import StatusBadge, { Status } from "@/components/recepciones/StatusBadge";
 import { OR_STATS } from "./_data";
 import Button from "@/components/ui/Button";
 import QrScannerModal from "@/components/recepciones/QrScannerModal";
+import PageInfoModal from "@/components/ui/PageInfoModal";
+import FormField from "@/components/ui/FormField";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 /** Feature 4: multi-label resultado tags (aparecen solo en "Completada") */
@@ -43,6 +45,7 @@ type Orden = {
   pallets?: number;       // Seller-declared pallets (for "Programado" ORs)
   bultos?: number;        // Seller-declared bultos (for "Programado" ORs)
   comentarios?: string;   // Optional comment entered when creating the OR (read-only in modals)
+  guiaDespacho?: string;  // Número de guía de despacho del seller
 };
 
 type SortField = "creacion" | "fechaAgendada" | null;
@@ -90,11 +93,16 @@ const ORDENES: Orden[] = [
 
   // ─── Programado ──────────────────────────────────────────────────────────────
   { id: "RO-BARRA-183", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "Extra Life", sucursal: "Quilicura", estado: "Programado", skus: 320, uTotales: "2.550", pallets: 10, bultos: 32, comentarios: "Llegará en un camión blanco patente XXNN33, preguntar por Carlos." },
-  { id: "RO-BARRA-182", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", fechaExtra: "Expirado hace 4 horas", seller: "Extra Life", sucursal: "La Reina", estado: "Programado", skus: 320, uTotales: "2.550", pallets: 8, bultos: 28 },
-  { id: "RO-BARRA-190", creacion: "17/02/2026", fechaAgendada: "21/02/2026 09:00", fechaExtra: "Expira en 28 minutos", seller: "Le Vice", sucursal: "Lo Barnechea", estado: "Programado", skus: 15, uTotales: "450", pallets: 3, bultos: 15, comentarios: "Entrega parcial, solo 2 pallets llegarán hoy. El resto el miércoles." },
-  { id: "RO-BARRA-194", creacion: "07/03/2026", fechaAgendada: "11/03/2026 10:00", seller: "VitaFit", sucursal: "Quilicura", estado: "Programado", skus: 24, uTotales: "1.800", pallets: 6, bultos: 18, comentarios: "Incluye 4 pallets de colágeno que requieren temperatura controlada." },
-  { id: "RO-BARRA-195", creacion: "06/03/2026", fechaAgendada: "12/03/2026 14:30", seller: "NutriPro", sucursal: "La Reina", estado: "Programado", skus: 18, uTotales: "960", pallets: 4, bultos: 12 },
-  { id: "RO-BARRA-211", creacion: "09/03/2026", fechaAgendada: "13/03/2026 11:00", seller: "BioNature", sucursal: "Santiago Centro", estado: "Programado", skus: 9, uTotales: "420", pallets: 2, bultos: 6 },
+  { id: "RO-BARRA-182", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", fechaExtra: "Expirado hace 4 horas", seller: "Extra Life", sucursal: "La Reina", estado: "Programado", skus: 320, uTotales: "2.550", pallets: 8, bultos: 28, guiaDespacho: "GD-2026-004821" },
+  { id: "RO-BARRA-190", creacion: "17/02/2026", fechaAgendada: "21/02/2026 09:00", fechaExtra: "Expira en 28 minutos", seller: "Le Vice", sucursal: "Lo Barnechea", estado: "Programado", skus: 15, uTotales: "450", pallets: 3, bultos: 15, comentarios: "Entrega parcial, solo 2 pallets llegarán hoy. El resto el miércoles.", guiaDespacho: "GD-2026-005130" },
+  { id: "RO-BARRA-194", creacion: "07/03/2026", fechaAgendada: "11/03/2026 10:00", seller: "VitaFit", sucursal: "Quilicura", estado: "Programado", skus: 24, uTotales: "1.800", pallets: 6, bultos: 18, comentarios: "Incluye 4 pallets de colágeno que requieren temperatura controlada.", guiaDespacho: "GD-2026-007845" },
+  { id: "RO-BARRA-195", creacion: "06/03/2026", fechaAgendada: "12/03/2026 14:30", seller: "NutriPro", sucursal: "La Reina", estado: "Programado", skus: 18, uTotales: "960", pallets: 4, bultos: 12, guiaDespacho: "GD-2026-008102" },
+  { id: "RO-BARRA-211", creacion: "09/03/2026", fechaAgendada: "13/03/2026 11:00", seller: "BioNature", sucursal: "Santiago Centro", estado: "Programado", skus: 9, uTotales: "420", pallets: 2, bultos: 6, guiaDespacho: "GD-2026-008390" },
+  { id: "RO-BARRA-226", creacion: "10/03/2026", fechaAgendada: "14/03/2026 09:00", seller: "Gohard", sucursal: "Las Condes", estado: "Programado", skus: 14, uTotales: "780", pallets: 3, bultos: 10, guiaDespacho: "GD-2026-008501" },
+  { id: "RO-BARRA-227", creacion: "10/03/2026", fechaAgendada: "15/03/2026 08:30", seller: "Le Vice", sucursal: "Providencia", estado: "Programado", skus: 22, uTotales: "1.640", pallets: 5, bultos: 16, comentarios: "Carga incluye productos de temporada, priorizar descarga.", guiaDespacho: "GD-2026-008612" },
+  { id: "RO-BARRA-228", creacion: "11/03/2026", fechaAgendada: "15/03/2026 14:00", seller: "VitaFit", sucursal: "Quilicura", estado: "Programado", skus: 30, uTotales: "2.100", pallets: 8, bultos: 24, guiaDespacho: "GD-2026-008720" },
+  { id: "RO-BARRA-229", creacion: "11/03/2026", fechaAgendada: "16/03/2026 10:00", seller: "NutriPro", sucursal: "Lo Barnechea", estado: "Programado", skus: 11, uTotales: "540", pallets: 2, bultos: 8, comentarios: "Segundo envío del mes, verificar contra OC anterior.", guiaDespacho: "GD-2026-008835" },
+  { id: "RO-BARRA-230", creacion: "11/03/2026", fechaAgendada: "17/03/2026 11:30", seller: "Extra Life", sucursal: "La Reina", estado: "Programado", skus: 16, uTotales: "1.200", pallets: 4, bultos: 14, guiaDespacho: "GD-2026-008940" },
 
   // ─── Recepcionado en bodega ──────────────────────────────────────────────────
   { id: "RO-BARRA-180", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Recepcionado en bodega", skus: 2, uTotales: "200" },
@@ -119,20 +127,20 @@ const ORDENES: Orden[] = [
   { id: "RO-BARRA-188", creacion: "12/02/2026", fechaAgendada: "16/02/2026 11:30", seller: "Extra Life", sucursal: "Santiago Centro", estado: "Cancelado", skus: 320, uTotales: "2.550" },
   { id: "RO-BARRA-213", creacion: "20/02/2026", fechaAgendada: "24/02/2026 10:00", seller: "Le Vice", sucursal: "Providencia", estado: "Cancelado", skus: 7, uTotales: "280", comentarios: "Seller canceló envío por falta de stock." },
 
-  // ─── Completado con diferencias ──────────────────────────────────────────────
-  { id: "RO-BARRA-186", creacion: "11/02/2026", fechaAgendada: "15/02/2026 08:00", seller: "Extra Life", sucursal: "Quilicura", estado: "Completado con diferencias", skus: 320, uTotales: "2.550",
+  // ─── Completada ─────────────────────────────────────────────────────────────
+  { id: "RO-BARRA-186", creacion: "11/02/2026", fechaAgendada: "15/02/2026 08:00", seller: "Extra Life", sucursal: "Quilicura", estado: "Completada", skus: 320, uTotales: "2.550",
     tags: makeTags({ sinDiferencias: 2510, conDiferencias: 20, noPickeables: 20 }) },
-  { id: "RO-BARRA-201", creacion: "25/02/2026", fechaAgendada: "01/03/2026 09:00", seller: "VitaFit", sucursal: "La Reina", estado: "Completado con diferencias", skus: 20, uTotales: "1.540",
+  { id: "RO-BARRA-201", creacion: "25/02/2026", fechaAgendada: "01/03/2026 09:00", seller: "VitaFit", sucursal: "La Reina", estado: "Completada", skus: 20, uTotales: "1.540",
     tags: makeTags({ sinDiferencias: 1480, conDiferencias: 36, noPickeables: 24 }) },
-  { id: "RO-BARRA-214", creacion: "18/02/2026", fechaAgendada: "22/02/2026 14:00", seller: "NutriPro", sucursal: "Lo Barnechea", estado: "Completado con diferencias", skus: 16, uTotales: "890",
+  { id: "RO-BARRA-214", creacion: "18/02/2026", fechaAgendada: "22/02/2026 14:00", seller: "NutriPro", sucursal: "Lo Barnechea", estado: "Completada", skus: 16, uTotales: "890",
     tags: makeTags({ sinDiferencias: 840, conDiferencias: 32, noPickeables: 18 }) },
 
-  // ─── Completado sin diferencias ──────────────────────────────────────────────
-  { id: "RO-BARRA-189", creacion: "09/02/2026", fechaAgendada: "13/02/2026 15:30", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Completado sin diferencias", skus: 320, uTotales: "2.550",
+  // ─── Completada (continuación) ──────────────────────────────────────────────
+  { id: "RO-BARRA-189", creacion: "09/02/2026", fechaAgendada: "13/02/2026 15:30", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Completada", skus: 320, uTotales: "2.550",
     tags: makeTags({ sinDiferencias: 2550 }) },
-  { id: "RO-BARRA-200", creacion: "28/02/2026", fechaAgendada: "04/03/2026 15:00", seller: "BioNature", sucursal: "Quilicura", estado: "Completado sin diferencias", skus: 10, uTotales: "520",
+  { id: "RO-BARRA-200", creacion: "28/02/2026", fechaAgendada: "04/03/2026 15:00", seller: "BioNature", sucursal: "Quilicura", estado: "Completada", skus: 10, uTotales: "520",
     tags: makeTags({ sinDiferencias: 520 }) },
-  { id: "RO-BARRA-215", creacion: "22/02/2026", fechaAgendada: "26/02/2026 08:30", seller: "Gohard", sucursal: "Las Condes", estado: "Completado sin diferencias", skus: 28, uTotales: "2.100",
+  { id: "RO-BARRA-215", creacion: "22/02/2026", fechaAgendada: "26/02/2026 08:30", seller: "Gohard", sucursal: "Las Condes", estado: "Completada", skus: 28, uTotales: "2.100",
     tags: makeTags({ sinDiferencias: 2100 }) },
 
   // ─── Adicionales ────────────────────────────────────────────────────────────
@@ -143,9 +151,9 @@ const ORDENES: Orden[] = [
   { id: "RO-BARRA-220", creacion: "26/02/2026", fechaAgendada: "02/03/2026 09:00", seller: "BioNature", sucursal: "La Reina", estado: "Pendiente de aprobación", skus: 11, uTotales: "610",
     tags: makeTags({ conDiferencias: 15 }) },
   { id: "RO-BARRA-221", creacion: "24/02/2026", fechaAgendada: "28/02/2026 14:00", seller: "Gohard", sucursal: "Providencia", estado: "Cancelado", skus: 5, uTotales: "200", comentarios: "Proveedor no se presentó en la fecha acordada." },
-  { id: "RO-BARRA-222", creacion: "23/02/2026", fechaAgendada: "27/02/2026 11:00", seller: "Le Vice", sucursal: "Lo Barnechea", estado: "Completado con diferencias", skus: 30, uTotales: "2.200",
+  { id: "RO-BARRA-222", creacion: "23/02/2026", fechaAgendada: "27/02/2026 11:00", seller: "Le Vice", sucursal: "Lo Barnechea", estado: "Completada", skus: 30, uTotales: "2.200",
     tags: makeTags({ sinDiferencias: 2050, conDiferencias: 95, noPickeables: 55 }) },
-  { id: "RO-BARRA-223", creacion: "21/02/2026", fechaAgendada: "25/02/2026 16:00", seller: "Extra Life", sucursal: "Las Condes", estado: "Completado sin diferencias", skus: 18, uTotales: "1.360",
+  { id: "RO-BARRA-223", creacion: "21/02/2026", fechaAgendada: "25/02/2026 16:00", seller: "Extra Life", sucursal: "Las Condes", estado: "Completada", skus: 18, uTotales: "1.360",
     tags: makeTags({ sinDiferencias: 1360 }) },
   { id: "RO-BARRA-224", creacion: "04/03/2026", fechaAgendada: "09/03/2026 12:00", seller: "VitaFit", sucursal: "Providencia", estado: "Recepcionado en bodega", skus: 8, uTotales: "480", pallets: 2, bultos: 5, comentarios: "Productos frágiles, manipular con cuidado." },
   { id: "RO-BARRA-225", creacion: "07/03/2026", fechaAgendada: "—", seller: "NutriPro", sucursal: "La Reina", estado: "Creado", skus: 21, uTotales: "1.580" },
@@ -158,9 +166,8 @@ const TABS = [
   "Programado",
   "Recepción en bodega",
   "En proceso de conteo",
-  "Parcialmente recepcionada",
-  "Completada sin diferencias",
-  "Completada con diferencias",
+  "Pendiente de aprobación",
+  "Completada",
   "Cancelada",
 ] as const;
 
@@ -170,9 +177,8 @@ const TAB_STATUS: Record<string, Status | null> = {
   "Programado":                   "Programado",
   "Recepción en bodega":          "Recepcionado en bodega",
   "En proceso de conteo":         "En proceso de conteo",
-  "Parcialmente recepcionada":    "Pendiente de aprobación",
-  "Completada sin diferencias":   "Completado sin diferencias",
-  "Completada con diferencias":   "Completado con diferencias",
+  "Pendiente de aprobación":      "Pendiente de aprobación",
+  "Completada":                   "Completada",
   "Cancelada":                    "Cancelado",
 };
 
@@ -219,25 +225,33 @@ type MenuItem = {
   icon?: React.ComponentType<{ className?: string }>;
   danger?: boolean;
   href?: string;
+  onClick?: () => void;
 };
 type PrimaryAction = {
   tooltip: string;                                         // 1-2 words shown on hover
   icon: React.ComponentType<{ className?: string }>;
   href?: string;                                           // navigation target (uses Link)
+  showLabel?: boolean;                                     // show text label next to icon
 };
 type ActionConfig = { primary?: PrimaryAction; menu: MenuItem[] };
 
-function getActions(estado: Status, id: string): ActionConfig {
+function getActions(estado: Status, id: string, orden?: Orden, onCancel?: (id: string) => void): ActionConfig {
+  const cancelItem: MenuItem = { label: "Cancelar", icon: SlashCircle01, danger: true, onClick: () => onCancel?.(id) };
+
   switch (estado) {
-    case "Creado":
+    case "Creado": {
+      const params = new URLSearchParams({ startStep: "2", mode: "completar", orId: id });
+      if (orden?.sucursal) params.set("sucursal", orden.sucursal);
+      if (orden?.seller)   params.set("seller", orden.seller);
       return {
-        primary: { tooltip: "Agendar", icon: CalendarPlus01, href: "/recepciones/crear?startStep=2" },
+        primary: { tooltip: "Completar", icon: CalendarPlus01, href: `/recepciones/crear?${params}` },
         menu: [
-          { label: "Ver",      icon: Eye },
-          { label: "Editar",   icon: Edit01 },
-          { label: "Cancelar", icon: SlashCircle01, danger: true },
+          { label: "Ver",      icon: Eye,    href: `/recepciones/${id}` },
+          { label: "Editar",   icon: Edit01, href: `/recepciones/${id}` },
+          cancelItem,
         ],
       };
+    }
     case "Programado":
       return {
         primary: { tooltip: "Recibir", icon: PackageCheck },
@@ -245,7 +259,7 @@ function getActions(estado: Status, id: string): ActionConfig {
           { label: "Ver",       icon: Eye },
           { label: "Editar",    icon: Edit01 },
           { label: "Reagendar", icon: CalendarPlus01, href: "/recepciones/crear?startStep=3&mode=reagendar" },
-          { label: "Cancelar",  icon: SlashCircle01, danger: true },
+          cancelItem,
         ],
       };
     case "Recepcionado en bodega":
@@ -254,7 +268,7 @@ function getActions(estado: Status, id: string): ActionConfig {
         menu: [
           { label: "Ver",      icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
           { label: "Editar",   icon: Edit01 },
-          { label: "Cancelar", icon: SlashCircle01, danger: true },
+          cancelItem,
         ],
       };
     case "En proceso de conteo":
@@ -273,154 +287,297 @@ function getActions(estado: Status, id: string): ActionConfig {
           { label: "Devolver a conteo",        icon: LockUnlocked01 },
         ],
       };
-    default: // Completado sin diferencias, Completado con diferencias, Cancelado
+    case "Completada":
+      return {
+        primary: { tooltip: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
+        menu: [],
+      };
+    default: // Cancelado
       return { menu: [{ label: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` }] };
   }
 }
 
+// ─── Stepper ([-] value [+]) ──────────────────────────────────────────────────
+function Stepper({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  return (
+    <div className="flex flex-col items-center">
+      <p className="text-sm font-semibold text-neutral-700 mb-1.5">{label}</p>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => onChange(Math.max(0, value - 1))}
+          className="w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700 transition-colors active:scale-95"
+        >
+          <Minus className="w-4 h-4" />
+        </button>
+        <input
+          type="number"
+          min={0}
+          value={value}
+          onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v) && v >= 0) onChange(v); }}
+          className="w-14 px-1 py-1 text-center text-sm font-bold text-neutral-900 bg-white border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-200 tabular-nums"
+        />
+        <button
+          type="button"
+          onClick={() => onChange(value + 1)}
+          className="w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700 transition-colors active:scale-95"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Recibir Modal ────────────────────────────────────────────────────────────
+type ScanStatus = "ok" | "duplicate" | "unknown";
+type ScanEntry = { code: string; type: "Pallet" | "Bulto"; status: ScanStatus };
+
 function RecebirModal({ orden, onCancel, onConfirm }: {
   orden: Orden;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
-  const [palletsRecibidos, setPalletsRecibidos] = useState<string>("");
-  const [bultosRecibidos,  setBultosRecibidos]  = useState<string>("");
-
   const declaredPallets = orden.pallets ?? 0;
   const declaredBultos  = orden.bultos  ?? 0;
-  const hasValues       = palletsRecibidos !== "" && bultosRecibidos !== "";
-  const parsedPallets   = parseInt(palletsRecibidos) || 0;
-  const parsedBultos    = parseInt(bultosRecibidos)  || 0;
-  const palletsMatch    = palletsRecibidos !== "" && parsedPallets === declaredPallets;
-  const bultosMatch     = bultosRecibidos  !== "" && parsedBultos  === declaredBultos;
-  const hasDiff         = hasValues && (!palletsMatch || !bultosMatch);
 
-  const maxPallets = Math.max(50, declaredPallets * 2);
-  const maxBultos  = Math.max(500, declaredBultos  * 2);
+  // Registros escaneados
+  const [entries, setEntries] = useState<ScanEntry[]>([]);
+  const [showDiffAlert, setShowDiffAlert] = useState(false);
+
+  // Solo contar entries válidos (ok) para progreso
+  const validEntries     = entries.filter(e => e.status === "ok");
+  const palletsRecibidos = validEntries.filter(e => e.type === "Pallet").length;
+  const bultosRecibidos  = validEntries.filter(e => e.type === "Bulto").length;
+
+  const palletsPct = declaredPallets > 0 ? Math.min(100, (palletsRecibidos / declaredPallets) * 100) : 0;
+  const bultosPct  = declaredBultos  > 0 ? Math.min(100, (bultosRecibidos  / declaredBultos)  * 100) : 0;
+
+  // Diferencias
+  const palletsDiff = palletsRecibidos - declaredPallets;
+  const bultosDiff  = bultosRecibidos  - declaredBultos;
+  const coincide    = palletsDiff === 0 && bultosDiff === 0;
+  const hasDiff     = validEntries.length > 0 && !coincide;
+
+  // Texto de diferencias para la alerta
+  const diffParts: string[] = [];
+  if (palletsDiff !== 0) diffParts.push(`${palletsDiff > 0 ? "+" : ""}${palletsDiff} pallet${Math.abs(palletsDiff) !== 1 ? "s" : ""}`);
+  if (bultosDiff !== 0)  diffParts.push(`${bultosDiff > 0 ? "+" : ""}${bultosDiff} bulto${Math.abs(bultosDiff) !== 1 ? "s" : ""}`);
+
+  const handleConfirm = () => {
+    if (hasDiff) {
+      setShowDiffAlert(true);
+    } else {
+      onConfirm();
+    }
+  };
+
+  // Mock scan — simula ~80% ok, ~10% duplicado, ~10% desconocido
+  const handleScan = (type: "Pallet" | "Bulto") => {
+    const prefix = type === "Pallet" ? "PLT" : "BLT";
+    const next = entries.filter(e => e.type === type && e.status === "ok").length + 1;
+    const code = `${prefix}-${String(next).padStart(3, "0")}`;
+    const rand = Math.random();
+
+    if (rand < 0.1) {
+      // Simular código desconocido
+      const unknownCode = `UNK-${String(Math.floor(Math.random() * 999)).padStart(3, "0")}`;
+      setEntries(prev => [...prev, { code: unknownCode, type, status: "unknown" }]);
+    } else if (rand < 0.2 && entries.some(e => e.type === type && e.status === "ok")) {
+      // Simular duplicado — reusar último código válido
+      const lastValid = [...entries].reverse().find(e => e.type === type && e.status === "ok");
+      if (lastValid) {
+        setEntries(prev => [...prev, { code: lastValid.code, type, status: "duplicate" }]);
+      } else {
+        setEntries(prev => [...prev, { code, type, status: "ok" }]);
+      }
+    } else {
+      setEntries(prev => [...prev, { code, type, status: "ok" }]);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden">
 
-        {/* Header */}
-        <div className="flex items-start justify-between px-6 pt-6 pb-4">
-          <h3 className="text-xl font-bold text-neutral-900">
-            Recibir Orden <span className="font-mono">#{orden.id}</span>
-          </h3>
-          <button onClick={onCancel} className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300 ml-4 flex-shrink-0">
+        {/* ── Header ──────────────────────────────────────────── */}
+        <div className="flex items-start justify-between px-5 pt-5 pb-3 flex-shrink-0">
+          <div>
+            <p className="text-xs font-medium text-neutral-500">Recepción</p>
+            <h3 className="text-base font-bold text-neutral-900 font-mono leading-tight">{orden.id}</h3>
+            <p className="text-xs font-semibold text-neutral-700 mt-0.5">{orden.seller}</p>
+          </div>
+          <button onClick={onCancel} className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300 ml-4 flex-shrink-0 mt-0.5">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="px-6 pb-2 space-y-4">
-          <p className="text-sm font-semibold text-neutral-800">Detalles de la recepción:</p>
+        {/* ── Scrollable body ─────────────────────────────────── */}
+        <div className="overflow-y-auto flex-1 min-h-0">
 
-          {/* Info card */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <div className="col-span-2 sm:col-span-1 bg-neutral-50 rounded-xl px-4 py-2">
-              <p className="text-[11px] text-neutral-400 mb-1 uppercase tracking-wider font-medium">Seller</p>
-              <p className="text-sm font-bold text-neutral-900 truncate">{orden.seller}</p>
-            </div>
-            <div className="bg-neutral-50 rounded-xl px-4 py-2">
-              <p className="text-[11px] text-neutral-400 mb-1 uppercase tracking-wider font-medium">Estado</p>
-              <StatusBadge status={orden.estado} />
-            </div>
-            <div className="bg-neutral-50 rounded-xl px-4 py-2">
-              <p className="text-[11px] text-neutral-400 mb-1 uppercase tracking-wider font-medium">Fecha programada</p>
-              <p className="text-sm font-semibold text-neutral-700 whitespace-nowrap">{orden.fechaAgendada}</p>
-            </div>
-            <div className="bg-neutral-50 rounded-xl px-4 py-2">
-              <p className="text-[11px] text-neutral-400 mb-1 uppercase tracking-wider font-medium">Pallets</p>
-              <p className="text-sm font-bold text-neutral-900">{declaredPallets}</p>
-            </div>
-            <div className="bg-neutral-50 rounded-xl px-4 py-2">
-              <p className="text-[11px] text-neutral-400 mb-1 uppercase tracking-wider font-medium">Bultos</p>
-              <p className="text-sm font-bold text-neutral-900">{declaredBultos}</p>
-            </div>
-          </div>
-
-          {/* Comentarios (read-only, from OR creation) */}
-          {orden.comentarios && (
-            <div>
-              <label className="block text-xs text-neutral-400 font-medium mb-1.5">
-                Comentarios adicionales
-              </label>
-              <div className="w-full px-3 py-2.5 border border-neutral-100 rounded-lg text-sm text-neutral-600 bg-neutral-50 min-h-[72px]">
-                {orden.comentarios}
+          {/* ── Carga esperada (progress bars en grid) ────────── */}
+          <div className="px-5 pb-4 pt-1">
+            <div className="grid grid-cols-2 gap-4">
+              {/* Pallets */}
+              <div>
+                <div className="flex items-baseline justify-between mb-1">
+                  <p className="text-xs font-semibold text-neutral-500">Pallets</p>
+                  <p className="text-xs tabular-nums">
+                    <span className="font-bold text-neutral-900">{palletsRecibidos}</span>
+                    <span className="text-neutral-400 mx-0.5">/</span>
+                    <span className="text-neutral-400">{declaredPallets}</span>
+                  </p>
+                </div>
+                <div className="w-full h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${palletsPct >= 100 ? "bg-green-500" : "bg-primary-500"}`}
+                    style={{ width: `${palletsPct}%` }}
+                  />
+                </div>
               </div>
-            </div>
-          )}
 
-          {/* Dropdowns */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-neutral-500 font-medium mb-1.5">Cantidad de pallets</label>
-              <div className="relative">
-                <select
-                  value={palletsRecibidos}
-                  onChange={e => setPalletsRecibidos(e.target.value)}
-                  className="w-full appearance-none px-3 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-200 bg-white pr-9"
-                >
-                  <option value="">Seleccione</option>
-                  {Array.from({ length: maxPallets + 1 }, (_, i) => (
-                    <option key={i} value={String(i)}>{i}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs text-neutral-500 font-medium mb-1.5">Cantidad de bultos</label>
-              <div className="relative">
-                <select
-                  value={bultosRecibidos}
-                  onChange={e => setBultosRecibidos(e.target.value)}
-                  className="w-full appearance-none px-3 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-200 bg-white pr-9"
-                >
-                  <option value="">Seleccione</option>
-                  {Array.from({ length: maxBultos + 1 }, (_, i) => (
-                    <option key={i} value={String(i)}>{i}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+              {/* Bultos */}
+              <div>
+                <div className="flex items-baseline justify-between mb-1">
+                  <p className="text-xs font-semibold text-neutral-500">Bultos</p>
+                  <p className="text-xs tabular-nums">
+                    <span className="font-bold text-neutral-900">{bultosRecibidos}</span>
+                    <span className="text-neutral-400 mx-0.5">/</span>
+                    <span className="text-neutral-400">{declaredBultos}</span>
+                  </p>
+                </div>
+                <div className="w-full h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${bultosPct >= 100 ? "bg-green-500" : "bg-primary-500"}`}
+                    style={{ width: `${bultosPct}%` }}
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Mismatch warning */}
-          {hasDiff && (
-            <div className="flex items-start gap-2.5 px-3 py-2.5 bg-orange-50 border border-orange-200 rounded-lg">
-              <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-orange-700">
-                Hay diferencias entre lo declarado y lo recibido. Puedes continuar de todas formas.
-              </p>
+          {/* ── Divider ─ */}
+          <div className="border-t border-neutral-100" />
+
+          {/* ── Escanear QR (cámara simulada + botones) ────────── */}
+          <div className="px-5 py-4 space-y-3">
+            <p className="text-xs font-semibold text-neutral-500">Escanear QR</p>
+
+            {/* Cámara simulada — compacta */}
+            <div className="w-full aspect-[16/9] bg-neutral-900 rounded-xl flex flex-col items-center justify-center gap-2 relative overflow-hidden">
+              <div className="absolute inset-4 border-2 border-white/15 rounded-lg" />
+              <div className="absolute inset-4 flex items-center justify-center">
+                <div className="w-24 h-24 border-2 border-white/40 rounded-lg" />
+              </div>
+              <QrCode02 className="w-8 h-8 text-white/40 relative z-10" />
+              <p className="text-[11px] text-white/40 relative z-10">Escanea QR de pallet o bulto</p>
             </div>
-          )}
+
+            {/* Botones de simulación */}
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="secondary" size="sm" onClick={() => handleScan("Bulto")} iconLeft={<QrCode02 className="w-3.5 h-3.5" />}>
+                Escanear bulto
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => handleScan("Pallet")} iconLeft={<QrCode02 className="w-3.5 h-3.5" />}>
+                Escanear pallet
+              </Button>
+            </div>
+          </div>
+
+          {/* ── Divider ─ */}
+          <div className="border-t border-neutral-100" />
+
+          {/* ── Carga registrada ───────────────────────────────── */}
+          <div className="px-5 py-4">
+            <p className="text-xs font-semibold text-neutral-500 mb-2">Carga registrada</p>
+            {entries.length === 0 ? (
+              <p className="text-xs text-neutral-400">Sin registros escaneados</p>
+            ) : (
+              <div className={`space-y-1.5 ${entries.length > 3 ? "max-h-[5.5rem] overflow-y-auto table-scroll" : ""}`}>
+                {[...entries].reverse().map((entry, i) => (
+                  <div key={`${entry.code}-${i}`} className="flex items-center gap-1.5">
+                    {entry.status === "ok" && (
+                      <>
+                        <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                        <p className="text-xs text-neutral-700">
+                          <span className="font-medium">{entry.type}</span>{" "}
+                          <span className="font-mono font-semibold text-neutral-800">{entry.code}</span>{" "}
+                          <span className="text-neutral-500">registrado</span>
+                        </p>
+                      </>
+                    )}
+                    {entry.status === "duplicate" && (
+                      <>
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                        <p className="text-xs text-amber-600 font-medium">Código ya escaneado</p>
+                      </>
+                    )}
+                    {entry.status === "unknown" && (
+                      <>
+                        <XCircle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
+                        <p className="text-xs text-red-600 font-medium">Código no pertenece a esta orden</p>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 mt-2 border-t border-neutral-100">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 font-medium transition-colors duration-300"
-          >
-            Cerrar
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={!hasValues}
-            className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors duration-300 flex items-center gap-2 ${
-              hasValues
-                ? "bg-primary-500 hover:bg-primary-600 text-white"
-                : "bg-neutral-100 text-neutral-400 cursor-not-allowed"
-            }`}
-          >
-            <CheckCircle className="w-4 h-4" />
+        {/* ── Status + Footer ─────────────────────────────────── */}
+        <div className="border-t border-neutral-100 px-5 pt-3 pb-5 flex-shrink-0 space-y-2.5">
+          {/* Status message */}
+          {entries.length > 0 && (
+            coincide ? (
+              <div className="flex items-center gap-1.5 justify-center">
+                <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                <p className="text-xs font-medium text-green-600">Coincide con la orden</p>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 justify-center">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                <p className="text-xs font-medium text-amber-600">
+                  Diferencia con lo esperado
+                </p>
+              </div>
+            )
+          )}
+
+          <Button variant="primary" size="md" onClick={handleConfirm} disabled={validEntries.length === 0} className="w-full" iconLeft={<CheckCircle className="w-4 h-4" />}>
             Confirmar recepción
-          </button>
+          </Button>
         </div>
+
+        {/* ── Alerta de diferencias ───────────────────────────── */}
+        {showDiffAlert && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-amber-500" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-neutral-900">Recepción con diferencias</h4>
+                  <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
+                    ¿Estás seguro de finalizar la recepción a bodega con{" "}
+                    <span className="font-semibold text-neutral-700">{diffParts.join(" y ")}</span>
+                    {" "}de diferencia?
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="secondary" size="md" onClick={() => setShowDiffAlert(false)} className="flex-1">
+                  Cancelar
+                </Button>
+                <Button variant="primary" size="md" onClick={() => { setShowDiffAlert(false); onConfirm(); }} className="flex-1">
+                  Confirmar
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
@@ -428,14 +585,14 @@ function RecebirModal({ orden, onCancel, onConfirm }: {
 }
 
 // ─── Actions cell ─────────────────────────────────────────────────────────────
-function ActionsCell({ orden, onPrimaryAction }: { orden: Orden; onPrimaryAction?: () => void }) {
+function ActionsCell({ orden, onPrimaryAction, onCancel }: { orden: Orden; onPrimaryAction?: () => void; onCancel?: (id: string) => void }) {
   const router        = useRouter();
   const [menuPos,    setMenuPos]    = useState<{ top: number; right: number } | null>(null);
   const [tipVisible, setTipVisible] = useState(false);
   const [mounted,    setMounted]    = useState(false);
   const dotsRef       = useRef<HTMLButtonElement>(null);
   const primaryWrap   = useRef<HTMLDivElement>(null);
-  const { primary, menu } = getActions(orden.estado, orden.id);
+  const { primary, menu } = getActions(orden.estado, orden.id, orden, onCancel);
   const Icon = primary?.icon;
 
   // Portal only works client-side
@@ -474,7 +631,11 @@ function ActionsCell({ orden, onPrimaryAction }: { orden: Orden; onPrimaryAction
           onMouseEnter={() => setTipVisible(true)}
           onMouseLeave={() => setTipVisible(false)}
         >
-          {primary.href ? (
+          {primary.showLabel ? (
+            <Button variant="secondary" size="sm" href={primary.href} iconLeft={<Icon className="w-3.5 h-3.5" />}>
+              {primary.tooltip}
+            </Button>
+          ) : primary.href ? (
             <Link href={primary.href} className={btnCls}>
               <Icon className="w-4 h-4" />
             </Link>
@@ -486,15 +647,17 @@ function ActionsCell({ orden, onPrimaryAction }: { orden: Orden; onPrimaryAction
         </div>
       )}
 
-      <button
-        ref={dotsRef}
-        onClick={toggleMenu}
-        className={`p-1.5 rounded-lg transition-colors duration-300 ${
-          menuPos ? "bg-neutral-100 text-neutral-700" : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
-        }`}
-      >
-        <DotsVertical className="w-4 h-4" />
-      </button>
+      {menu.length > 0 && (
+        <button
+          ref={dotsRef}
+          onMouseDown={toggleMenu}
+          className={`p-1.5 rounded-lg transition-colors duration-300 ${
+            menuPos ? "bg-neutral-100 text-neutral-700" : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
+          }`}
+        >
+          <DotsVertical className="w-4 h-4" />
+        </button>
+      )}
 
       {/* ── Tooltip — portal to body so sticky/overflow never clips it ── */}
       {mounted && tipPos && primary && createPortal(
@@ -529,7 +692,7 @@ function ActionsCell({ orden, onPrimaryAction }: { orden: Orden; onPrimaryAction
             return (
               <button
                 key={item.label}
-                onClick={() => { setMenuPos(null); if (item.href) router.push(item.href); }}
+                onClick={() => { setMenuPos(null); if (item.href) router.push(item.href); item.onClick?.(); }}
                 className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-colors duration-300 ${
                   item.danger ? "text-red-500 hover:bg-red-50" : "text-neutral-700 hover:bg-neutral-50"
                 } ${hasSeparator ? "border-t border-neutral-100 mt-1 pt-2.5" : ""}`}
@@ -625,15 +788,15 @@ function OrdenesPageInner() {
   const [activeTab,         setActiveTab]         = useState<string>("Todas");
   const [showToast,         setShowToast]         = useState(false);
   const [toastMsg,          setToastMsg]          = useState({ title: "", subtitle: "" });
-  const [showInfo,          setShowInfo]          = useState(false);
   const [showFilters,       setShowFilters]       = useState(false);
   const [search,            setSearch]            = useState("");
-  const [orStatusOverrides, setOrStatusOverrides] = useState<Record<string, Status>>({});
+  const [orStatusOverrides, setOrStatusOverrides] = useState<Record<string, { estado: Status; fechaAgendada?: string }>>({});
   const [recibirOrden,      setRecibirOrden]      = useState<Orden | null>(null);
   const [createdOrs,        setCreatedOrs]        = useState<Orden[]>([]);
   const [showQrScanner,     setShowQrScanner]     = useState(false);
   const [cardMenuId,        setCardMenuId]        = useState<string | null>(null);
   const [bottomMenuOpen,    setBottomMenuOpen]    = useState(false);
+  const [cancelTarget,      setCancelTarget]      = useState<string | null>(null);
 
   // Close card menu / bottom menu on outside click
   useEffect(() => {
@@ -645,15 +808,15 @@ function OrdenesPageInner() {
 
   // Read per-OR status overrides + created ORs from localStorage
   useEffect(() => {
-    const overrides: Record<string, Status> = {};
+    const overrides: Record<string, { estado: Status; fechaAgendada?: string }> = {};
 
     // Overrides for static mock ORs
     for (const orden of ORDENES) {
       try {
         const stored = localStorage.getItem(`amplifica_or_${orden.id}`);
         if (stored) {
-          const { estado } = JSON.parse(stored) as { estado: Status };
-          if (estado) overrides[orden.id] = estado;
+          const parsed = JSON.parse(stored) as { estado: Status; fechaAgendada?: string };
+          if (parsed.estado) overrides[orden.id] = parsed;
         }
       } catch { /* ignore */ }
     }
@@ -668,8 +831,8 @@ function OrdenesPageInner() {
           try {
             const stored = localStorage.getItem(`amplifica_or_${or.id}`);
             if (stored) {
-              const { estado } = JSON.parse(stored) as { estado: Status };
-              if (estado) overrides[or.id] = estado;
+              const p = JSON.parse(stored) as { estado: Status; fechaAgendada?: string };
+              if (p.estado) overrides[or.id] = p;
             }
           } catch { /* ignore */ }
         }
@@ -699,7 +862,8 @@ function OrdenesPageInner() {
   // Merge created ORs with static data, apply localStorage overrides, and enrich with OR_STATS
   const ordenesEffective = useMemo(() =>
     [...createdOrs, ...ORDENES].map(o => {
-      const enriched = orStatusOverrides[o.id] ? { ...o, estado: orStatusOverrides[o.id] } : { ...o };
+      const override = orStatusOverrides[o.id];
+      const enriched = override ? { ...o, estado: override.estado, ...(override.fechaAgendada ? { fechaAgendada: override.fechaAgendada } : {}) } : { ...o };
       const stats = OR_STATS[o.id];
       if (stats && !enriched.progreso) {
         enriched.progreso = { contadas: stats.contadas, total: stats.total };
@@ -719,11 +883,13 @@ function OrdenesPageInner() {
     return { id: o.id, seller: o.seller, sucursal: o.sucursal, fechaAgendada: o.fechaAgendada, estado: o.estado, skus: o.skus, uTotales: o.uTotales, pallets: o.pallets, bultos: o.bultos };
   }, [ordenesEffective]);
 
-  const handleQrConfirm = useCallback((orId: string) => {
-    // Persist the new estado to localStorage
+  const handleQrConfirm = useCallback((orId: string, labelCount: number) => {
     localStorage.setItem(`amplifica_or_${orId}`, JSON.stringify({ estado: "Recepcionado en bodega" }));
-    setOrStatusOverrides(prev => ({ ...prev, [orId]: "Recepcionado en bodega" as Status }));
-    setToastMsg({ title: "Orden recepcionada", subtitle: `${orId} cambió a Recepcionado en bodega` });
+    setOrStatusOverrides(prev => ({ ...prev, [orId]: { estado: "Recepcionado en bodega" as Status } }));
+    setToastMsg({
+      title: "Orden recepcionada en bodega",
+      subtitle: `${orId} — ${labelCount} etiqueta${labelCount !== 1 ? "s" : ""} QR enviada${labelCount !== 1 ? "s" : ""} a impresión`,
+    });
     setShowToast(true);
   }, []);
 
@@ -732,7 +898,7 @@ function OrdenesPageInner() {
   const allSucursales = useMemo(() => [...new Set(ordenesEffective.map(o => o.sucursal))].sort(), [ordenesEffective]);
 
   // ── Active filter count (for badge) ──
-  const activeFilterCount = filterSellers.size + filterSucursales.size + filterTagTypes.size;
+  const activeFilterCount = filterTagTypes.size;
 
   // ── Toggle helper ──
   const toggleInSet = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, val: string) => {
@@ -744,8 +910,6 @@ function OrdenesPageInner() {
   };
 
   const clearAllFilters = () => {
-    setFilterSellers(new Set());
-    setFilterSucursales(new Set());
     setFilterTagTypes(new Set());
   };
 
@@ -757,6 +921,10 @@ function OrdenesPageInner() {
       router.replace("/recepciones");
     } else if (searchParams.get("rescheduled") === "1") {
       setToastMsg({ title: "Orden de recepción reagendada", subtitle: "La fecha y hora han sido actualizadas" });
+      setShowToast(true);
+      router.replace("/recepciones");
+    } else if (searchParams.get("completed") === "1") {
+      setToastMsg({ title: "Orden completada", subtitle: "La orden ha sido completada y programada correctamente" });
       setShowToast(true);
       router.replace("/recepciones");
     }
@@ -899,7 +1067,7 @@ function OrdenesPageInner() {
 
 
   return (
-    <div className="p-4 lg:p-6 min-w-0 pb-24 sm:pb-4 lg:pb-6">
+    <div className="p-4 lg:p-6 min-w-0 pb-24 sm:pb-4 lg:pb-6 max-w-[1680px] mx-auto">
 
       {/* Toast */}
       {showToast && (
@@ -915,40 +1083,6 @@ function OrdenesPageInner() {
         </div>
       )}
 
-      {/* ── Info modal ── */}
-      {showInfo && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ background: "rgba(0,0,0,0.35)" }}
-          onMouseDown={() => setShowInfo(false)}
-        >
-          <div
-            className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4"
-            onMouseDown={e => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 bg-primary-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <InfoCircle className="w-5 h-5 text-primary-500" />
-                </div>
-                <h2 className="text-base font-semibold text-neutral-900">Órdenes de Recepción</h2>
-              </div>
-              <button onClick={() => setShowInfo(false)} className="text-neutral-400 hover:text-neutral-600 flex-shrink-0 mt-0.5">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <p className="text-sm text-neutral-600 leading-relaxed">
-              Las <strong>Órdenes de Recepción (OR)</strong> gestionan la entrada de mercancía al centro de distribución. Cada OR registra el proceso completo: desde la programación de fecha de entrega hasta la verificación del inventario recibido.
-            </p>
-            <ul className="mt-3 space-y-1.5 text-sm text-neutral-500">
-              <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" /> Programa citas de descarga con horario</li>
-              <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" /> Declara SKUs y unidades antes de la recepción</li>
-              <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" /> Rastrea diferencias y productos no pickeables</li>
-            </ul>
-          </div>
-        </div>
-      )}
-
       {/* ── Recibir OR modal ── */}
       {recibirOrden && (
         <RecebirModal
@@ -960,7 +1094,7 @@ function OrdenesPageInner() {
             try {
               localStorage.setItem(`amplifica_or_${targetId}`, JSON.stringify({ estado: newStatus }));
             } catch { /* ignore */ }
-            setOrStatusOverrides(prev => ({ ...prev, [targetId]: newStatus }));
+            setOrStatusOverrides(prev => ({ ...prev, [targetId]: { estado: newStatus } }));
             setRecibirOrden(null);
             setToastMsg({
               title: "Orden recepcionada en bodega",
@@ -969,6 +1103,56 @@ function OrdenesPageInner() {
             setShowToast(true);
           }}
         />
+      )}
+
+      {/* ── Cancel OR modal ── */}
+      {cancelTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ background: "rgba(0,0,0,0.4)" }}
+          onClick={() => setCancelTarget(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex justify-end mb-2">
+              <button onClick={() => setCancelTarget(null)} className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-4 mx-auto">
+              <SlashCircle01 className="w-7 h-7 text-red-500" />
+            </div>
+            <h3 className="text-lg font-bold text-neutral-900 text-center mb-1">¿Cancelar orden?</h3>
+            <p className="text-sm text-neutral-500 text-center mb-6">
+              La orden <span className="font-semibold text-neutral-700">{cancelTarget}</span> será cancelada y no podrá procesarse.
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  try {
+                    localStorage.setItem(`amplifica_or_${cancelTarget}`, JSON.stringify({ estado: "Cancelado" }));
+                  } catch { /* ignore */ }
+                  setOrStatusOverrides(prev => ({ ...prev, [cancelTarget]: { estado: "Cancelado" as Status } }));
+                  setToastMsg({ title: "Orden cancelada", subtitle: `${cancelTarget} fue cancelada correctamente` });
+                  setShowToast(true);
+                  setCancelTarget(null);
+                }}
+                className="w-full h-11 flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
+              >
+                <SlashCircle01 className="w-4 h-4" />
+                Sí, cancelar orden
+              </button>
+              <button
+                onClick={() => setCancelTarget(null)}
+                className="w-full h-11 flex items-center justify-center text-neutral-600 text-sm font-medium hover:bg-neutral-50 rounded-lg transition-colors duration-300"
+              >
+                Volver
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Filter modal ── */}
@@ -1005,22 +1189,6 @@ function OrdenesPageInner() {
 
             {/* Body */}
             <div className="p-5 space-y-5 overflow-y-auto max-h-[60vh]">
-              {/* Seller */}
-              <FilterSection
-                title="Seller"
-                options={allSellers}
-                selected={filterSellers}
-                onToggle={v => toggleInSet(setFilterSellers, v)}
-              />
-
-              {/* Sucursales */}
-              <FilterSection
-                title="Sucursal"
-                options={allSucursales}
-                selected={filterSucursales}
-                onToggle={v => toggleInSet(setFilterSucursales, v)}
-              />
-
               {/* Tags de resultado */}
               <FilterSection
                 title="Estado de productos"
@@ -1065,12 +1233,15 @@ function OrdenesPageInner() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-5 gap-3 sm:gap-4">
         <div className="flex items-center gap-2 min-w-0">
           <h1 className="text-xl sm:text-2xl font-bold text-neutral-900" style={NW}>Órdenes de Recepción</h1>
-          <button
-            onClick={() => setShowInfo(true)}
-            className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300"
-          >
-            <InfoCircle className="w-5 h-5" />
-          </button>
+          <PageInfoModal
+            title="Órdenes de Recepción"
+            description={<>Las <strong>Órdenes de Recepción (OR)</strong> gestionan la entrada de mercancía al centro de distribución. Cada OR registra el proceso completo: desde la programación de fecha de entrega hasta la verificación del inventario recibido.</>}
+            features={[
+              "Programa citas de descarga con horario",
+              "Declara SKUs y unidades antes de la recepción",
+              "Rastrea diferencias y productos no pickeables",
+            ]}
+          />
           {/* Dots menu — mobile only (Exportar + Recepción sin agenda) */}
           <div className="relative sm:hidden ml-auto">
             <button
@@ -1209,7 +1380,7 @@ function OrdenesPageInner() {
           {/* ── Filters button — opens filter modal ── */}
           <button
             onClick={() => setShowFilters(true)}
-            className={`relative p-2.5 border border-transparent rounded-lg transition-colors duration-300 ${
+            className={`relative h-9 w-9 flex items-center justify-center border border-transparent rounded-lg transition-colors duration-300 ${
               activeFilterCount > 0
                 ? "bg-primary-50 text-primary-500 hover:bg-primary-100"
                 : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
@@ -1228,7 +1399,7 @@ function OrdenesPageInner() {
 
           <Link
             href="/recepciones/columnas"
-            className="hidden sm:flex p-2 bg-neutral-100 rounded-lg hover:bg-neutral-200 items-center justify-center transition-colors duration-300"
+            className="hidden sm:flex h-9 w-9 bg-neutral-100 rounded-lg hover:bg-neutral-200 items-center justify-center transition-colors duration-300"
             title="Editor de columnas"
           >
             <LayoutGrid01 className="w-4 h-4 text-neutral-500" />
@@ -1241,7 +1412,7 @@ function OrdenesPageInner() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Buscar OR..."
-              className="pl-9 pr-8 py-2 bg-neutral-100 rounded-lg text-sm text-neutral-700 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200 w-52"
+              className="pl-9 pr-8 py-2 h-9 bg-neutral-100 rounded-lg text-sm text-neutral-700 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200 w-52"
             />
             {search && (
               <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
@@ -1273,22 +1444,6 @@ function OrdenesPageInner() {
       {activeFilterCount > 0 && (
         <div className="flex items-center gap-2 mb-3 flex-wrap">
           <span className="text-xs text-neutral-500 font-medium">Filtros activos:</span>
-          {[...filterSellers].map(s => (
-            <span key={s} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-primary-50 text-primary-600 border border-primary-200 rounded-full font-medium">
-              {s}
-              <button onClick={() => toggleInSet(setFilterSellers, s)} className="ml-0.5 text-primary-400 hover:text-primary-500">
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
-          {[...filterSucursales].map(s => (
-            <span key={s} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-primary-50 text-primary-600 border border-primary-200 rounded-full font-medium">
-              {s}
-              <button onClick={() => toggleInSet(setFilterSucursales, s)} className="ml-0.5 text-primary-400 hover:text-primary-500">
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
           {[...filterTagTypes].map(k => {
             const opt = TAG_FILTER_OPTIONS.find(t => t.key === k);
             const ChipIcon = opt?.Icon;
@@ -1316,7 +1471,7 @@ function OrdenesPageInner() {
           </div>
         ) : (
           paginatedRows.map((orden, i) => {
-            const actions = getActions(orden.estado, orden.id);
+            const actions = getActions(orden.estado, orden.id, orden, setCancelTarget);
             const PrimaryIcon = actions.primary?.icon;
             return (
               <div
@@ -1458,7 +1613,7 @@ function OrdenesPageInner() {
                             return (
                               <button
                                 key={item.label}
-                                onClick={() => { setCardMenuId(null); if (item.href) router.push(item.href); }}
+                                onClick={() => { setCardMenuId(null); if (item.href) router.push(item.href); item.onClick?.(); }}
                                 className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-colors duration-300 ${
                                   item.danger ? "text-red-500 hover:bg-red-50" : "text-neutral-700 hover:bg-neutral-50"
                                 } ${hasSep ? "border-t border-neutral-100 mt-1 pt-2.5" : ""}`}
@@ -1682,6 +1837,7 @@ function OrdenesPageInner() {
                       <ActionsCell
                         orden={orden}
                         onPrimaryAction={orden.estado === "Programado" ? () => setRecibirOrden(orden) : undefined}
+                        onCancel={setCancelTarget}
                       />
                     </td>
                   </tr>

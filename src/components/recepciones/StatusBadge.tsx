@@ -2,7 +2,7 @@ import {
   Plus,
   Calendar,
   Warehouse,
-  SplitSquareHorizontal,
+  Clock,
   Ban,
   ClipboardList,
   Check,
@@ -16,8 +16,7 @@ type Status =
   | "Recepcionado en bodega"
   | "En proceso de conteo"
   | "Pendiente de aprobación"
-  | "Completado sin diferencias"
-  | "Completado con diferencias"
+  | "Completada"
   | "Cancelado";
 
 // ─── Config per status ─────────────────────────────────────────────────────────
@@ -51,19 +50,14 @@ const statusConfig: Record<Status, StatusCfg> = {
     className: "bg-primary-25 text-primary-600 border-primary-200",
   },
   "Pendiente de aprobación": {
-    label: "Parcialmente recepcionada",
-    Icon: SplitSquareHorizontal,
-    className: "bg-orange-50 text-red-600 border-orange-200",
+    label: "Pendiente de aprobación",
+    Icon: Clock,
+    className: "bg-orange-50 text-orange-600 border-orange-200",
   },
-  "Completado sin diferencias": {
-    label: "Completada sin diferencias",
+  Completada: {
+    label: "Completada",
     Icon: Check,
     className: "bg-green-50 text-green-700 border-green-200",
-  },
-  "Completado con diferencias": {
-    label: "Completada con diferencias",
-    Icon: Check,
-    className: "bg-amber-50 text-amber-700 border-amber-200",
   },
   Cancelado: {
     label: "Cancelada",

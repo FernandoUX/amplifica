@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback, memo } from "react";
 import {
   ChevronLeft, ChevronRight, Trash2, Scan, ScanBarcode, ImageOff, Image,
   Clock, User, PlayCircle, StopCircle, Eye,
   ChevronDown, ChevronUp, MoreHorizontal, Package,
   X, Check, Upload, Search, HelpCircle, FileText,
   Bell, PlusCircle, CalendarDays, CheckCircle2, Shield,
-  Download,
+  Download, Camera,
 } from "lucide-react";
 import {
   Plus, ClipboardCheck, LockUnlocked01, AlertTriangle,
@@ -54,6 +54,7 @@ type OrdenData = {
   seller: string;
   sucursal: string;
   fechaAgendada: string;
+  estado?: string;           // original status from list page (e.g. "Creado", "Programado")
   products: ProductConteo[];
 };
 
@@ -92,8 +93,8 @@ const MOCK_ORDENES: Record<string, OrdenData> = {
     sucursal: "Quilicura",
     fechaAgendada: "08/03/2026 16:30",
     products: [
-      { id: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 4 Sachets Tropical Delight",  barcode: "8500942860946", esperadas: 100, contadasSesion: 0 },
-      { id: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",      barcode: "8500942860625", esperadas: 150, contadasSesion: 0 },
+      { id: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 20 Sachets Tropical Delight", barcode: "8500942860946", imagen: "/products/extra-life-tropical-delight.png", esperadas: 100, contadasSesion: 0 },
+      { id: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",     barcode: "8500942860625", imagen: "/products/extra-life-variety-pack.png",      esperadas: 150, contadasSesion: 0 },
     ],
   },
   "RO-BARRA-184": {
@@ -102,8 +103,8 @@ const MOCK_ORDENES: Record<string, OrdenData> = {
     sucursal: "Quilicura",
     fechaAgendada: "19/02/2026 10:00",
     products: [
-      { id: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 4 Sachets Tropical Delight",  barcode: "8500942860946", esperadas: 100, contadasSesion: 0 },
-      { id: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",      barcode: "8500942860625", esperadas: 150, contadasSesion: 0 },
+      { id: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 20 Sachets Tropical Delight", barcode: "8500942860946", imagen: "/products/extra-life-tropical-delight.png", esperadas: 100, contadasSesion: 0 },
+      { id: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",     barcode: "8500942860625", imagen: "/products/extra-life-variety-pack.png",      esperadas: 150, contadasSesion: 0 },
     ],
   },
   "RO-BARRA-179": {
@@ -126,16 +127,16 @@ const MOCK_ORDENES: Record<string, OrdenData> = {
       { id: "p2", sku: "GH-003", nombre: "Gohard Pre-Workout Energy 300g",       barcode: "7891234560003", esperadas: 45,  contadasSesion: 0 },
     ],
   },
-  // ─── Completado con diferencias ──────────────────────────────────────────────
+  // ─── Completada ─────────────────────────────────────────────────────────────
   "RO-BARRA-186": {
     id: "RO-BARRA-186",
     seller: "Extra Life",
     sucursal: "Quilicura",
     fechaAgendada: "15/02/2026 08:00",
     products: [
-      { id: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 4 Sachets Tropical Delight",  barcode: "8500942860946", esperadas: 1200, contadasSesion: 0 },
-      { id: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",      barcode: "8500942860625", esperadas: 800,  contadasSesion: 0 },
-      { id: "p3", sku: "300078", nombre: "Extra Life Electrolitos Effervescentes 10 Tabs Limón",         barcode: "8500942860731", esperadas: 550,  contadasSesion: 0 },
+      { id: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 20 Sachets Tropical Delight", barcode: "8500942860946", imagen: "/products/extra-life-tropical-delight.png", esperadas: 1200, contadasSesion: 0 },
+      { id: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",     barcode: "8500942860625", imagen: "/products/extra-life-variety-pack.png",      esperadas: 800,  contadasSesion: 0 },
+      { id: "p3", sku: "300078", nombre: "Extra Life Boost De Hidratación 10 Sachets Orange Mango Fusion", barcode: "8500942860731", imagen: "/products/extra-life-orange-mango.png", esperadas: 550,  contadasSesion: 0 },
     ],
   },
   "RO-BARRA-201": {
@@ -149,7 +150,7 @@ const MOCK_ORDENES: Record<string, OrdenData> = {
       { id: "p3", sku: "VF-103", nombre: "VitaFit Multivitamínico Diario 60 Tabs",  barcode: "7801234560103", esperadas: 440,  contadasSesion: 0 },
     ],
   },
-  // ─── Completado sin diferencias ──────────────────────────────────────────────
+  // ─── Completada (continuación) ──────────────────────────────────────────────
   "RO-BARRA-189": {
     id: "RO-BARRA-189",
     seller: "Le Vice",
@@ -168,6 +169,57 @@ const MOCK_ORDENES: Record<string, OrdenData> = {
     products: [
       { id: "p1", sku: "BN-001", nombre: "BioNature Spirulina Orgánica 300g",  barcode: "7891234560301", esperadas: 500, contadasSesion: 0 },
       { id: "p2", sku: "BN-002", nombre: "BioNature Chlorella 200 Tabs",       barcode: "7891234560302", esperadas: 300, contadasSesion: 0 },
+    ],
+  },
+  // ─── Nuevas ORs Programadas ─────────────────────────────────────────────────
+  "RO-BARRA-226": {
+    id: "RO-BARRA-226",
+    seller: "Gohard",
+    sucursal: "Las Condes",
+    fechaAgendada: "14/03/2026 09:00",
+    products: [
+      { id: "p1", sku: "GH-001", nombre: "Gohard Proteína Whey 1kg Chocolate",  barcode: "7891234560001", esperadas: 390, contadasSesion: 0 },
+      { id: "p2", sku: "GH-002", nombre: "Gohard Creatina Monohidratada 300g",   barcode: "7891234560002", esperadas: 390, contadasSesion: 0 },
+    ],
+  },
+  "RO-BARRA-227": {
+    id: "RO-BARRA-227",
+    seller: "Le Vice",
+    sucursal: "Providencia",
+    fechaAgendada: "15/03/2026 08:30",
+    products: [
+      { id: "p1", sku: "LV-001", nombre: "Le Vice Colágeno Hidrolizado 500g",     barcode: "7891234560201", esperadas: 820, contadasSesion: 0 },
+      { id: "p2", sku: "LV-002", nombre: "Le Vice Vitamina C Liposomal 60 caps",  barcode: "7891234560202", esperadas: 820, contadasSesion: 0 },
+    ],
+  },
+  "RO-BARRA-228": {
+    id: "RO-BARRA-228",
+    seller: "VitaFit",
+    sucursal: "Quilicura",
+    fechaAgendada: "15/03/2026 14:00",
+    products: [
+      { id: "p1", sku: "VF-101", nombre: "VitaFit Proteína Vegana 1kg Vainilla",   barcode: "7801234560101", esperadas: 1050, contadasSesion: 0 },
+      { id: "p2", sku: "VF-102", nombre: "VitaFit Omega-3 Cápsulas 120 uds",       barcode: "7801234560102", esperadas: 1050, contadasSesion: 0 },
+    ],
+  },
+  "RO-BARRA-229": {
+    id: "RO-BARRA-229",
+    seller: "NutriPro",
+    sucursal: "Lo Barnechea",
+    fechaAgendada: "16/03/2026 10:00",
+    products: [
+      { id: "p1", sku: "NP-001", nombre: "NutriPro Whey Protein Isolate 900g",  barcode: "7801234560401", esperadas: 270, contadasSesion: 0 },
+      { id: "p2", sku: "NP-002", nombre: "NutriPro BCAA 300g Sandía",           barcode: "7801234560402", esperadas: 270, contadasSesion: 0 },
+    ],
+  },
+  "RO-BARRA-230": {
+    id: "RO-BARRA-230",
+    seller: "Extra Life",
+    sucursal: "La Reina",
+    fechaAgendada: "17/03/2026 11:30",
+    products: [
+      { id: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 20 Sachets Tropical Delight", barcode: "8500942860946", imagen: "/products/extra-life-tropical-delight.png", esperadas: 600, contadasSesion: 0 },
+      { id: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",     barcode: "8500942860625", imagen: "/products/extra-life-variety-pack.png",      esperadas: 600, contadasSesion: 0 },
     ],
   },
 };
@@ -204,15 +256,24 @@ const SEED_SESIONES: Record<string, Sesion[]> = {
       ],
     },
   ],
-  // ─── Completado con diferencias ──────────────────────────────────────────────
+  // ─── Completada ─────────────────────────────────────────────────────────────
   "RO-BARRA-186": [
     {
       id: "SES-001", operador: "Fernando Roblero",
       inicio: "2026-02-15T08:10:00", fin: "2026-02-15T09:05:00",
       items: [
-        { pid: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 4 Sachets Tropical Delight", cantidad: 1180 },
-        { pid: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",     cantidad: 780 },
-        { pid: "p3", sku: "300078", nombre: "Extra Life Electrolitos Effervescentes 10 Tabs Limón",        cantidad: 550 },
+        { pid: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 4 Sachets Tropical Delight", cantidad: 600 },
+        { pid: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",     cantidad: 400 },
+        { pid: "p3", sku: "300078", nombre: "Extra Life Electrolitos Effervescentes 10 Tabs Limón",        cantidad: 280 },
+      ],
+    },
+    {
+      id: "SES-002", operador: "Catalina Mora",
+      inicio: "2026-02-15T09:30:00", fin: "2026-02-15T10:15:00",
+      items: [
+        { pid: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 4 Sachets Tropical Delight", cantidad: 580 },
+        { pid: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",     cantidad: 380 },
+        { pid: "p3", sku: "300078", nombre: "Extra Life Electrolitos Effervescentes 10 Tabs Limón",        cantidad: 270 },
       ],
     },
   ],
@@ -227,7 +288,7 @@ const SEED_SESIONES: Record<string, Sesion[]> = {
       ],
     },
   ],
-  // ─── Completado sin diferencias ──────────────────────────────────────────────
+  // ─── Completada (continuación) ──────────────────────────────────────────────
   "RO-BARRA-189": [
     {
       id: "SES-001", operador: "Fernando Roblero",
@@ -341,11 +402,17 @@ function buildQuarantineRecords(
 }
 
 function getFallbackOrden(id: string): OrdenData {
+  // Try to get seller/sucursal/estado from ORDENES_SEED for consistency with list page
+  const seed = ORDENES_SEED.find(o => o.id === id);
   return {
-    id, seller: "Extra Life", sucursal: "Quilicura", fechaAgendada: "—",
+    id,
+    seller: seed?.seller ?? "Extra Life",
+    sucursal: seed?.sucursal ?? "Quilicura",
+    fechaAgendada: seed?.fechaAgendada ?? "—",
+    estado: seed?.estado,
     products: [
-      { id: "p1", sku: "SKU-001", nombre: "Producto de muestra A", barcode: "1234567890001", esperadas: 100, contadasSesion: 0 },
-      { id: "p2", sku: "SKU-002", nombre: "Producto de muestra B", barcode: "1234567890002", esperadas: 100, contadasSesion: 0 },
+      { id: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 20 Sachets Tropical Delight", barcode: "8500942860946", imagen: "/products/extra-life-tropical-delight.png", esperadas: 100, contadasSesion: 0 },
+      { id: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",      barcode: "8500942860625", imagen: "/products/extra-life-variety-pack.png",      esperadas: 100, contadasSesion: 0 },
     ],
   };
 }
@@ -402,22 +469,22 @@ function CategorizarBtn({ incidencias, onOpen, disabled }: {
   disabled?: boolean;
 }) {
   const count = incidencias.length;
-  const amberCls = count > 0 && !disabled ? "!bg-amber-50 !text-amber-700 hover:!bg-amber-100" : "";
   return (
     <Button
       variant="secondary"
-      size="sm"
+      size="md"
+      className="w-full sm:w-auto"
       onClick={disabled ? undefined : onOpen}
       disabled={disabled}
       title={disabled ? "Inicia una sesión de conteo para registrar incidencias" : undefined}
-      className={`whitespace-nowrap ${amberCls}`}
+      iconLeft={!count ? <Plus className="w-3.5 h-3.5" /> : undefined}
+      iconRight={
+        count > 0 && !disabled ? (
+          <span className="w-5 h-5 rounded-full bg-white text-amber-600 flex items-center justify-center text-[10px] font-bold leading-none border border-amber-200">{count}</span>
+        ) : undefined
+      }
     >
-      {count > 0 && !disabled && (
-        <span className="w-4 h-4 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
-          {count}
-        </span>
-      )}
-      Categorizar
+      {count > 0 ? `Reportar incidencia${count > 1 ? "s" : ""}` : "Reportar incidencia"}
     </Button>
   );
 }
@@ -458,14 +525,14 @@ function ConfirmRemoveModal({ nombre, onCancel, onConfirm }: {
 }
 
 // ─── Confirm Close Modal ──────────────────────────────────────────────────────
-type OrOutcome = "Completado sin diferencias" | "Completado con diferencias";
+type OrOutcome = "Completada";
 
 function ConfirmCloseModal({ id, sesiones, totalContadas, totalEsperadas, onCancel, onConfirm }: {
   id: string; sesiones: Sesion[]; totalContadas: number; totalEsperadas: number;
   onCancel: () => void; onConfirm: (outcome: OrOutcome) => void;
 }) {
   const diff    = totalEsperadas - totalContadas;
-  const outcome: OrOutcome = diff === 0 ? "Completado sin diferencias" : "Completado con diferencias";
+  const outcome: OrOutcome = "Completada";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
@@ -517,8 +584,8 @@ function ConfirmCloseModal({ id, sesiones, totalContadas, totalEsperadas, onCanc
   );
 }
 
-// ─── ProductCard ──────────────────────────────────────────────────────────────
-function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove, incidencias, onCategorizar }: {
+// ─── ProductCard (memoized — only re-renders when its own props change) ───────
+type ProductCardProps = {
   product: ProductConteo;
   acumulado: number;
   sesionActiva: boolean;
@@ -526,7 +593,25 @@ function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove, inc
   onRemove: (id: string) => void;
   incidencias: IncidenciaRow[];
   onCategorizar: () => void;
-}) {
+  isJustScanned?: boolean;
+};
+/** Placeholder visual cuando no hay imagen del producto */
+function NoImagePlaceholder() {
+  return (
+    <div className="w-full h-full flex flex-col items-center justify-center bg-neutral-100 text-neutral-300">
+      <svg className="w-8 h-8 sm:w-10 sm:h-10" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Box / package icon */}
+        <rect x="8" y="16" width="32" height="24" rx="3" stroke="currentColor" strokeWidth="2" fill="none" />
+        <path d="M8 22h32" stroke="currentColor" strokeWidth="2" />
+        <path d="M20 16v-4a4 4 0 0 1 8 0v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M24 22v8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="2 3" />
+      </svg>
+      <span className="text-[8px] sm:text-[9px] font-medium mt-1 uppercase tracking-wider">Sin imagen</span>
+    </div>
+  );
+}
+
+const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove, incidencias, onCategorizar, isJustScanned }: ProductCardProps) {
   const incidenciasTotal = incidencias.reduce((s, r) => s + r.cantidad, 0);
   const total  = acumulado + product.contadasSesion + incidenciasTotal;
   const status = getProductStatus(total, product.esperadas);
@@ -540,15 +625,55 @@ function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove, inc
   // Display: editing active session counts; or accumulated total when idle
   const displayVal = sesionActiva ? product.contadasSesion : total;
 
+  // ── Image lightbox + broken image fallback ──
+  const [showLightbox, setShowLightbox] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const hasValidImage = !!product.imagen && !imgError;
+
+  // ── Manual count justification modal ──
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [manualVal, setManualVal] = useState("");
+  const [manualJustificacion, setManualJustificacion] = useState("");
+  const [manualFoto, setManualFoto] = useState<File | null>(null);
+  const [manualFotoPreview, setManualFotoPreview] = useState<string | null>(null);
+  const manualFileRef = useRef<HTMLInputElement>(null);
+
+  const openManualModal = () => {
+    if (!sesionActiva) return;
+    setManualVal("");
+    setManualJustificacion("");
+    setManualFoto(null);
+    setManualFotoPreview(null);
+    setShowManualModal(true);
+  };
+
+  const handleManualFoto = (file: File) => {
+    setManualFoto(file);
+    const url = URL.createObjectURL(file);
+    setManualFotoPreview(url);
+  };
+
+  const handleManualSubmit = () => {
+    const parsed = Math.max(0, parseInt(manualVal) || 0);
+    onChange(product.id, parsed);
+    setShowManualModal(false);
+    if (manualFotoPreview) URL.revokeObjectURL(manualFotoPreview);
+  };
+
+  const canSubmitManual = manualFoto !== null && manualVal.trim() !== "";
+
   return (
-    <div className="p-3 sm:p-4 border-b border-neutral-100 last:border-0">
+    <div id={`pcard-${product.id}`} className={`m-1 p-3 sm:p-4 rounded-xl transition-all duration-700 ${isJustScanned ? "bg-neutral-50 animate-[scanPulse_0.6s_ease-out]" : ""}`}>
       <div className="flex items-start gap-3 sm:gap-4">
 
         {/* Image */}
-        <div className="flex-shrink-0 bg-neutral-100 rounded-lg flex items-center justify-center overflow-hidden w-14 h-14 sm:w-[120px] sm:h-[120px]">
-          {product.imagen
-            ? <img src={product.imagen} alt={product.nombre} className="w-full h-full object-cover" />
-            : <ImageOff className="w-6 h-6 sm:w-7 sm:h-7 text-neutral-300" />}
+        <div
+          className={`flex-shrink-0 bg-neutral-50 rounded-lg border border-neutral-100 flex items-center justify-center overflow-hidden w-16 h-16 sm:w-[120px] sm:h-[120px] ${hasValidImage ? "cursor-pointer group/img" : ""} ${isJustScanned ? "animate-[imgBounceIn_0.5s_ease-out]" : ""}`}
+          onClick={() => { if (hasValidImage) setShowLightbox(true); }}
+        >
+          {hasValidImage
+            ? <img src={product.imagen!} alt={product.nombre} loading="lazy" onError={() => setImgError(true)} className="w-full h-full object-cover transition-transform duration-200 group-hover/img:scale-105" />
+            : <NoImagePlaceholder />}
         </div>
 
         {/* Info header */}
@@ -567,30 +692,24 @@ function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove, inc
           </div>
 
           {/* SKU + barcode */}
-          <p className="text-xs text-neutral-400 mt-0.5 truncate">
-            <span className="font-semibold text-neutral-500">SKU:</span> {product.sku}
-            <span className="hidden sm:inline">
-              <span className="mx-2 text-neutral-200">|</span>
-              <span className="font-semibold text-neutral-500">C. DE BARRA:</span> {product.barcode}
-            </span>
-          </p>
+          <div className="flex items-center gap-2 mt-1 text-xs text-neutral-400 truncate">
+            <span><span className="font-semibold text-neutral-500">SKU:</span> <span className="font-mono">{product.sku}</span></span>
+            <span className="hidden sm:inline text-neutral-200">|</span>
+            <span className="hidden sm:inline"><span className="font-semibold text-neutral-500">C. DE BARRA:</span> <span className="font-mono">{product.barcode}</span></span>
+          </div>
 
           {/* Desktop: counter row inline */}
           <div className="hidden sm:flex items-center gap-3 mt-3">
-            <Button variant="secondary" size="sm" onClick={() => sesionActiva && onChange(product.id, Math.max(0, product.contadasSesion - 1))} disabled={!sesionActiva} className="!p-0 w-8 h-8 !text-lg !font-bold">−</Button>
+            <button
+              onClick={openManualModal}
+              disabled={!sesionActiva}
+              className={`w-16 border border-neutral-200 rounded-lg text-center text-sm font-semibold py-1.5 tabular-nums transition-colors duration-300
+                ${sesionActiva ? "text-neutral-800 bg-white hover:border-primary-300 cursor-pointer" : "text-neutral-600 bg-neutral-50 cursor-default"}`}
+            >
+              {displayVal}
+            </button>
 
-            <input
-              type="number" min={0}
-              value={displayVal}
-              readOnly={!sesionActiva}
-              onChange={e => sesionActiva && onChange(product.id, Math.max(0, parseInt(e.target.value) || 0))}
-              className={`w-16 border border-neutral-200 rounded-lg text-center text-sm font-semibold py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-200 tabular-nums transition-colors duration-300
-                ${sesionActiva ? "text-neutral-800 bg-white" : "text-neutral-600 bg-neutral-50 cursor-default"}`}
-            />
-
-            <Button variant="secondary" size="sm" onClick={() => sesionActiva && onChange(product.id, product.contadasSesion + 1)} disabled={!sesionActiva} className="!p-0 w-8 h-8 !text-lg !font-bold">+</Button>
-
-            <span className="flex items-center gap-1.5 text-sm text-neutral-500 ml-1">
+            <span className="flex items-center gap-1.5 text-sm text-neutral-500">
               <Package className="w-4 h-4 text-neutral-400" />
               <span className="tabular-nums font-medium text-neutral-700">
                 {total.toLocaleString("es-CL")}/{product.esperadas.toLocaleString("es-CL")}
@@ -614,55 +733,166 @@ function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove, inc
       </div>
 
       {/* ── Mobile-only: counter + progress ── */}
-      <div className="sm:hidden mt-3">
-        {/* Progress info + Categorizar */}
-        <div className="flex items-center justify-between mb-2.5">
-          <span className="text-xs text-neutral-500">
-            <span className="tabular-nums font-semibold text-neutral-700">{total.toLocaleString("es-CL")}</span>/{product.esperadas.toLocaleString("es-CL")} esperadas
-          </span>
-          <CategorizarBtn incidencias={incidencias} onOpen={onCategorizar} disabled={!sesionActiva} />
-        </div>
-
-        {/* Counter controls - full width, larger buttons */}
-        <div className="relative">
-          <div className={`flex items-center gap-2.5 ${!sesionActiva ? "opacity-30 pointer-events-none" : ""}`}>
-            <button
-              onClick={() => sesionActiva && onChange(product.id, Math.max(0, product.contadasSesion - 1))}
-              disabled={!sesionActiva}
-              className="w-11 h-11 flex items-center justify-center rounded-xl bg-neutral-100 text-neutral-700 text-lg font-bold disabled:opacity-40 disabled:cursor-not-allowed active:bg-neutral-200 transition-colors"
-            >−</button>
-
-            <input
-              type="number" min={0}
-              value={displayVal}
-              readOnly={!sesionActiva}
-              onChange={e => sesionActiva && onChange(product.id, Math.max(0, parseInt(e.target.value) || 0))}
-              className={`flex-1 border border-neutral-200 rounded-xl text-center text-base font-bold py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-200 tabular-nums transition-colors duration-300
-                ${sesionActiva ? "text-neutral-800 bg-white" : "text-neutral-600 bg-neutral-50 cursor-default"}`}
-            />
-
-            <button
-              onClick={() => sesionActiva && onChange(product.id, product.contadasSesion + 1)}
-              disabled={!sesionActiva}
-              className="w-11 h-11 flex items-center justify-center rounded-xl bg-primary-500 text-white text-lg font-bold disabled:opacity-40 disabled:cursor-not-allowed active:bg-primary-600 transition-colors"
-            >+</button>
+      <div className="sm:hidden mt-3 space-y-3">
+        {/* Progress bar + counts */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs text-neutral-500">
+              <span className="tabular-nums font-semibold text-neutral-700">{total.toLocaleString("es-CL")}</span>/{product.esperadas.toLocaleString("es-CL")} esperadas
+            </span>
+            {product.esperadas > 0 && (
+              <span className="text-[11px] font-medium tabular-nums text-neutral-400">{Math.round(pct)}%</span>
+            )}
           </div>
-          {!sesionActiva && (
-            <p className="text-center text-[11px] text-neutral-400 mt-1.5">Inicia sesión para contar</p>
+          {product.esperadas > 0 && (
+            <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+              <div className={`h-full rounded-full transition-all duration-300 ${barColor}`}
+                style={{ width: `${pct}%` }} />
+            </div>
           )}
         </div>
 
-        {/* Progress bar */}
-        {product.esperadas > 0 && (
-          <div className="mt-2.5 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-            <div className={`h-full rounded-full transition-all duration-300 ${barColor}`}
-              style={{ width: `${pct}%` }} />
+        {/* Counter input + Reportar incidencia — stacked full width */}
+        <div className="space-y-2">
+          <div className="relative">
+            <div className={`${!sesionActiva ? "opacity-30 pointer-events-none" : ""}`}>
+              <button
+                onClick={openManualModal}
+                disabled={!sesionActiva}
+                className={`w-full border border-neutral-200 rounded-lg text-center text-base font-bold py-2 tabular-nums transition-colors duration-300
+                  ${sesionActiva ? "text-neutral-800 bg-white hover:border-primary-300 cursor-pointer" : "text-neutral-600 bg-neutral-50 cursor-default"}`}
+              >
+                {displayVal}
+              </button>
+            </div>
+            {!sesionActiva && (
+              <p className="text-center text-[11px] text-neutral-400 mt-1">Inicia sesión para contar</p>
+            )}
           </div>
-        )}
+          <div className="w-full">
+            <CategorizarBtn incidencias={incidencias} onOpen={onCategorizar} disabled={!sesionActiva} />
+          </div>
+        </div>
       </div>
+
+      {/* ── Modal: Justificación de conteo manual ── */}
+      {/* ── Lightbox de imagen ── */}
+      {showLightbox && hasValidImage && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-6" onClick={() => setShowLightbox(false)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative max-w-md w-full animate-[fadeIn_0.2s_ease-out]" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => setShowLightbox(false)}
+              className="absolute -top-3 -right-3 z-10 w-8 h-8 rounded-full bg-white shadow-lg flex items-center justify-center text-neutral-500 hover:text-neutral-800 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <img
+              src={product.imagen}
+              alt={product.nombre}
+              className="w-full rounded-2xl shadow-2xl object-contain max-h-[70vh] bg-white"
+            />
+            <p className="text-center text-sm text-white/80 mt-3 line-clamp-2">{product.nombre}</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Justificación de conteo manual ── */}
+      {showManualModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setShowManualModal(false)}>
+          <div className="absolute inset-0 bg-black/35" />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-lg bg-primary-50 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-primary-500" />
+                </div>
+                <h3 className="text-base font-bold text-neutral-900">Conteo manual</h3>
+              </div>
+              <button onClick={() => setShowManualModal(false)} className="p-1 text-neutral-400 hover:text-neutral-600 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Product ref */}
+            <p className="text-xs text-neutral-500 bg-neutral-50 rounded-lg px-3 py-2 leading-snug">
+              <span className="font-semibold text-neutral-700">{product.nombre}</span>
+              <br />
+              SKU: {product.sku}
+            </p>
+
+            {/* Cantidad */}
+            <FormField
+              label="Cantidad *"
+              type="number"
+              value={manualVal}
+              onChange={setManualVal}
+              placeholder="Ingresa la cantidad"
+            />
+
+            {/* Foto obligatoria */}
+            <div>
+              <p className="text-[11px] font-semibold text-neutral-600 mb-1.5 pl-0.5">Foto de evidencia *</p>
+              <input
+                ref={manualFileRef}
+                type="file"
+                className="hidden"
+                accept="image/jpeg,image/png"
+                capture="environment"
+                onChange={e => e.target.files?.[0] && handleManualFoto(e.target.files[0])}
+              />
+              {manualFotoPreview ? (
+                <div className="relative">
+                  <img src={manualFotoPreview} alt="Evidencia" className="w-full h-36 object-cover rounded-lg border border-neutral-200" />
+                  <button
+                    onClick={() => { setManualFoto(null); if (manualFotoPreview) URL.revokeObjectURL(manualFotoPreview); setManualFotoPreview(null); }}
+                    className="absolute top-1.5 right-1.5 w-6 h-6 bg-white/90 rounded-full flex items-center justify-center text-neutral-500 hover:text-red-500 shadow-sm"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => manualFileRef.current?.click()}
+                  className="w-full border-2 border-dashed border-neutral-200 rounded-lg py-6 flex flex-col items-center gap-1.5 text-neutral-400 hover:border-primary-300 hover:text-primary-500 transition-colors"
+                >
+                  <Camera className="w-6 h-6" />
+                  <span className="text-xs font-medium">Tomar o subir foto</span>
+                </button>
+              )}
+            </div>
+
+            {/* Justificación */}
+            <FormField
+              as="textarea"
+              label="Justificación *"
+              value={manualJustificacion}
+              onChange={setManualJustificacion}
+              placeholder="Argumenta la decisión del conteo manual..."
+              rows={3}
+            />
+
+            {/* Actions */}
+            <div className="flex gap-2.5 pt-1">
+              <Button variant="secondary" className="flex-1" onClick={() => setShowManualModal(false)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                className="flex-1"
+                disabled={!canSubmitManual}
+                onClick={handleManualSubmit}
+              >
+                Confirmar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-}
+});
 
 // ─── Session history row ──────────────────────────────────────────────────────
 function SesionRow({ sesion, incidencias, products, acumulado }: {
@@ -749,7 +979,7 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
                       <p className="font-mono text-xs text-neutral-500">{item.sku}</p>
                       <p className="text-[13px] font-medium text-neutral-800 leading-snug mt-0.5">{item.nombre}</p>
                     </div>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap flex-shrink-0 ${
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-[6px] text-xs font-medium border whitespace-nowrap flex-shrink-0 ${
                       status === "completo"   ? "bg-green-50  text-green-700  border-green-200"  :
                       status === "diferencia" ? "bg-amber-50  text-amber-700  border-amber-200"  :
                       status === "exceso"     ? "bg-red-50    text-red-600    border-red-200"    :
@@ -825,7 +1055,7 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
                       )}
                     </td>
                     <td className="py-2 align-top">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-[6px] text-xs font-medium border ${
                         status === "completo"   ? "bg-green-50  text-green-700  border-green-200"  :
                         status === "diferencia" ? "bg-amber-50  text-amber-700  border-amber-200"  :
                         status === "exceso"     ? "bg-red-50    text-red-600    border-red-200"    :
@@ -865,104 +1095,131 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const tag = INCIDENCIA_TAGS.find(t => t.key === row.tag);
+  const [collapsed, setCollapsed] = useState(false);
+
+  const summary = tag ? tag.label : "Sin tipo";
 
   return (
-    <div className="px-4 py-4 border-t border-neutral-100 space-y-3 bg-neutral-50/50">
-      {/* Row header */}
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Incidencia #{index + 1}</span>
-        <button onClick={() => onRemove(row.rowId)} className="p-1 text-neutral-300 hover:text-red-400 transition-colors duration-300 rounded">
+    <div className="border-t border-neutral-100 bg-neutral-50/50">
+      {/* Row header — clickable to collapse */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setCollapsed(c => !c)}
+        onKeyDown={e => e.key === "Enter" && setCollapsed(c => !c)}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-neutral-100/50 transition-colors duration-200 cursor-pointer"
+      >
+        <div className="flex items-center gap-2">
+          {collapsed ? <ChevronRight className="w-3.5 h-3.5 text-neutral-400" /> : <ChevronDown className="w-3.5 h-3.5 text-neutral-400" />}
+          <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Incidencia #{index + 1}</span>
+          {collapsed && <span className="text-xs text-neutral-400">· {summary} · {row.cantidad} uds · {row.imagenes.length} img</span>}
+        </div>
+        <button
+          onClick={e => { e.stopPropagation(); onRemove(row.rowId); }}
+          className="p-1 text-neutral-300 hover:text-red-400 transition-colors duration-300 rounded"
+        >
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      {/* Tag + Cantidad */}
-      <div className="grid grid-cols-2 gap-3">
-        <FormField
-          as="select"
-          label="Tipo de incidencia *"
-          value={row.tag}
-          onChange={v => onUpdate(row.rowId, { tag: v as IncidenciaTagKey | "" })}
-        >
-          <option value="">Seleccione</option>
-          {INCIDENCIA_TAGS.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
-        </FormField>
-        <FormField
-          label="Cantidad afectada *"
-          type="number"
-          value={String(row.cantidad)}
-          onChange={v => onUpdate(row.rowId, { cantidad: Math.max(1, parseInt(v) || 1) })}
-        />
-      </div>
-
-      {/* Description — only for "no-en-sistema" */}
-      {row.tag === "no-en-sistema" && (
-        <FormField
-          as="textarea"
-          label="Descripción del producto *"
-          value={row.descripcion}
-          onChange={v => onUpdate(row.rowId, { descripcion: v })}
-          placeholder="Nombre, código visible, descripción del producto no identificado..."
-          rows={2}
-        />
-      )}
-
-      {/* Image upload */}
-      <div>
-        <label className="block text-xs text-neutral-400 font-medium mb-1.5">
-          Imágenes * <span className="text-neutral-400 font-normal">({row.imagenes.length}/5 · JPG o PNG · 5 MB máx)</span>
-        </label>
-        <input
-          ref={fileRef} type="file" className="hidden"
-          accept="image/jpeg,image/png" multiple
-          onChange={e => e.target.files && onAddImages(row.rowId, e.target.files)}
-        />
-        {row.imagenes.length > 0 && (
-          <div className="flex gap-2 flex-wrap mb-2">
-            {row.imagenes.map((img, i) => (
-              <div key={i} className="relative w-16 h-16 flex-shrink-0">
-                <img src={URL.createObjectURL(img)} alt="" className="w-16 h-16 object-cover rounded-lg border border-neutral-200" />
-                <button
-                  onClick={() => onRemoveImage(row.rowId, i)}
-                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white shadow"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
+      {/* Collapsible body */}
+      {!collapsed && (
+        <div className="px-4 pb-4 space-y-3">
+          {/* Tag + Cantidad */}
+          <div className="grid grid-cols-2 gap-3">
+            <FormField
+              as="select"
+              label="Tipo de incidencia *"
+              value={row.tag}
+              onChange={v => onUpdate(row.rowId, { tag: v as IncidenciaTagKey | "" })}
+            >
+              <option value="">Seleccione</option>
+              {INCIDENCIA_TAGS.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+            </FormField>
+            <FormField
+              label="Cantidad afectada *"
+              type="number"
+              value={String(row.cantidad)}
+              onChange={v => onUpdate(row.rowId, { cantidad: Math.max(1, parseInt(v) || 1) })}
+            />
           </div>
-        )}
-        {row.imagenes.length < 5 && (
-          <button
-            onClick={() => fileRef.current?.click()}
-            className="flex items-center gap-2 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors duration-300"
-          >
-            <Upload className="w-3.5 h-3.5" />
-            {row.imagenes.length === 0 ? "Subir imagen" : "Agregar más"}
-          </button>
-        )}
-        {row.imagenes.length === 0 && (
-          <p className="text-xs text-red-400 mt-1 flex items-center gap-1">
-            <AlertTriangle className="w-3 h-3" /> Requerida al menos 1 imagen
-          </p>
-        )}
-      </div>
 
-      {/* Nota */}
-      <FormField
-        as="textarea"
-        label="Nota adicional"
-        value={row.nota}
-        onChange={v => onUpdate(row.rowId, { nota: v })}
-        placeholder="Observaciones adicionales..."
-        rows={2}
-        helperText="Opcional"
-      />
+          {/* Description — only for "no-en-sistema" */}
+          {row.tag === "no-en-sistema" && (
+            <FormField
+              as="textarea"
+              label="Descripción del producto *"
+              value={row.descripcion}
+              onChange={v => onUpdate(row.rowId, { descripcion: v })}
+              placeholder="Nombre, código visible, descripción del producto no identificado..."
+              rows={2}
+            />
+          )}
 
-      {/* Tag resolution badge */}
-      {tag && (
-        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border ${tagColorCls(row.tag as IncidenciaTagKey)}`}>
-          Resuelve: <span className="font-semibold">{tag.resuelve}</span>
+          {/* Image upload */}
+          <div>
+            <label className="block text-xs text-neutral-600 font-semibold mb-1.5">
+              Imágenes * <span className="text-neutral-400 font-normal">({row.imagenes.length}/5 · JPG o PNG · 5 MB máx)</span>
+            </label>
+            <input
+              ref={fileRef} type="file" className="hidden"
+              accept="image/jpeg,image/png" multiple
+              onChange={e => e.target.files && onAddImages(row.rowId, e.target.files)}
+            />
+            {row.imagenes.length > 0 && (
+              <div className="flex gap-2 flex-wrap mb-2">
+                {row.imagenes.map((img, i) => (
+                  <div key={i} className="relative w-16 h-16 flex-shrink-0">
+                    <img src={URL.createObjectURL(img)} alt="" className="w-16 h-16 object-cover rounded-lg border border-neutral-200" />
+                    <button
+                      onClick={() => onRemoveImage(row.rowId, i)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white shadow"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {row.imagenes.length < 5 && (
+              row.imagenes.length === 0 ? (
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors duration-300"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  Subir imagen
+                </button>
+              ) : (
+                <Button variant="secondary" size="sm" iconLeft={<Upload className="w-3.5 h-3.5" />} onClick={() => fileRef.current?.click()}>
+                  Agregar más
+                </Button>
+              )
+            )}
+            {row.imagenes.length === 0 && (
+              <p className="text-xs text-red-400 mt-1 flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" /> Requerida al menos 1 imagen
+              </p>
+            )}
+          </div>
+
+          {/* Nota */}
+          <FormField
+            as="textarea"
+            label="Nota adicional"
+            value={row.nota}
+            onChange={v => onUpdate(row.rowId, { nota: v })}
+            placeholder="Observaciones adicionales..."
+            rows={2}
+            helperText="Opcional"
+          />
+
+          {/* Tag resolution badge */}
+          {tag && (
+            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border ${tagColorCls(row.tag as IncidenciaTagKey)}`}>
+              Resuelve: <span className="font-semibold">{tag.resuelve}</span>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -1068,13 +1325,9 @@ function IncidenciasSKUModal({ product, initialRows, onClose, onSave, onLiveUpda
                 />
               ))}
               <div className="px-4 py-3 border-t border-dashed border-neutral-200">
-                <button
-                  onClick={addRow}
-                  className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-primary-500 hover:bg-primary-50/50 transition-colors duration-300 px-2 py-1.5 rounded-lg"
-                >
-                  <Plus className="w-3.5 h-3.5" />
+                <Button variant={rows.length > 0 ? "secondary" : "primary"} size="md" iconLeft={<Plus className="w-3.5 h-3.5" />} onClick={addRow} className="w-full">
                   Agregar otra incidencia
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -1239,15 +1492,9 @@ function AddProductModal({ onCancel, onConfirm, defaultCategoria }: {
           <Button variant="secondary" size="lg" onClick={onCancel}>
             Cancelar
           </Button>
-          <button
-            onClick={handleConfirm} disabled={!canConfirm}
-            className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors duration-300 flex items-center gap-2 ${
-              canConfirm ? "bg-primary-500 hover:bg-primary-600 text-white" : "bg-neutral-100 text-neutral-400 cursor-not-allowed"
-            }`}
-          >
-            <Plus className="w-4 h-4" />
+          <Button variant="primary" size="lg" onClick={handleConfirm} disabled={!canConfirm} iconLeft={<Plus className="w-4 h-4" />}>
             Añadir producto
-          </button>
+          </Button>
         </div>
 
       </div>
@@ -1636,7 +1883,7 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
                 {/* Row 1: SKU + Estado */}
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <span className="font-mono text-xs text-neutral-500">{rec.sku}</span>
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${est.cls}`}>
+                  <span className={`inline-flex px-2 py-0.5 rounded-[6px] text-xs font-medium border whitespace-nowrap ${est.cls}`}>
                     {est.label}
                   </span>
                 </div>
@@ -1651,7 +1898,7 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
                                                    "bg-red-50 text-red-700 border-red-200"
                     }`}>{tagInfo.label}</span>
                   )}
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${cat.cls}`}>
+                  <span className={`inline-flex px-2 py-0.5 rounded-[6px] text-xs font-medium border whitespace-nowrap ${cat.cls}`}>
                     {cat.label}
                   </span>
                 </div>
@@ -1747,12 +1994,12 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
                     </td>
                     <td className="px-4 py-3 tabular-nums font-semibold text-neutral-800 align-top">{rec.cantidad}</td>
                     <td className="px-4 py-3 align-top">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${cat.cls}`}>
+                      <span className={`inline-flex px-2 py-0.5 rounded-[6px] text-xs font-medium border whitespace-nowrap ${cat.cls}`}>
                         {cat.label}
                       </span>
                     </td>
                     <td className="px-4 py-3 align-top">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${est.cls}`}>
+                      <span className={`inline-flex px-2 py-0.5 rounded-[6px] text-xs font-medium border whitespace-nowrap ${est.cls}`}>
                         {est.label}
                       </span>
                     </td>
@@ -2006,59 +2253,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
           )}
         </div>
 
-        {/* ── Summary stats ── */}
-        {(() => {
-          const totalEsperadas = products.reduce((s, p) => s + p.esperadas, 0);
-          const totalRecibidas = skuRows.reduce((s, r) => s + r.received, 0);
-          const diffNeta       = totalRecibidas - totalEsperadas;
-          const totalInc       = flatInc.length;
-          const summaryItems = [
-            { label: "SKUs",            value: products.length.toString() },
-            { label: "Uds. esperadas",  value: totalEsperadas.toLocaleString("es-CL") },
-            { label: "Uds. recibidas",  value: totalRecibidas.toLocaleString("es-CL") },
-            { label: "Diferencia neta", value: diffNeta === 0 ? "0" : (diffNeta > 0 ? "+" : "") + diffNeta.toLocaleString("es-CL"),
-              cls: diffNeta === 0 ? "text-green-600" : diffNeta > 0 ? "text-blue-600" : "text-red-600" },
-            { label: "Incidencias",     value: totalInc > 0 ? totalInc.toString() : "0",
-              cls: totalInc > 0 ? "text-amber-600" : undefined },
-            { label: "Operador",        value: OPERADOR },
-          ];
-          return (
-            <>
-              {/* Mobile: 3-col compact cards */}
-              <div className="sm:hidden px-4 py-3 border-b border-neutral-100 space-y-2">
-                <div className="grid grid-cols-3 gap-2">
-                  {summaryItems.slice(0, 3).map(s => (
-                    <div key={s.label} className="bg-neutral-50 rounded-lg px-3 py-2.5 text-center">
-                      <p className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider">{s.label}</p>
-                      <p className={`text-base font-bold mt-0.5 tabular-nums ${s.cls ?? "text-neutral-800"}`}>{s.value}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {summaryItems.slice(3, 5).map(s => (
-                    <div key={s.label} className="bg-neutral-50 rounded-lg px-3 py-2.5 text-center">
-                      <p className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider">{s.label}</p>
-                      <p className={`text-base font-bold mt-0.5 tabular-nums ${s.cls ?? "text-neutral-800"}`}>{s.value}</p>
-                    </div>
-                  ))}
-                  <div className="bg-neutral-50 rounded-lg px-3 py-2.5 text-center">
-                    <p className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider">{summaryItems[5].label}</p>
-                    <p className="text-xs font-bold mt-0.5 text-neutral-800 truncate">{summaryItems[5].value}</p>
-                  </div>
-                </div>
-              </div>
-              {/* Desktop: 6-col summary cards */}
-              <div className="hidden sm:grid grid-cols-6 gap-3 px-5 py-4 border-b border-neutral-100">
-                {summaryItems.map(s => (
-                  <div key={s.label} className="bg-neutral-50 rounded-lg px-3 py-2.5 text-left">
-                    <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider">{s.label}</p>
-                    <p className={`text-sm font-bold mt-1 tabular-nums ${s.cls ?? "text-neutral-800"}`}>{s.value}</p>
-                  </div>
-                ))}
-              </div>
-            </>
-          );
-        })()}
+        {/* Stats now shown in dark bar above ResumenOR */}
 
         {/* ── Consolidated view ── */}
         {viewMode === "consolidado" && (<>
@@ -2074,7 +2269,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                       <p className="font-mono text-xs text-neutral-500">{p.sku}</p>
                       <p className="text-sm font-medium text-neutral-800 leading-snug mt-0.5">{p.nombre}</p>
                     </div>
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap flex-shrink-0 ${
+                    <span className={`inline-flex px-2 py-0.5 rounded-[6px] text-xs font-medium border whitespace-nowrap flex-shrink-0 ${
                       status === "Correcto"       ? "bg-green-50 text-green-700 border-green-200" :
                       status === "Con incidencia" ? "bg-amber-50 text-amber-700 border-amber-200" :
                       status === "Exceso"         ? "bg-blue-50  text-blue-700  border-blue-200"  :
@@ -2165,7 +2360,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                         {diff === 0 ? "0" : diff > 0 ? `+${diff.toLocaleString("es-CL")}` : diff.toLocaleString("es-CL")}
                       </td>
                       <td className="px-3 py-3 text-center align-top">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${
+                        <span className={`inline-flex px-2 py-0.5 rounded-[6px] text-xs font-medium border whitespace-nowrap ${
                           status === "Correcto"       ? "bg-green-50 text-green-700 border-green-200" :
                           status === "Con incidencia" ? "bg-amber-50 text-amber-700 border-amber-200" :
                           status === "Exceso"         ? "bg-blue-50  text-blue-700  border-blue-200"  :
@@ -2339,13 +2534,18 @@ export default function ConteoORPage() {
   const id       = decodeURIComponent(rawId);
   const baseData = MOCK_ORDENES[id] ?? getFallbackOrden(id);
 
+  // Original estado from seed (Creado, Programado, etc.) — used for conditional header buttons
+  const originalEstado = baseData.estado ?? ORDENES_SEED.find(o => o.id === id)?.estado ?? "Programado";
+
   // ── State ──────────────────────────────────────────────────────────────────
   const [products,      setProducts]      = useState<ProductConteo[]>(baseData.products);
   const [sesiones,      setSesiones]      = useState<Sesion[]>(() => SEED_SESIONES[id] ?? []);
   const [sesionActiva,  setSesionActiva]  = useState(false);
   const [sesionInicio,  setSesionInicio]  = useState("");
   const [scanner,       setScanner]       = useState("");
-  const [confirmClose,   setConfirmClose]   = useState(false);
+  const [confirmClose,      setConfirmClose]      = useState(false);
+  const [confirmLiberar,    setConfirmLiberar]    = useState(false);
+  const [confirmFinalizar,  setConfirmFinalizar]  = useState(false);
   const [noUnitsAlert,   setNoUnitsAlert]   = useState(false);
   const [pendingRemove,  setPendingRemove]  = useState<string | null>(null);
   const [showDotsMenu,   setShowDotsMenu]   = useState(false);
@@ -2360,6 +2560,10 @@ export default function ConteoORPage() {
   const [addProductFlow, setAddProductFlow] = useState<"closed" | "choice" | "catalog" | "manual">("closed");
   const [quarantineRecs,   setQuarantineRecs]   = useState<QuarantineRecord[]>([]);
   const [guiaModal,        setGuiaModal]        = useState(false);
+  const [lastScannedId,    setLastScannedId]    = useState<string | null>(null);
+  const [scanError,        setScanError]        = useState(false);
+  const scanFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scanErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Capture snapshot of incidencias for a SKU when the modal opens (to revert on cancel)
   useEffect(() => {
@@ -2376,7 +2580,7 @@ export default function ConteoORPage() {
       const stored = localStorage.getItem(`amplifica_or_${id}`);
       if (stored) {
         const { estado } = JSON.parse(stored) as { estado: OrOutcome };
-        if (estado === "Completado sin diferencias" || estado === "Completado con diferencias") {
+        if (estado === "Completada") {
           setOrEstado(estado);
           isClosed = true;
         }
@@ -2386,7 +2590,7 @@ export default function ConteoORPage() {
       // Fallback: check seed data for ORs that are already completed
       const seedEntry = ORDENES_SEED.find(o => o.id === id);
       if (seedEntry) {
-        if (seedEntry.estado === "Completado sin diferencias" || seedEntry.estado === "Completado con diferencias") {
+        if (seedEntry.estado === "Completada") {
           setOrEstado(seedEntry.estado as OrOutcome);
           isClosed = true;
         }
@@ -2476,22 +2680,23 @@ export default function ConteoORPage() {
     return map;
   }, [products, acumulado, incidencias]);
 
-  // ── Stats ─────────────────────────────────────────────────────────────────
+  // ── Stats (single-pass over products instead of 3x .filter()) ────────────
   const stats = useMemo(() => {
-    const totalEsperadas   = products.reduce((s, p) => s + p.esperadas, 0);
-    const totalAcum        = Object.values(acumulado).reduce((s, v) => s + v, 0);
-    const totalSesionAct   = products.reduce((s, p) => s + p.contadasSesion, 0);
+    let totalEsperadas = 0, totalSesionAct = 0, sinDiferencias = 0, conDiferencias = 0, pendientes = 0;
+    for (const p of products) {
+      totalEsperadas += p.esperadas;
+      totalSesionAct += p.contadasSesion;
+      const s = getProductStatus(totalPP[p.id] ?? 0, p.esperadas);
+      if (s === "completo") sinDiferencias++;
+      else if (s === "diferencia" || s === "exceso") conDiferencias++;
+      else if (s === "pendiente") pendientes++;
+    }
+    const totalAcum = Object.values(acumulado).reduce((s, v) => s + v, 0);
     const totalIncidencias = Object.values(incidencias).reduce(
       (s, rows) => s + rows.reduce((rs, r) => rs + r.cantidad, 0), 0
     );
-    const totalContadas  = totalAcum + totalSesionAct + totalIncidencias;
-    const pct            = totalEsperadas > 0 ? Math.round((totalContadas / totalEsperadas) * 100) : 0;
-    const sinDiferencias = products.filter(p => getProductStatus(totalPP[p.id] ?? 0, p.esperadas) === "completo").length;
-    const conDiferencias = products.filter(p => {
-      const s = getProductStatus(totalPP[p.id] ?? 0, p.esperadas);
-      return s === "diferencia" || s === "exceso";
-    }).length;
-    const pendientes = products.filter(p => getProductStatus(totalPP[p.id] ?? 0, p.esperadas) === "pendiente").length;
+    const totalContadas = totalAcum + totalSesionAct + totalIncidencias;
+    const pct = totalEsperadas > 0 ? Math.round((totalContadas / totalEsperadas) * 100) : 0;
     return { totalEsperadas, totalContadas, totalSesionAct, pct, sinDiferencias, conDiferencias, pendientes };
   }, [products, acumulado, totalPP, incidencias]);
 
@@ -2537,19 +2742,99 @@ export default function ConteoORPage() {
     setProducts(ps => ps.map(p => ({ ...p, contadasSesion: 0 })));
   };
 
-  const updateContadas = (pid: string, val: number) =>
-    setProducts(ps => ps.map(p => p.id === pid ? { ...p, contadasSesion: val } : p));
+  const updateContadas = useCallback((pid: string, val: number) =>
+    setProducts(ps => ps.map(p => p.id === pid ? { ...p, contadasSesion: val } : p)), []);
 
-  const removeProduct = (pid: string) => {
+  const removeProduct = useCallback((pid: string) => {
     setProducts(ps => ps.filter(p => p.id !== pid));
     setPendingRemove(null);
-  };
+  }, []);
+
+  // O(1) lookup map: barcode/sku → product id (rebuilt only when products change)
+  const scanLookup = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of products) {
+      if (p.barcode) map.set(p.barcode, p.id);
+      if (p.sku) map.set(p.sku, p.id);
+    }
+    return map;
+  }, [products]);
+
+  // Sonic-coin-like sound using Web Audio API
+  const playScanSound = useCallback(() => {
+    try {
+      const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      const playTone = (freq: number, start: number, dur: number, vol: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+        gain.gain.setValueAtTime(vol, ctx.currentTime + start);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + dur);
+      };
+      // Rising two-tone arpeggio (like a coin collect)
+      playTone(988, 0, 0.12, 0.3);     // B5
+      playTone(1319, 0.08, 0.2, 0.25); // E6
+    } catch { /* silent fallback */ }
+  }, []);
+
+  const playErrorSound = useCallback(() => {
+    try {
+      const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      const playTone = (freq: number, start: number, dur: number, vol: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+        gain.gain.setValueAtTime(vol, ctx.currentTime + start);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + dur);
+      };
+      // Descending buzz — unmistakable error
+      playTone(440, 0, 0.12, 0.2);     // A4
+      playTone(330, 0.1, 0.18, 0.2);   // E4
+      playTone(220, 0.22, 0.25, 0.15); // A3
+    } catch { /* silent fallback */ }
+  }, []);
 
   const handleScan = () => {
     const code = scanner.trim();
     if (!code || !sesionActiva) return;
-    const match = products.find(p => p.barcode === code || p.sku === code);
-    if (match) { updateContadas(match.id, match.contadasSesion + 1); setScanner(""); }
+    const matchId = scanLookup.get(code);
+    if (!matchId) {
+      // Error: código no encontrado
+      playErrorSound();
+      setScanError(true);
+      if (scanErrorTimerRef.current) clearTimeout(scanErrorTimerRef.current);
+      scanErrorTimerRef.current = setTimeout(() => setScanError(false), 1500);
+      setScanner("");
+      return;
+    }
+    // Single setProducts: increment + move to top in one pass
+    setProducts(ps => {
+      const idx = ps.findIndex(p => p.id === matchId);
+      if (idx === -1) return ps;
+      const updated = { ...ps[idx], contadasSesion: ps[idx].contadasSesion + 1 };
+      if (idx === 0) return [updated, ...ps.slice(1)];
+      return [updated, ...ps.slice(0, idx), ...ps.slice(idx + 1)];
+    });
+    setScanner("");
+    // Flash animation
+    if (scanFlashTimerRef.current) clearTimeout(scanFlashTimerRef.current);
+    setLastScannedId(matchId);
+    scanFlashTimerRef.current = setTimeout(() => setLastScannedId(null), 1200);
+    // Auto-scroll to the scanned card so animation is visible
+    requestAnimationFrame(() => {
+      const el = document.getElementById(`pcard-${matchId}`);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+    // Sound
+    playScanSound();
   };
 
   const sesionNumActual  = sesiones.length + 1;
@@ -2637,9 +2922,7 @@ export default function ConteoORPage() {
             try {
               localStorage.setItem(`amplifica_or_${id}`, JSON.stringify({ estado: outcome }));
               localStorage.setItem("amplifica_pending_toast", JSON.stringify({
-                title: outcome === "Completado sin diferencias"
-                  ? "Recepción completada sin diferencias"
-                  : "Recepción completada con diferencias",
+                title: "Recepción completada",
                 subtitle: `${id} fue cerrada correctamente`,
               }));
             } catch { /* ignore */ }
@@ -2647,6 +2930,65 @@ export default function ConteoORPage() {
             router.push("/recepciones");
           }}
         />
+      )}
+
+      {/* ── Confirm Liberar modal ── */}
+      {confirmLiberar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" onClick={() => setConfirmLiberar(false)}>
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-end mb-2">
+              <button onClick={() => setConfirmLiberar(false)} className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-4">
+              <AlertTriangle className="w-7 h-7 text-red-600" />
+            </div>
+            <h3 className="text-lg font-bold text-neutral-900 mb-1">¿Liberar sesión activa?</h3>
+            <p className="text-sm text-neutral-500 mb-6">
+              Se descartarán todas las unidades escaneadas en esta sesión ({stats.totalSesionAct} uds). Esta acción no se puede deshacer.
+            </p>
+            <div className="flex gap-3">
+              <Button variant="secondary" size="lg" onClick={() => setConfirmLiberar(false)} className="flex-1">
+                Cancelar
+              </Button>
+              <button onClick={() => { liberarSesion(); setConfirmLiberar(false); }}
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors duration-300 flex items-center justify-center gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                Liberar y descartar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirmar finalización de sesión ── */}
+      {confirmFinalizar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" onClick={() => setConfirmFinalizar(false)}>
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start gap-3 mb-5">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <StopCircle className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-neutral-900">Finalizar sesión</h3>
+                <p className="text-sm text-neutral-500 mt-1 leading-relaxed">
+                  ¿Estás seguro de finalizar la sesión de conteo con{" "}
+                  <span className="font-semibold text-neutral-700">{stats.totalSesionAct} unidades escaneadas</span>{" "}
+                  de <span className="font-semibold text-neutral-700">{stats.totalEsperadas.toLocaleString("es-CL")} esperadas</span>?
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="secondary" size="md" onClick={() => setConfirmFinalizar(false)} className="flex-1">
+                Cancelar
+              </Button>
+              <Button variant="primary" size="md" onClick={() => { setConfirmFinalizar(false); finalizarSesion(); }} className="flex-1">
+                Finalizar
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {pendingProduct && (
@@ -2681,7 +3023,7 @@ export default function ConteoORPage() {
                 <FileText className="w-8 h-8 text-neutral-300" />
                 <p className="text-xs text-neutral-400 text-center">Vista previa no disponible en esta versión</p>
               </div>
-              <button className="w-full h-11 flex items-center justify-center gap-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-xl transition-colors duration-300">
+              <button className="w-full h-11 flex items-center justify-center gap-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300">
                 <Download className="w-4 h-4" />
                 Descargar guía
               </button>
@@ -2697,18 +3039,26 @@ export default function ConteoORPage() {
         <span className="text-neutral-700 font-medium">Orden de Recepción</span>
       </nav>
 
-      <div className="max-w-4xl mx-auto px-4 lg:px-6 pt-3 pb-32 lg:pb-6 space-y-5">
+      <div className="max-w-4xl mx-auto px-4 lg:px-6 pt-3 pb-32 lg:pb-6 space-y-2 sm:space-y-5">
 
         {/* ── Title row ── */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
-          <div className="text-center sm:text-left">
-            <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">
-              Orden de Recepción{" "}
-              <span className="font-mono text-neutral-900">#{id}</span>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-4">
+          <div className={`${sesionActiva ? "sm:text-left" : "text-center sm:text-left"}`}>
+            <h1 className={`font-bold text-neutral-900 ${sesionActiva ? "text-sm sm:text-2xl" : "text-xl sm:text-2xl"}`}>
+              {sesionActiva ? (
+                <>
+                  <span className="sm:hidden font-mono">#{id}</span>
+                  <span className="hidden sm:inline">Orden de Recepción <span className="font-mono">#{id}</span></span>
+                </>
+              ) : (
+                <>Orden de Recepción{" "}<span className="font-mono text-neutral-900">#{id}</span></>
+              )}
             </h1>
-            <p className="text-sm text-neutral-400 mt-0.5">
-              {baseData.sucursal}{baseData.fechaAgendada && baseData.fechaAgendada !== "—" ? ` - ${baseData.fechaAgendada}` : ""}
-            </p>
+            {!sesionActiva && (
+              <p className="text-sm text-neutral-400 mt-0.5">
+                {baseData.sucursal}{baseData.fechaAgendada && baseData.fechaAgendada !== "—" ? ` - ${baseData.fechaAgendada}` : ""}
+              </p>
+            )}
           </div>
 
           {/* Desktop-only session buttons / closed OR actions */}
@@ -2723,11 +3073,19 @@ export default function ConteoORPage() {
               >
                 Ver Guía de despacho
               </Button>
+            ) : originalEstado === "Creado" ? (
+              <Link
+                href={`/recepciones/crear?startStep=2&mode=completar&sucursal=${encodeURIComponent(baseData.sucursal)}&seller=${encodeURIComponent(baseData.seller)}&orId=${id}`}
+                className="flex items-center gap-2.5 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300 whitespace-nowrap"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                Completar
+              </Link>
             ) : (
               sesionActiva ? (
                 <button
-                  onClick={finalizarSesion}
-                  className="flex items-center gap-2 px-4 py-2 border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700 text-sm font-medium rounded-lg transition-colors duration-300 whitespace-nowrap"
+                  onClick={() => setConfirmFinalizar(true)}
+                  className="flex items-center gap-2 px-4 py-2 border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700 text-sm font-medium rounded-lg transition-colors duration-300 whitespace-nowrap active:scale-[0.97]"
                 >
                   <StopCircle className="w-4 h-4 text-neutral-500" />
                   Finalizar sesión
@@ -2759,8 +3117,9 @@ export default function ConteoORPage() {
           )}
         </div>
 
-        {/* ── QR Display (hidden when OR closed) ── */}
-        {!orCerrada && (
+        {/* ── QR Display: solo en "Programado" y "Recibir en bodega" (antes de iniciar conteo) ── */}
+        {/* El operador imprime etiquetas de bultos/pallets para que el operador de conteo escanee y encuentre la OR rápido */}
+        {!orCerrada && !sesionActiva && sesiones.length === 0 && (
           <QrDisplaySection
             orId={id}
             seller={baseData.seller}
@@ -2768,131 +3127,237 @@ export default function ConteoORPage() {
             fechaAgendada={baseData.fechaAgendada}
             skus={products.length}
             uTotales={stats.totalEsperadas.toLocaleString("es-CL")}
-            sesiones={sesiones.length + (sesionActiva ? 1 : 0)}
+            sesiones={0}
           />
         )}
 
-        {/* ── Active session banner ── */}
-        {sesionActiva && (
-          <div className="bg-primary-50 border border-primary-200 rounded-xl px-4 py-3 flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full bg-primary-500 animate-pulse flex-shrink-0" />
-            <div className="flex-1 min-w-0 text-sm">
-              <span className="font-bold text-primary-600">{sesionId(sesionNumActual)}</span>
-              <span className="text-primary-400 ml-2 text-xs">
-                Iniciada {fmtDT(sesionInicio)}
-              </span>
+        {/* ── Info compacta: durante y después del conteo ── */}
+        {!orCerrada && (sesionActiva || sesiones.length > 0) && (
+          <div className={`bg-white border border-neutral-200 rounded-xl px-4 py-3 ${sesionActiva ? "hidden sm:block" : ""}`}>
+            <div className="flex items-center gap-5 flex-wrap">
+              <div>
+                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Orden</p>
+                <p className="text-sm font-semibold text-neutral-800 mt-0.5 font-mono">{id}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Tienda</p>
+                <p className="text-sm font-medium text-neutral-700 mt-0.5">{baseData.seller}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Sucursal</p>
+                <p className="text-sm font-medium text-neutral-700 mt-0.5">{baseData.sucursal}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Productos</p>
+                <p className="text-sm font-medium text-neutral-700 mt-0.5">{products.length} SKUs · {stats.totalEsperadas.toLocaleString("es-CL")} Uds.</p>
+              </div>
+              {sesiones.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Sesiones</p>
+                  <p className="text-sm font-medium text-neutral-700 mt-0.5">{sesiones.length + (sesionActiva ? 1 : 0)}</p>
+                </div>
+              )}
             </div>
-            <span className="text-sm font-bold text-primary-500 tabular-nums flex-shrink-0">
-              {stats.totalSesionAct.toLocaleString("es-CL")} uds esta sesión
-            </span>
           </div>
         )}
 
-        {/* ── Scanner (active session only) ── */}
+        {/* ── Active session: mobile compact card ── */}
         {sesionActiva && (
-          <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
-
-            {/* Mobile: camera viewfinder + input (CTA lives in sticky bar) */}
-            <div className="sm:hidden">
-              <div className="bg-neutral-900 px-6 py-6 flex flex-col items-center gap-3">
-                <div className="relative w-44 h-24 flex items-center justify-center">
-                  {/* Corner brackets */}
-                  <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-white/25 rounded-tl-lg" />
-                  <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-white/25 rounded-tr-lg" />
-                  <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-white/25 rounded-bl-lg" />
-                  <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-white/25 rounded-br-lg" />
-                  {/* Barcode icon */}
-                  <ScanBarcode className="w-9 h-9 text-white/20" />
-                  {/* Scan line */}
-                  <div className="absolute inset-x-3 h-0.5 bg-primary-400/50 top-1/2 animate-pulse rounded-full" />
-                </div>
-                <p className="text-white/50 text-xs font-medium">Apunta al código de barras del producto</p>
+          <div className="sm:hidden rounded-xl px-3 py-2.5 space-y-2 bg-primary-50">
+            {/* Session ID + progress bar inline */}
+            <div className="flex items-center gap-2">
+              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${scanError ? "bg-red-500" : "bg-primary-500 animate-pulse"}`} />
+              <span className={`text-xs font-bold flex-shrink-0 ${scanError ? "text-red-600" : "text-primary-600"}`}>{scanError ? "No encontrado" : sesionId(sesionNumActual)}</span>
+              <div className="flex-1 h-1.5 bg-primary-200/50 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    stats.pct === 100 ? "bg-green-500" : "bg-primary-500"
+                  }`}
+                  style={{ width: `${stats.pct}%` }}
+                />
               </div>
-              <div className="p-3">
-                <label className="block text-xs font-medium text-neutral-500 mb-1.5">SKU / Código de barras</label>
-                <div className="relative">
-                  <ScanBarcode className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
-                  <input
-                    ref={scannerInputRef}
-                    type="text"
-                    value={scanner}
-                    onChange={e => setScanner(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && handleScan()}
-                    placeholder="Escanea o ingresa manualmente"
-                    className="w-full pl-9 pr-4 py-2.5 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 placeholder-neutral-400"
-                  />
-                </div>
+              <span className="text-[11px] font-bold text-primary-600 tabular-nums flex-shrink-0">
+                {stats.pct}%
+              </span>
+              <span className="text-[11px] text-primary-400 tabular-nums flex-shrink-0">
+                {stats.totalContadas.toLocaleString("es-CL")}/{stats.totalEsperadas.toLocaleString("es-CL")}
+              </span>
+              {stats.totalSesionAct > 0 && (
+                <span className="text-[11px] font-bold text-primary-500 tabular-nums flex-shrink-0">+{stats.totalSesionAct}</span>
+              )}
+            </div>
+            {/* Scanner block — dark bg, no borders, eye-catching */}
+            <div className={`bg-neutral-900 rounded-xl px-4 py-4 space-y-3 transition-colors duration-300 ${
+              scanError ? "bg-red-900/90 animate-[headShake_0.5s_ease-in-out]" : ""
+            }`}>
+              {/* Viewfinder area */}
+              <div className="relative w-full h-14 flex items-center justify-center">
+                <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-white/20 rounded-tl" />
+                <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-white/20 rounded-tr" />
+                <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-white/20 rounded-bl" />
+                <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-white/20 rounded-br" />
+                <ScanBarcode className="w-6 h-6 text-white/15" />
+                <div className="absolute inset-x-2 h-0.5 bg-primary-400/40 top-1/2 animate-pulse rounded-full" />
+              </div>
+              {/* Input inside dark block */}
+              <div className="relative">
+                <ScanBarcode className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${scanError ? "text-red-400" : "text-white/40"}`} />
+                <input
+                  ref={scannerInputRef}
+                  type="text"
+                  value={scanner}
+                  onChange={e => { setScanner(e.target.value); if (scanError) setScanError(false); }}
+                  onKeyDown={e => e.key === "Enter" && handleScan()}
+                  placeholder={scanError ? "Código no encontrado" : "Escanea o ingresa SKU"}
+                  className={`w-full pl-9 pr-3 py-2.5 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 transition-colors ${
+                    scanError
+                      ? "bg-red-100 text-red-700 placeholder-red-400 focus:ring-red-300"
+                      : "bg-white/10 text-white placeholder-white/40 focus:ring-primary-400"
+                  }`}
+                />
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Desktop: original layout */}
-            <div className="hidden sm:block p-4 lg:p-5">
-              <p className="text-base font-semibold text-neutral-800 mb-3">
-                Escanear código de barras
-              </p>
+        {/* ── Desktop combined: session + scanner + progress (single card) ── */}
+        {sesionActiva && (
+          <div className="hidden sm:block bg-white border border-neutral-200 rounded-xl overflow-hidden">
+            {/* Session header bar */}
+            <div className="bg-primary-50 border-b border-primary-200 px-4 py-2.5 flex items-center gap-3">
+              <span className="w-2 h-2 rounded-full bg-primary-500 animate-pulse flex-shrink-0" />
+              <span className="text-sm font-bold text-primary-600">{sesionId(sesionNumActual)}</span>
+              <span className="text-primary-400 text-xs">Iniciada {fmtDT(sesionInicio)}</span>
+              <span className="ml-auto text-sm font-bold text-primary-500 tabular-nums flex-shrink-0">
+                {stats.totalSesionAct.toLocaleString("es-CL")} uds. escaneadas
+              </span>
+            </div>
+            {/* Scanner input row */}
+            <div className="px-4 py-3 border-b border-neutral-100">
               <div className="flex flex-row gap-2">
                 <div className="relative flex-1">
                   <Scan className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
                   <input
                     type="text"
                     value={scanner}
-                    onChange={e => setScanner(e.target.value)}
+                    onChange={e => { setScanner(e.target.value); if (scanError) setScanError(false); }}
                     onKeyDown={e => e.key === "Enter" && handleScan()}
-                    placeholder="Ingresa o escanea SKU / Código de barras"
-                    className="w-full pl-9 pr-4 py-2.5 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 placeholder-neutral-400"
+                    placeholder={scanError ? "Código no encontrado en esta OR" : "Ingresa o escanea SKU / Código de barras"}
+                    className={`w-full pl-9 pr-4 py-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors ${
+                      scanError
+                        ? "border border-red-300 bg-red-50 text-red-700 focus:ring-red-200 placeholder-red-400"
+                        : "border border-neutral-200 text-neutral-600 focus:ring-primary-200 placeholder-neutral-500"
+                    }`}
                     autoFocus
                   />
                 </div>
-                <button
-                  onClick={handleScan}
-                  className="px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
-                >
+                <Button variant="primary" size="lg" onClick={handleScan}>
                   Registrar
-                </button>
+                </Button>
               </div>
-              <p className="text-xs text-neutral-400 mt-2">
-                Presiona{" "}
-                <kbd className="px-1.5 py-0.5 bg-neutral-100 rounded text-[11px] font-mono border border-neutral-200">Enter</kbd>{" "}
-                o haz clic en <span className="font-semibold text-neutral-600">Registrar</span> para escanear una unidad.
-              </p>
+            </div>
+            {/* Progress row */}
+            <div className="px-4 py-2.5">
+              <div className="flex items-center gap-3">
+                <span className="text-lg font-black text-neutral-900 tabular-nums leading-none w-12 flex-shrink-0">
+                  {stats.pct}%
+                </span>
+                <div className="flex-1">
+                  <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        stats.pct === 100 ? "bg-green-500" :
+                        stats.pct >= 75  ? "bg-primary-500" :
+                        stats.conDiferencias > 0 ? "bg-amber-400" : "bg-primary-400"
+                      }`}
+                      style={{ width: `${stats.pct}%` }}
+                    />
+                  </div>
+                </div>
+                <span className="text-xs text-neutral-400 tabular-nums flex-shrink-0">
+                  {stats.totalContadas.toLocaleString("es-CL")}/{stats.totalEsperadas.toLocaleString("es-CL")}
+                </span>
+                {stats.totalSesionAct > 0 && (
+                  <span className="text-xs font-semibold text-primary-500 tabular-nums flex-shrink-0">
+                    +{stats.totalSesionAct}
+                  </span>
+                )}
+              </div>
+              {/* Chips */}
+              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                {stats.sinDiferencias > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full">
+                    <CheckCircle2 className="w-2.5 h-2.5" />
+                    {stats.sinDiferencias} OK
+                  </span>
+                )}
+                {stats.conDiferencias > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-full">
+                    <AlertTriangle className="w-2.5 h-2.5" />
+                    {stats.conDiferencias} diferencias
+                  </span>
+                )}
+                {stats.pendientes > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 bg-neutral-50 text-neutral-500 border border-neutral-200 rounded-full">
+                    {stats.pendientes} pendientes
+                  </span>
+                )}
+                {(Object.entries(incidenciasPorTag) as [IncidenciaTagKey, number][]).map(([tagKey, total]) => {
+                  const tag = INCIDENCIA_TAGS.find(t => t.key === tagKey);
+                  if (!tag || total === 0) return null;
+                  return (
+                    <span key={tagKey} className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border ${tagColorCls(tagKey)}`}>
+                      {tag.label}
+                      <span className="opacity-60 font-normal tabular-nums ml-0.5">· {total}</span>
+                    </span>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
 
-        {/* ── Progreso de conteo (solo visible mientras OR abierta) ── */}
-        {!orCerrada && (
-        <div className="bg-white border border-neutral-200 rounded-xl p-5">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-base font-semibold text-neutral-800">Progreso de conteo</span>
-            <span className="text-sm font-bold text-neutral-700 tabular-nums">
+        {/* ── Progreso de conteo (visible cuando NO hay sesión activa y OR abierta) ── */}
+        {!orCerrada && !sesionActiva && (
+        <div className="bg-white border border-neutral-200 rounded-xl px-4 py-3">
+          {/* Row: porcentaje + barra + conteo */}
+          <div className="flex items-center gap-3">
+            <span className="text-lg font-black text-neutral-900 tabular-nums leading-none w-12 flex-shrink-0">
+              {stats.pct}%
+            </span>
+            <div className="flex-1">
+              <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    stats.pct === 100 ? "bg-green-500" :
+                    stats.pct >= 75  ? "bg-primary-500" :
+                    stats.conDiferencias > 0 ? "bg-amber-400" : "bg-primary-400"
+                  }`}
+                  style={{ width: `${stats.pct}%` }}
+                />
+              </div>
+            </div>
+            <span className="text-xs text-neutral-400 tabular-nums flex-shrink-0">
               {stats.totalContadas.toLocaleString("es-CL")}/{stats.totalEsperadas.toLocaleString("es-CL")}
-              <span className="ml-1 text-neutral-500 font-normal">({stats.pct}%)</span>
             </span>
           </div>
-          <div className="h-2.5 bg-neutral-100 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${
-                stats.pct === 100 ? "bg-green-500" :
-                stats.conDiferencias > 0 ? "bg-amber-400" : "bg-primary-500"
-              }`}
-              style={{ width: `${stats.pct}%` }}
-            />
-          </div>
 
-          {/* Summary chips */}
-          <div className="flex items-center gap-2 mt-3 flex-wrap">
-            {stats.conDiferencias > 0 && (
-              <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full">
-                {stats.conDiferencias} con diferencias
+          {/* Chips en una sola línea debajo */}
+          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+            {stats.sinDiferencias > 0 && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full">
+                <CheckCircle2 className="w-2.5 h-2.5" />
+                {stats.sinDiferencias} OK
               </span>
             )}
-            {stats.sinDiferencias > 0 && (
-              <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-full">
-                {stats.sinDiferencias.toLocaleString("es-CL")} sin diferencias
+            {stats.conDiferencias > 0 && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-full">
+                <AlertTriangle className="w-2.5 h-2.5" />
+                {stats.conDiferencias} diferencias
               </span>
             )}
             {stats.pendientes > 0 && (
-              <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full">
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 bg-neutral-50 text-neutral-500 border border-neutral-200 rounded-full">
                 {stats.pendientes} pendientes
               </span>
             )}
@@ -2900,9 +3365,9 @@ export default function ConteoORPage() {
               const tag = INCIDENCIA_TAGS.find(t => t.key === tagKey);
               if (!tag || total === 0) return null;
               return (
-                <span key={tagKey} className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border ${tagColorCls(tagKey)}`}>
+                <span key={tagKey} className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border ${tagColorCls(tagKey)}`}>
                   {tag.label}
-                  <span className="opacity-60 font-normal tabular-nums ml-0.5">· {total} uds</span>
+                  <span className="opacity-60 font-normal tabular-nums ml-0.5">· {total}</span>
                 </span>
               );
             })}
@@ -2933,7 +3398,7 @@ export default function ConteoORPage() {
                               <p className="text-sm font-medium text-neutral-800 leading-snug">{p.nombre}</p>
                               <p className="text-xs text-neutral-400 font-mono mt-0.5">{p.sku}</p>
                             </div>
-                            <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold flex-shrink-0 ${statusConf.cls}`}>
+                            <span className={`inline-flex px-2 py-0.5 rounded-[6px] text-xs font-medium flex-shrink-0 ${statusConf.cls}`}>
                               {statusConf.label}
                             </span>
                           </div>
@@ -3005,7 +3470,7 @@ export default function ConteoORPage() {
                                 {incCount > 0 ? incCount : "—"}
                               </td>
                               <td className="px-3 py-2 text-center">
-                                <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusConf.cls}`}>
+                                <span className={`inline-flex px-2 py-0.5 rounded-[6px] text-xs font-medium ${statusConf.cls}`}>
                                   {statusConf.label}
                                 </span>
                               </td>
@@ -3017,52 +3482,89 @@ export default function ConteoORPage() {
                   </div>
                 </>
               )}
-              <div className="flex justify-center">
-                <Button
-                  variant="tertiary"
-                  size="sm"
-                  onClick={() => setShowProductTable(v => !v)}
-                  iconRight={showProductTable ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                >
-                  {showProductTable ? "Ocultar detalle" : "Ver detalle de productos"}
-                </Button>
-              </div>
+              <button
+                onClick={() => setShowProductTable(v => !v)}
+                className="w-full flex items-center justify-center gap-1 py-1.5 text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
+              >
+                {showProductTable ? "Ocultar detalle" : "Ver detalle de productos"}
+                {showProductTable ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </button>
             </div>
           )}
         </div>
         )}
 
         {/* ── OR closed result banner ── */}
-        {orCerrada && (() => {
-          const sinDif = orEstado === "Completado sin diferencias";
-          return (
-            <div className={`rounded-xl px-4 py-4 border ${
-              sinDif ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"
-            }`}>
+        {orCerrada && (
+            <div className="rounded-xl px-4 py-4 border bg-green-50 border-green-200">
               <div className="flex items-start gap-3 sm:items-center sm:gap-4">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-lg font-bold ${
-                  sinDif ? "bg-green-100 text-green-600" : "bg-amber-100 text-amber-600"
-                }`}>✓</div>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-lg font-bold bg-green-100 text-green-600">✓</div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-bold ${sinDif ? "text-green-700" : "text-amber-700"}`}>
-                    Recepción cerrada
+                  <p className="text-sm font-bold text-green-700">
+                    Recepción completada
                   </p>
-                  <p className={`text-xs mt-0.5 ${sinDif ? "text-green-600" : "text-amber-600"}`}>
-                    {sinDif
-                      ? "Todas las unidades fueron contadas sin diferencias."
-                      : "Se registraron diferencias entre lo declarado y lo contado."}
+                  <p className="text-xs mt-0.5 text-green-600">
+                    El proceso de conteo fue finalizado correctamente.
                   </p>
-                  <span className={`sm:hidden inline-flex mt-2 text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${
-                    sinDif ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
-                  }`}>
-                    {orEstado}
+                  <span className="sm:hidden inline-flex mt-2 text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap bg-green-100 text-green-700">
+                    Completada
                   </span>
                 </div>
-                <span className={`hidden sm:inline-flex flex-shrink-0 text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${
-                  sinDif ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
-                }`}>
-                  {orEstado}
+                <span className="hidden sm:inline-flex flex-shrink-0 text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap bg-green-100 text-green-700">
+                  Completada
                 </span>
+              </div>
+            </div>
+        )}
+
+        {/* ── Stats resumen dark bar (OR cerrada) ── */}
+        {orCerrada && (() => {
+          const totalEsperadas = products.reduce((s, p) => s + p.esperadas, 0);
+          const totalRecibidas = products.reduce((s, p) => {
+            const acc = acumulado[p.id] ?? 0;
+            const inc = (incidencias[p.id] ?? []).filter(r => r.tag !== "").reduce((rs, r) => rs + r.cantidad, 0);
+            return s + acc + inc;
+          }, 0);
+          const diffNeta = totalRecibidas - totalEsperadas;
+          const totalInc = products.reduce((s, p) => (incidencias[p.id] ?? []).filter(r => r.tag !== "").length + s, 0);
+          const summaryItems = [
+            { label: "SKUs", value: products.length.toString() },
+            { label: "Uds. esperadas", value: totalEsperadas.toLocaleString("es-CL") },
+            { label: "Uds. recibidas", value: totalRecibidas.toLocaleString("es-CL") },
+            { label: "Diferencia neta", value: diffNeta === 0 ? "0" : (diffNeta > 0 ? "+" : "") + diffNeta.toLocaleString("es-CL"),
+              cls: diffNeta === 0 ? "text-green-400" : diffNeta > 0 ? "text-blue-400" : "text-red-400" },
+            { label: "Incidencias", value: totalInc > 0 ? totalInc.toString() : "0",
+              cls: totalInc > 0 ? "text-amber-400" : undefined },
+          ];
+          return (
+            <div className="bg-neutral-900 rounded-xl overflow-hidden">
+              {/* Mobile: 3+2 */}
+              <div className="sm:hidden px-4 py-3.5 space-y-2">
+                <div className="grid grid-cols-3 gap-2">
+                  {summaryItems.slice(0, 3).map(s => (
+                    <div key={s.label} className="text-center">
+                      <p className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider">{s.label}</p>
+                      <p className={`text-base font-bold mt-0.5 tabular-nums ${s.cls ?? "text-white"}`}>{s.value}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {summaryItems.slice(3).map(s => (
+                    <div key={s.label} className="text-center">
+                      <p className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider">{s.label}</p>
+                      <p className={`text-base font-bold mt-0.5 tabular-nums ${s.cls ?? "text-white"}`}>{s.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Desktop: 5-col */}
+              <div className="hidden sm:grid grid-cols-5 gap-3 px-5 py-4">
+                {summaryItems.map(s => (
+                  <div key={s.label} className="text-left">
+                    <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">{s.label}</p>
+                    <p className={`text-sm font-bold mt-1 tabular-nums ${s.cls ?? "text-white"}`}>{s.value}</p>
+                  </div>
+                ))}
               </div>
             </div>
           );
@@ -3124,6 +3626,25 @@ export default function ConteoORPage() {
           />
         )}
 
+        {/* ── Historial de sesiones (OR cerrada) ── */}
+        {orCerrada && sesiones.length > 0 && (
+          <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+            <div className="px-4 py-3.5 border-b border-neutral-100 flex items-center justify-between">
+              <div>
+                <p className="text-base font-semibold text-neutral-900">Historial de sesiones</p>
+                <p className="text-xs text-neutral-400 mt-0.5">
+                  {sesiones.length} sesión{sesiones.length !== 1 ? "es" : ""} · {[...new Set(sesiones.map(s => s.operador))].length} operador{[...new Set(sesiones.map(s => s.operador))].length !== 1 ? "es" : ""}
+                </p>
+              </div>
+            </div>
+            <div className="divide-y divide-neutral-100">
+              {sesiones.map(s => (
+                <SesionRow key={s.id} sesion={s} incidencias={incidencias} products={products} acumulado={acumulado} />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ── Products container (hidden when OR closed — ResumenOR has details) ── */}
         {!orCerrada && (
           <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
@@ -3138,18 +3659,21 @@ export default function ConteoORPage() {
                 </div>
               </div>
             ) : (
-              products.map(p => (
-                <ProductCard
-                  key={p.id}
-                  product={p}
-                  acumulado={acumulado[p.id] ?? 0}
-                  sesionActiva={sesionActiva}
-                  onChange={updateContadas}
-                  onRemove={pid => setPendingRemove(pid)}
-                  incidencias={incidencias[p.id] ?? []}
-                  onCategorizar={() => setIncidenciaTarget(p.id)}
-                />
-              ))
+              <div className="divide-y divide-neutral-100">
+                {products.map(p => (
+                  <ProductCard
+                    key={p.id}
+                    product={p}
+                    acumulado={acumulado[p.id] ?? 0}
+                    sesionActiva={sesionActiva}
+                    onChange={updateContadas}
+                    onRemove={pid => setPendingRemove(pid)}
+                    incidencias={incidencias[p.id] ?? []}
+                    onCategorizar={() => setIncidenciaTarget(p.id)}
+                    isJustScanned={lastScannedId === p.id}
+                  />
+                ))}
+              </div>
             )}
 
             {/* Añadir producto — solo visible con sesión activa */}
@@ -3194,7 +3718,6 @@ export default function ConteoORPage() {
 
         {/* ── Notificaciones enviadas (OR cerrada) ── */}
         {orCerrada && (() => {
-          const sinDif = orEstado === "Completado sin diferencias";
           const hasInc = Object.values(incidencias).some(rows => rows.some(r => r.tag !== ""));
           const hasQuar = quarantineRecs.length > 0;
 
@@ -3225,7 +3748,7 @@ export default function ConteoORPage() {
               color: "green",
             },
             {
-              titulo: sinDif ? "Recepción completada sin diferencias" : "Recepción completada con diferencias",
+              titulo: "Recepción completada",
               destinatario: `${baseData.seller} (Seller) + Supervisor`,
               fecha: "08/03/2026 18:10",
               canal: "Email + Push",
@@ -3306,25 +3829,32 @@ export default function ConteoORPage() {
           );
         })()}
 
-        {/* ── Footer: Liberar + Terminar recepción (always visible when OR open) ── */}
-        {!orCerrada && (<>
-          {/* No-units alert */}
+        {/* ── Footer: Liberar + Terminar recepción (always visible when OR open, hidden for Creado) ── */}
+        {!orCerrada && originalEstado !== "Creado" && (<>
+          {/* No-units alert modal */}
           {noUnitsAlert && (
-            <div className="flex items-start gap-3 p-4 mb-2 bg-amber-50 border border-amber-200 rounded-lg">
-              <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-amber-800">No se puede terminar la recepción</p>
-                <p className="text-sm text-amber-700 mt-0.5">Debes ingresar al menos una unidad en las sesiones de conteo antes de terminar la recepción.</p>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" onClick={() => setNoUnitsAlert(false)}>
+              <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-end mb-2">
+                  <button onClick={() => setNoUnitsAlert(false)} className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center mb-4">
+                  <AlertTriangle className="w-7 h-7 text-amber-600" />
+                </div>
+                <h3 className="text-lg font-bold text-neutral-900 mb-1">No se puede terminar la recepción</h3>
+                <p className="text-sm text-neutral-500 mb-6">Debes ingresar al menos una unidad en las sesiones de conteo antes de terminar la recepción.</p>
+                <Button variant="primary" size="lg" onClick={() => setNoUnitsAlert(false)} className="w-full">
+                  Entendido
+                </Button>
               </div>
-              <button onClick={() => setNoUnitsAlert(false)} className="p-1 rounded hover:bg-amber-100 transition-colors flex-shrink-0">
-                <X className="w-4 h-4 text-amber-500" />
-              </button>
             </div>
           )}
 
           {/* Desktop footer actions */}
           <div className="hidden lg:flex items-center justify-between pt-2 pb-8">
-            <Button variant="secondary" size="lg" onClick={liberarSesion} disabled={!sesionActiva} iconLeft={<LockUnlocked01 className="w-4 h-4" />}>
+            <Button variant="secondary" size="lg" onClick={() => setConfirmLiberar(true)} disabled={!sesionActiva} iconLeft={<LockUnlocked01 className="w-4 h-4" />}>
               Liberar
             </Button>
 
@@ -3353,28 +3883,29 @@ export default function ConteoORPage() {
       {/* ── Mobile sticky bottom bar ── */}
       {!orCerrada && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 pt-3 pb-6 z-30 lg:hidden">
-          {sesionActiva ? (
-            <div className="flex flex-col gap-2">
-              {/* Primary: Escanear unidad */}
+          {originalEstado === "Creado" ? (
+            <Link
+              href={`/recepciones/crear?startStep=2&mode=completar&sucursal=${encodeURIComponent(baseData.sucursal)}&seller=${encodeURIComponent(baseData.seller)}&orId=${id}`}
+              className="w-full h-12 flex items-center justify-center gap-2.5 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Completar
+            </Link>
+          ) : sesionActiva ? (
+            <div className="flex flex-col gap-1">
               <button
-                onClick={() => {
-                  scannerInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-                  setTimeout(() => scannerInputRef.current?.focus(), 400);
-                }}
-                className="w-full h-12 flex items-center justify-center gap-2 bg-primary-500 hover:bg-primary-600 active:bg-primary-700 text-white text-sm font-semibold rounded-xl transition-colors duration-300"
-              >
-                <ScanBarcode className="w-4 h-4" />
-                Escanear unidad
-                <span className="text-xs font-normal opacity-75">· {stats.totalSesionAct} uds</span>
-              </button>
-
-              {/* Finalizar sesión — full width */}
-              <button
-                onClick={finalizarSesion}
-                className="w-full h-12 flex items-center justify-center gap-2 text-red-600 text-sm font-medium rounded-xl hover:bg-red-50 active:bg-red-100 transition-colors duration-300"
+                onClick={() => setConfirmFinalizar(true)}
+                className="w-full h-12 flex items-center justify-center gap-2 bg-primary-500 hover:bg-primary-600 active:bg-primary-700 text-white text-sm font-semibold rounded-lg active:scale-[0.97] transition-all duration-300"
               >
                 <StopCircle className="w-4 h-4" />
                 Finalizar sesión
+              </button>
+              <button
+                onClick={() => setConfirmLiberar(true)}
+                className="w-full h-10 flex items-center justify-center gap-2 text-red-500 text-sm font-medium hover:text-red-600 active:scale-[0.97] transition-all duration-300"
+              >
+                <LockUnlocked01 className="w-4 h-4" />
+                Liberar sesión
               </button>
             </div>
           ) : (

@@ -5,6 +5,7 @@ import {
   X, QrCode02, CheckCircle, AlertTriangle, XCircle,
   Clock, SearchLg, ChevronRight, RefreshCw01,
 } from "@untitled-ui/icons-react";
+import { Printer } from "lucide-react";
 import {
   ensureQrSeeded, loadQrTokens, validateScan,
   markTokenScanned, computeTimeTolerance,
@@ -29,7 +30,7 @@ type Props = {
   open: boolean;
   onClose: () => void;
   /** Called when the scan is confirmed — parent updates the OR estado */
-  onConfirm: (orId: string) => void;
+  onConfirm: (orId: string, labelCount: number) => void;
   /** Look up OR info by id (used after token is found) */
   getOrInfo: (orId: string) => OrInfo | undefined;
 };
@@ -73,6 +74,16 @@ export default function QrScannerModal({ open, onClose, onConfirm, getOrInfo }: 
   const [matchedToken, setMatchedToken] = useState<QrToken | null>(null);
   const [matchedOr, setMatchedOr] = useState<OrInfo | null>(null);
 
+  // ── Label printing states ──
+  const [labelMode, setLabelMode] = useState<"pallets" | "bultos" | "custom">("pallets");
+  const [customLabelCount, setCustomLabelCount] = useState("");
+
+  const labelCount = labelMode === "pallets"
+    ? (matchedOr?.pallets ?? 0)
+    : labelMode === "bultos"
+      ? (matchedOr?.bultos ?? 0)
+      : (parseInt(customLabelCount) || 0);
+
   // Seed tokens on first open
   useEffect(() => { if (open) ensureQrSeeded(); }, [open]);
 
@@ -84,6 +95,8 @@ export default function QrScannerModal({ open, onClose, onConfirm, getOrInfo }: 
       setScanError(null);
       setMatchedToken(null);
       setMatchedOr(null);
+      setLabelMode("pallets");
+      setCustomLabelCount("");
     }
   }, [open]);
 
@@ -106,8 +119,11 @@ export default function QrScannerModal({ open, onClose, onConfirm, getOrInfo }: 
     setProgramadoOrs(items);
   }, [open, getOrInfo]);
 
+  // ── Mock flow types for demo quick-scan items ──
+  const MOCK_FLOWS: ScanError[] = ["already_scanned", "wrong_sucursal"];
+
   // ── Scan logic ──
-  const doScan = useCallback((tokenValue: string) => {
+  const doScan = useCallback((tokenValue: string, forcedError?: ScanError) => {
     setStep("validating");
 
     setTimeout(() => {
@@ -122,6 +138,14 @@ export default function QrScannerModal({ open, onClose, onConfirm, getOrInfo }: 
 
       const token = result.token;
       const or = getOrInfo(token.orden_recepcion_id);
+
+      // Mock: force a specific error flow for demo
+      if (forcedError) {
+        setScanError(forcedError);
+        setMatchedToken(token);
+        setStep("error");
+        return;
+      }
 
       // Additional checks with OR context
       if (or && or.estado !== "Programado") {
@@ -138,9 +162,9 @@ export default function QrScannerModal({ open, onClose, onConfirm, getOrInfo }: 
   }, [getOrInfo]);
 
   const handleConfirm = () => {
-    if (!matchedToken) return;
+    if (!matchedToken || labelCount === 0) return;
     markTokenScanned(matchedToken.id);
-    onConfirm(matchedToken.orden_recepcion_id);
+    onConfirm(matchedToken.orden_recepcion_id, labelCount);
     onClose();
   };
 
@@ -223,7 +247,7 @@ export default function QrScannerModal({ open, onClose, onConfirm, getOrInfo }: 
                       onChange={e => setInputVal(e.target.value)}
                       onKeyDown={e => { if (e.key === "Enter" && inputVal.trim()) doScan(inputVal.trim()); }}
                       placeholder="Pegar o escribir token UUID..."
-                      className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-200 focus:border-primary-400 outline-none text-neutral-700 placeholder:text-neutral-400"
+                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-200 text-neutral-700 placeholder-neutral-400"
                     />
                   </div>
                   <button
@@ -245,10 +269,10 @@ export default function QrScannerModal({ open, onClose, onConfirm, getOrInfo }: 
                   <p className="text-sm text-neutral-400 italic">No hay órdenes programadas con QR activo.</p>
                 ) : (
                   <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                    {programadoOrs.map(item => (
+                    {programadoOrs.map((item, idx) => (
                       <button
                         key={item.orId}
-                        onClick={() => doScan(item.token)}
+                        onClick={() => doScan(item.token, MOCK_FLOWS[idx - 1])}
                         className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-neutral-200 hover:border-primary-300 hover:bg-primary-50/50 transition-colors text-left group"
                       >
                         <div className="min-w-0">
@@ -272,7 +296,7 @@ export default function QrScannerModal({ open, onClose, onConfirm, getOrInfo }: 
             </div>
           )}
 
-          {/* STEP: SUCCESS */}
+          {/* STEP: SUCCESS — Recepción verificada + etiquetas QR */}
           {step === "success" && matchedOr && (
             <div className="flex-1 flex flex-col">
               {/* Success header */}
@@ -281,8 +305,8 @@ export default function QrScannerModal({ open, onClose, onConfirm, getOrInfo }: 
                   <CheckCircle className="w-5 h-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-base font-semibold text-neutral-900">QR validado correctamente</p>
-                  <p className="text-sm text-neutral-500">La orden está lista para ser recepcionada.</p>
+                  <p className="text-base font-semibold text-neutral-900">Recepción verificada</p>
+                  <p className="text-sm text-neutral-500">La orden está lista para el proceso de conteo.</p>
                 </div>
               </div>
 
@@ -292,7 +316,7 @@ export default function QrScannerModal({ open, onClose, onConfirm, getOrInfo }: 
                   <span className="text-sm font-semibold text-neutral-900">{matchedOr.id}</span>
                   <ToleranceBadge fechaAgendada={matchedOr.fechaAgendada} />
                 </div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                <div className="grid grid-cols-3 gap-x-4 gap-y-2 text-sm">
                   <div>
                     <span className="text-neutral-500">Seller</span>
                     <p className="font-medium text-neutral-800">{matchedOr.seller}</p>
@@ -302,23 +326,62 @@ export default function QrScannerModal({ open, onClose, onConfirm, getOrInfo }: 
                     <p className="font-medium text-neutral-800">{matchedOr.sucursal}</p>
                   </div>
                   <div>
-                    <span className="text-neutral-500">Fecha agendada</span>
-                    <p className="font-medium text-neutral-800">{matchedOr.fechaAgendada}</p>
-                  </div>
-                  <div>
                     <span className="text-neutral-500">SKUs</span>
                     <p className="font-medium text-neutral-800">{matchedOr.skus}</p>
                   </div>
-                  <div>
-                    <span className="text-neutral-500">Unidades</span>
-                    <p className="font-medium text-neutral-800">{matchedOr.uTotales}</p>
-                  </div>
-                  {matchedOr.bultos && (
+                  {matchedOr.pallets != null && (
+                    <div>
+                      <span className="text-neutral-500">Pallets</span>
+                      <p className="font-medium text-neutral-800">{matchedOr.pallets}</p>
+                    </div>
+                  )}
+                  {matchedOr.bultos != null && (
                     <div>
                       <span className="text-neutral-500">Bultos</span>
                       <p className="font-medium text-neutral-800">{matchedOr.bultos}</p>
                     </div>
                   )}
+                  <div>
+                    <span className="text-neutral-500">Unidades</span>
+                    <p className="font-medium text-neutral-800">{matchedOr.uTotales}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Label printing section */}
+              <div className="mb-4">
+                <p className="text-sm font-semibold text-neutral-800 mb-2">Etiquetas QR para conteo</p>
+                <p className="text-xs text-neutral-500 mb-3">Selecciona cuántas etiquetas imprimir. Cada etiqueta permitirá iniciar el conteo al escanearla.</p>
+                <div className="space-y-2">
+                  {matchedOr.pallets != null && matchedOr.pallets > 0 && (
+                    <label className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${labelMode === "pallets" ? "border-primary-300 bg-primary-50/50" : "border-neutral-200 hover:border-neutral-300"}`}>
+                      <input type="radio" name="labelMode" checked={labelMode === "pallets"} onChange={() => setLabelMode("pallets")} className="accent-primary-500" />
+                      <span className="text-sm text-neutral-700">Por pallets</span>
+                      <span className="ml-auto text-sm font-semibold text-neutral-800">{matchedOr.pallets} etiqueta{matchedOr.pallets !== 1 ? "s" : ""}</span>
+                    </label>
+                  )}
+                  {matchedOr.bultos != null && matchedOr.bultos > 0 && (
+                    <label className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${labelMode === "bultos" ? "border-primary-300 bg-primary-50/50" : "border-neutral-200 hover:border-neutral-300"}`}>
+                      <input type="radio" name="labelMode" checked={labelMode === "bultos"} onChange={() => setLabelMode("bultos")} className="accent-primary-500" />
+                      <span className="text-sm text-neutral-700">Por bultos</span>
+                      <span className="ml-auto text-sm font-semibold text-neutral-800">{matchedOr.bultos} etiqueta{matchedOr.bultos !== 1 ? "s" : ""}</span>
+                    </label>
+                  )}
+                  <label className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${labelMode === "custom" ? "border-primary-300 bg-primary-50/50" : "border-neutral-200 hover:border-neutral-300"}`}>
+                    <input type="radio" name="labelMode" checked={labelMode === "custom"} onChange={() => setLabelMode("custom")} className="accent-primary-500" />
+                    <span className="text-sm text-neutral-700">Personalizado</span>
+                    {labelMode === "custom" && (
+                      <input
+                        type="number"
+                        value={customLabelCount}
+                        onChange={e => setCustomLabelCount(e.target.value)}
+                        placeholder="0"
+                        min="1"
+                        autoFocus
+                        className="ml-auto w-20 px-3 py-2 text-sm text-center bg-white text-neutral-600 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-200 tabular-nums"
+                      />
+                    )}
+                  </label>
                 </div>
               </div>
 
@@ -326,9 +389,17 @@ export default function QrScannerModal({ open, onClose, onConfirm, getOrInfo }: 
               <div className="flex flex-col gap-2 mt-auto">
                 <button
                   onClick={handleConfirm}
-                  className="w-full h-12 px-4 text-sm font-semibold text-white bg-primary-500 rounded-xl hover:bg-primary-600 transition-colors"
+                  disabled={labelCount === 0}
+                  className={`w-full h-12 px-4 text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 ${
+                    labelCount > 0
+                      ? "text-white bg-primary-500 hover:bg-primary-600"
+                      : "bg-neutral-100 text-neutral-400 cursor-not-allowed"
+                  }`}
                 >
-                  Confirmar recepción
+                  <Printer className="w-4 h-4" />
+                  {labelCount > 0
+                    ? `Confirmar e imprimir ${labelCount} etiqueta${labelCount !== 1 ? "s" : ""}`
+                    : "Selecciona cantidad de etiquetas"}
                 </button>
                 <button
                   onClick={onClose}

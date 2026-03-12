@@ -6,11 +6,13 @@ import { useState, useEffect, useRef, Suspense } from "react";
 import { createPortal } from "react-dom";
 import {
   AlertCircle, ChevronDown, Upload, Trash2, MoreVertical,
-  Package, ArrowRight, ChevronLeft, ChevronRight, Check
+  Package, ArrowRight, ChevronLeft, ChevronRight, Check,
+  PlusCircle, FileSpreadsheet,
 } from "lucide-react";
 import StepIndicator from "@/components/recepciones/StepIndicator";
 import ProductsModal, { AddProduct } from "@/components/recepciones/ProductsModal";
 import FormField from "@/components/ui/FormField";
+import Button from "@/components/ui/Button";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Product = { sku: string; nombre: string; barcode: string; qty: number };
@@ -32,7 +34,7 @@ type FormData = {
 // (MiniCalendar removed — calendar is now inlined in Step3)
 
 // ─── Step 1 ───────────────────────────────────────────────────────────────────
-function Step1({ form, setForm }: { form: FormData; setForm: React.Dispatch<React.SetStateAction<FormData>> }) {
+function Step1({ form, setForm, lockedSucursal, lockedSeller }: { form: FormData; setForm: React.Dispatch<React.SetStateAction<FormData>>; lockedSucursal: boolean; lockedSeller: boolean }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [showAlert, setShowAlert] = useState(true);
@@ -72,9 +74,15 @@ function Step1({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
           label="Sucursal de destino"
           value={form.sucursal}
           onChange={v => setForm(f => ({ ...f, sucursal: v }))}
+          disabled={lockedSucursal}
         >
           <option value="Quilicura">Quilicura — El juncal 901, Quilicura, Santiago, Chile</option>
           <option value="Pudahuel">Pudahuel</option>
+          <option value="La Reina">La Reina</option>
+          <option value="Lo Barnechea">Lo Barnechea</option>
+          <option value="Santiago Centro">Santiago Centro</option>
+          <option value="Providencia">Providencia</option>
+          <option value="Las Condes">Las Condes</option>
         </FormField>
 
         {/* Tienda */}
@@ -83,47 +91,57 @@ function Step1({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
           label="Tienda"
           value={form.tienda}
           onChange={v => setForm(f => ({ ...f, tienda: v }))}
+          disabled={lockedSeller}
         >
           <option>Extra Life</option>
-          <option>Outdoor Shop</option>
+          <option>Le Vice</option>
+          <option>Gohard</option>
+          <option>VitaFit</option>
+          <option>NutriPro</option>
+          <option>BioNature</option>
+          <option>FitLab</option>
+          <option>PowerNutri</option>
+          <option>OmegaPlus</option>
+          <option>ProHealth</option>
+          <option>NaturalBoost</option>
+          <option>BodyFuel</option>
+          <option>VitalCore</option>
+          <option>PureFit</option>
+          <option>MaxProtein</option>
         </FormField>
 
         {/* Pallets */}
         <FormField
-          as="select"
+          type="number"
           label="Cantidad de pallets"
           value={form.pallets}
           onChange={v => setForm(f => ({ ...f, pallets: v }))}
           disabled={form.desconoceFormato}
-        >
-          <option value="">Seleccione</option>
-          {[1,2,3,4,5,6,7,8,9,10].map(n => <option key={n}>{n}</option>)}
-        </FormField>
+          placeholder="0"
+        />
 
         {/* Bultos */}
         <FormField
-          as="select"
+          type="number"
           label="Cantidad de bultos"
           value={form.bultos}
           onChange={v => setForm(f => ({ ...f, bultos: v }))}
           disabled={form.desconoceFormato}
-        >
-          <option value="">Seleccione</option>
-          {[5,10,15,20,25,30,40,50,100].map(n => <option key={n}>{n}</option>)}
-        </FormField>
+          placeholder="0"
+        />
       </div>
 
       {/* Toggle */}
-      <label className="flex items-center gap-3 cursor-pointer">
+      <div className="flex items-center gap-3">
         <button
           type="button"
-          onClick={() => setForm(f => ({ ...f, desconoceFormato: !f.desconoceFormato }))}
-          className={`w-10 h-6 flex-shrink-0 rounded-full transition-colors duration-300 flex items-center px-1 ${form.desconoceFormato ? "bg-primary-500" : "bg-neutral-200"}`}
+          onClick={() => setForm(f => ({ ...f, desconoceFormato: !f.desconoceFormato, ...(!f.desconoceFormato ? { pallets: "", bultos: "" } : {}) }))}
+          className={`w-10 h-6 flex-shrink-0 rounded-full transition-colors duration-300 flex items-center px-1 cursor-pointer ${form.desconoceFormato ? "bg-primary-500" : "bg-neutral-200"}`}
         >
           <span className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${form.desconoceFormato ? "translate-x-4" : "translate-x-0"}`} />
         </button>
         <span className="text-sm text-neutral-700">Desconozco la cantidad de pallets y/o bultos</span>
-      </label>
+      </div>
 
       {/* Comentarios */}
       <FormField
@@ -180,7 +198,6 @@ function Step1({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
 // ─── Step 2 ───────────────────────────────────────────────────────────────────
 function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<React.SetStateAction<FormData>> }) {
   const [showModal, setShowModal] = useState(false);
-  const [search, setSearch] = useState("");
 
   const addProducts = (incoming: AddProduct[]) => {
     setForm(f => {
@@ -202,22 +219,14 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
     setForm(f => ({ ...f, products: f.products.filter(p => p.sku !== sku) }));
   };
 
-  const q = search.toLowerCase().trim();
-  const filtered = q
-    ? form.products.filter(p =>
-        p.sku.toLowerCase().includes(q) ||
-        p.nombre.toLowerCase().includes(q) ||
-        p.barcode.toLowerCase().includes(q)
-      )
-    : form.products;
+  const filtered = form.products;
 
   return (
     <div className="space-y-5">
       {showModal && (
         <ProductsModal
-          onClose={() => { setShowModal(false); setSearch(""); }}
+          onClose={() => setShowModal(false)}
           onAdd={addProducts}
-          initialSearch={search}
         />
       )}
 
@@ -232,40 +241,7 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
         </div>
       </div>
 
-      <h3 className="text-base font-semibold text-neutral-800 -mb-1">Ingresar productos</h3>
-
-      {/* Actions */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1 hidden sm:block">
-            <Package className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder={form.products.length > 0 ? "Filtrar productos agregados por SKU, nombre o código…" : "Busca por SKU, nombre o código de barras"}
-              className="w-full pl-9 pr-4 py-2.5 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 placeholder-neutral-400"
-            />
-          </div>
-          <button className="hidden sm:flex flex-none px-3 py-1.5 rounded-lg text-xs text-neutral-600 hover:bg-neutral-50 hover:text-neutral-700 items-center justify-center gap-1.5 whitespace-nowrap transition-colors duration-200">
-            Descargar plantilla
-          </button>
-          <button className="hidden sm:flex flex-none px-3 py-1.5 bg-neutral-100 text-neutral-700 hover:bg-neutral-200 rounded-lg text-xs font-medium items-center justify-center gap-1.5 whitespace-nowrap transition-colors duration-200">
-            <Upload className="w-3.5 h-3.5" /> Importar planilla
-          </button>
-        </div>
-        {/* Mobile: search full-width below */}
-        <div className="relative sm:hidden">
-          <Package className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder={form.products.length > 0 ? "Filtrar productos por SKU o nombre…" : "Busca por SKU, nombre o código de barras"}
-            className="w-full pl-9 pr-4 py-2.5 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 placeholder-neutral-400"
-          />
-        </div>
-      </div>
+      <h3 className="text-base font-semibold text-neutral-800">Ingresar productos</h3>
 
       {/* Empty or Table */}
       {form.products.length === 0 ? (
@@ -280,18 +256,15 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <button
-              onClick={() => setShowModal(true)}
-              className="w-full sm:w-auto px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors duration-300"
-            >
+            <Button variant="primary" size="md" onClick={() => setShowModal(true)} iconLeft={<PlusCircle className="w-4 h-4" />} className="w-full sm:w-auto">
               Agregar productos
-            </button>
-            <button className="w-full sm:w-auto px-4 py-2 bg-neutral-100 text-neutral-700 hover:bg-neutral-200 rounded-lg text-sm font-medium transition-colors duration-200">
+            </Button>
+            <Button variant="secondary" size="md" iconLeft={<Upload className="w-4 h-4" />} className="w-full sm:w-auto">
               Importar planilla
-            </button>
-            <button className="w-full sm:hidden px-4 py-2 text-neutral-600 hover:bg-neutral-50 rounded-lg text-sm font-medium transition-colors duration-200">
+            </Button>
+            <Button variant="tertiary" size="md" iconLeft={<FileSpreadsheet className="w-4 h-4" />} className="w-full sm:w-auto">
               Descargar plantilla
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
@@ -299,12 +272,6 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
 
           {/* ── Mobile card list ── */}
           <div className="sm:hidden divide-y divide-neutral-100">
-            {filtered.length === 0 && q && (
-              <div className="py-8 text-center">
-                <p className="text-sm text-neutral-400">Sin resultados para &quot;{search}&quot;</p>
-                <button onClick={() => setSearch("")} className="mt-1 text-xs text-primary-500 hover:text-primary-600 font-medium">Limpiar filtro</button>
-              </div>
-            )}
             {filtered.map(product => (
               <div key={`m-${product.sku}`} className="px-4 py-3.5">
                 <div className="flex items-start justify-between gap-3">
@@ -345,14 +312,6 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-50">
-              {filtered.length === 0 && q && (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center">
-                    <p className="text-sm text-neutral-400">Sin resultados para &quot;{search}&quot;</p>
-                    <button onClick={() => setSearch("")} className="mt-1 text-xs text-primary-500 hover:text-primary-600 font-medium">Limpiar filtro</button>
-                  </td>
-                </tr>
-              )}
               {filtered.map(product => (
                 <tr key={product.sku} className="hover:bg-neutral-50">
                   <td className="py-3 px-4 font-medium text-neutral-700 whitespace-nowrap">{product.sku}</td>
@@ -386,10 +345,7 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
           {/* ── Footer ── */}
           <div className="px-4 py-3 border-t border-neutral-100 flex flex-col sm:flex-row sm:justify-between items-center gap-2">
             <p className="text-xs text-neutral-500">
-              {q && filtered.length !== form.products.length
-                ? <>{filtered.length} de {form.products.length} SKU(s) · {filtered.reduce((s, p) => s + p.qty, 0)} unidades <span className="text-primary-500 ml-1 cursor-pointer hover:underline" onClick={() => setSearch("")}>(limpiar filtro)</span></>
-                : <>{form.products.length} SKU(s) · {form.products.reduce((s, p) => s + p.qty, 0)} unidades</>
-              }
+              {form.products.length} SKU(s) · {form.products.reduce((s, p) => s + p.qty, 0)} unidades
             </p>
             <button onClick={() => setShowModal(true)}
               className="flex items-center gap-2 text-sm text-primary-500 hover:text-primary-700 font-medium">
@@ -403,7 +359,18 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
 }
 
 // ─── Step 3 ───────────────────────────────────────────────────────────────────
-function Step3({ form, setForm }: { form: FormData; setForm: React.Dispatch<React.SetStateAction<FormData>> }) {
+// ─── Sucursal → Address map ──────────────────────────────────────────────────
+const SUCURSAL_ADDRESS: Record<string, string> = {
+  Quilicura:        "El Juncal 901, Quilicura, Santiago",
+  Pudahuel:         "Av. La Estrella 1500, Pudahuel, Santiago",
+  "La Reina":       "Av. Larraín 7500, La Reina, Santiago",
+  "Lo Barnechea":   "Av. La Dehesa 2100, Lo Barnechea, Santiago",
+  "Santiago Centro": "Av. Libertador Bernardo O'Higgins 1000, Santiago",
+  Providencia:      "Av. Providencia 2100, Providencia, Santiago",
+  "Las Condes":     "Av. Apoquindo 4500, Las Condes, Santiago",
+};
+
+function Step3({ form, setForm, isReagendar }: { form: FormData; setForm: React.Dispatch<React.SetStateAction<FormData>>; isReagendar: boolean }) {
   const today = new Date();
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [viewYear,  setViewYear]  = useState(today.getFullYear());
@@ -499,6 +466,7 @@ function Step3({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
             label="Sucursal"
             value={form.sucursal}
             onChange={v => setForm(f => ({ ...f, sucursal: v }))}
+            disabled={!isReagendar}
           >
             <option value="Quilicura">Quilicura</option>
             <option value="Pudahuel">Pudahuel</option>
@@ -508,6 +476,9 @@ function Step3({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
             <option value="Providencia">Providencia</option>
             <option value="Las Condes">Las Condes</option>
           </FormField>
+          {SUCURSAL_ADDRESS[form.sucursal] && (
+            <p className="text-neutral-400 leading-snug">{SUCURSAL_ADDRESS[form.sucursal]}</p>
+          )}
           <div className="space-y-0.5">
             {!form.desconoceFormato && form.pallets && <p className="text-neutral-500">Pallets: {form.pallets}</p>}
             {!form.desconoceFormato && form.bultos  && <p className="text-neutral-500">Bultos: {form.bultos}</p>}
@@ -733,17 +704,53 @@ function CrearORPageInner() {
   const initialStep   = Math.max(1, Math.min(3, parseInt(searchParams.get("startStep") ?? "1") || 1));
   const isReagendar   = searchParams.get("mode") === "reagendar";
   const isSinAgenda   = searchParams.get("mode") === "sin-agenda";
+  const isCompletar   = searchParams.get("mode") === "completar";
+  const completarOrId = searchParams.get("orId") ?? "";
+  const completarSucursal = searchParams.get("sucursal") ?? "";
+  const completarSeller   = searchParams.get("seller") ?? "";
   const totalSteps    = isSinAgenda ? 2 : 3;
 
   const [step,       setStep]       = useState(initialStep);
   const [maxReached, setMaxReached] = useState(initialStep);
   const [showInfo,   setShowInfo]   = useState(false);
-  const [form, setForm] = useState<FormData>({
-    sucursal: "Quilicura", tienda: "Extra Life",
-    pallets: "", bultos: "", desconoceFormato: false,
-    comentarios: "", guiaDespacho: null, products: [],
-    fechaReserva: "", horaReserva: "",
+
+  // Read sidebar filters to pre-fill & lock sucursal/seller
+  const [lockedSucursal, setLockedSucursal] = useState(false);
+  const [lockedSeller,   setLockedSeller]   = useState(false);
+
+  const [form, setForm] = useState<FormData>(() => {
+    const defaults: FormData = {
+      sucursal: "Quilicura", tienda: "Extra Life",
+      pallets: "", bultos: "", desconoceFormato: false,
+      comentarios: "", guiaDespacho: null, products: [],
+      fechaReserva: "", horaReserva: "",
+    };
+    if (typeof window === "undefined") return defaults;
+    // Completar mode: pre-fill from URL params
+    if (isCompletar && completarSucursal) defaults.sucursal = completarSucursal;
+    if (isCompletar && completarSeller)   defaults.tienda   = completarSeller;
+    // Sidebar filter pre-fill (lower priority than completar)
+    if (!isCompletar) {
+      const suc = localStorage.getItem("amplifica_filter_sucursal");
+      const sel = localStorage.getItem("amplifica_filter_seller");
+      if (suc) defaults.sucursal = suc;
+      if (sel) defaults.tienda = sel;
+    }
+    return defaults;
   });
+
+  useEffect(() => {
+    if (isCompletar) {
+      // Lock sucursal/seller in completar mode (they came from the existing OR)
+      if (completarSucursal) setLockedSucursal(true);
+      if (completarSeller)   setLockedSeller(true);
+    } else {
+      const suc = localStorage.getItem("amplifica_filter_sucursal");
+      const sel = localStorage.getItem("amplifica_filter_seller");
+      if (suc) setLockedSucursal(true);
+      if (sel) setLockedSeller(true);
+    }
+  }, [isCompletar, completarSucursal, completarSeller]);
 
   const canContinue = () => {
     if (step === 1) return form.sucursal && form.tienda && (form.desconoceFormato || (form.pallets && form.bultos));
@@ -753,8 +760,42 @@ function CrearORPageInner() {
   };
 
   const handleSubmit = () => {
-    if (!isReagendar) persistNewOr(form, false);
-    router.push(isReagendar ? "/recepciones?rescheduled=1" : "/recepciones?created=1");
+    if (isCompletar && completarOrId) {
+      // Update existing OR to "Programado" with the new date/time
+      try {
+        const now  = new Date();
+        const dd   = String(now.getDate()).padStart(2, "0");
+        const mm   = String(now.getMonth() + 1).padStart(2, "0");
+        const yyyy = now.getFullYear();
+        let fechaAgendada = "—";
+        if (form.fechaReserva && form.horaReserva) {
+          const [fy, fm, fd] = form.fechaReserva.split("-");
+          fechaAgendada = `${fd}/${fm}/${fy} ${form.horaReserva}`;
+        }
+        // Override the OR status to Programado
+        localStorage.setItem(`amplifica_or_${completarOrId}`, JSON.stringify({
+          estado: "Programado",
+          fechaAgendada,
+          skus: form.products.length,
+          uTotales: String(form.products.reduce((s, p) => s + p.qty, 0)),
+        }));
+        // Also update if it exists in amplifica_created_ors
+        try {
+          const existing: Array<{ id: string; [k: string]: unknown }> = JSON.parse(localStorage.getItem("amplifica_created_ors") ?? "[]");
+          const idx = existing.findIndex(o => o.id === completarOrId);
+          if (idx >= 0) {
+            existing[idx] = { ...existing[idx], estado: "Programado", fechaAgendada, skus: form.products.length, uTotales: String(form.products.reduce((s, p) => s + p.qty, 0)) };
+            localStorage.setItem("amplifica_created_ors", JSON.stringify(existing));
+          }
+        } catch { /* ignore */ }
+      } catch { /* ignore */ }
+      router.push("/recepciones?completed=1");
+    } else if (!isReagendar) {
+      persistNewOr(form, false);
+      router.push("/recepciones?created=1");
+    } else {
+      router.push("/recepciones?rescheduled=1");
+    }
   };
 
   // "Recepción sin agenda": auto-assign current date & time, then submit
@@ -773,6 +814,8 @@ function CrearORPageInner() {
 
   const pageTitle = isSinAgenda
     ? "Nueva OR sin Agenda"
+    : isCompletar
+    ? "Completar Orden de Recepción"
     : isReagendar
     ? "Reagendar Orden de Recepción"
     : "Nueva Orden de Recepción";
@@ -813,9 +856,9 @@ function CrearORPageInner() {
                 </ol>
                 <p className="text-xs text-neutral-400 pt-1">Completa todos los pasos para generar la OR y coordinar la descarga.</p>
               </div>
-              <button onClick={() => setShowInfo(false)} className="mt-5 w-full py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors">
+              <Button variant="primary" size="lg" onClick={() => setShowInfo(false)} className="mt-5 w-full">
                 Entendido
-              </button>
+              </Button>
             </div>
           </div>,
           document.body
@@ -833,51 +876,60 @@ function CrearORPageInner() {
 
         {/* Content card */}
         <div className="bg-white border border-neutral-200 rounded-2xl p-4 sm:p-6">
-          {step === 1 && <Step1 form={form} setForm={setForm} />}
+          {step === 1 && <Step1 form={form} setForm={setForm} lockedSucursal={lockedSucursal} lockedSeller={lockedSeller} />}
           {step === 2 && <Step2 form={form} setForm={setForm} />}
-          {step === 3 && !isSinAgenda && <Step3 form={form} setForm={setForm} />}
+          {step === 3 && !isSinAgenda && <Step3 form={form} setForm={setForm} isReagendar={isReagendar} />}
         </div>
 
         {/* Footer actions */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 pt-3 pb-6 flex flex-col gap-2 z-30 sm:flex-row-reverse sm:items-center sm:pb-3 lg:static lg:border-0 lg:px-0 lg:py-0 lg:mt-6 lg:flex-row lg:justify-between">
           {/* sin-agenda: step 2 → submit directly */}
           {isSinAgenda && step === 2 ? (
-            <button
+            <Button
+              variant="primary"
+              size="lg"
               onClick={handleSubmitSinAgenda}
               disabled={!canContinue()}
-              className="w-full h-12 sm:h-auto sm:w-auto sm:flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-200 text-white text-sm font-medium rounded-lg transition-colors duration-300"
+              iconLeft={<Check className="w-4 h-4" />}
+              className="w-full h-12 sm:h-auto sm:w-auto sm:flex-1 lg:flex-none"
             >
-              <Check className="w-4 h-4" />
               Crear OR sin agenda
-            </button>
+            </Button>
           ) : step < totalSteps ? (
-            <button
+            <Button
+              variant="primary"
+              size="lg"
               onClick={() => {
                 setStep(s => s + 1);
                 setMaxReached(m => Math.max(m, step + 1));
               }}
               disabled={!canContinue()}
-              className="w-full h-12 sm:h-auto sm:w-auto sm:flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-200 text-white text-sm font-medium rounded-lg transition-colors duration-300"
+              iconRight={<ArrowRight className="w-4 h-4" />}
+              className="w-full h-12 sm:h-auto sm:w-auto sm:flex-1 lg:flex-none"
             >
-              Continuar <ArrowRight className="w-4 h-4" />
-            </button>
+              Continuar
+            </Button>
           ) : (
-            <button
+            <Button
+              variant="primary"
+              size="lg"
               onClick={handleSubmit}
               disabled={!canContinue()}
-              className="w-full h-12 sm:h-auto sm:w-auto sm:flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-200 text-white text-sm font-medium rounded-lg transition-colors duration-300"
+              iconLeft={<Check className="w-4 h-4" />}
+              className="w-full h-12 sm:h-auto sm:w-auto sm:flex-1 lg:flex-none"
             >
-              <Check className="w-4 h-4" />
-              {isReagendar ? "Guardar nueva fecha" : "Crear Orden de Recepción"}
-            </button>
+              {isCompletar ? "Completar Orden" : isReagendar ? "Guardar nueva fecha" : "Crear Orden de Recepción"}
+            </Button>
           )}
 
-          <button
-            onClick={() => (step === 1 || (isReagendar && step === 3)) ? router.push("/recepciones") : setStep(s => s - 1)}
-            className="w-full h-12 sm:h-auto sm:w-auto lg:flex-none lg:order-first px-5 py-2.5 text-neutral-600 hover:bg-neutral-50 sm:bg-neutral-100 sm:text-neutral-700 sm:hover:bg-neutral-200 rounded-lg text-sm font-medium transition-colors duration-200"
+          <Button
+            variant="secondary"
+            size="lg"
+            onClick={() => (step === 1 || (isReagendar && step === 3) || (isCompletar && step === 2)) ? router.push("/recepciones") : setStep(s => s - 1)}
+            className="w-full h-12 sm:h-auto sm:w-auto lg:flex-none lg:order-first"
           >
             Volver
-          </button>
+          </Button>
         </div>
       </div>
     </div>

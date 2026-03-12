@@ -81,7 +81,8 @@ export default function Button(props: ButtonProps) {
 
   const cls = `
     inline-flex items-center justify-center font-medium whitespace-nowrap
-    transition-colors duration-200 outline-none select-none
+    transition-all duration-200 outline-none select-none
+    active:scale-[0.97] disabled:active:scale-100
     ${sizeClasses[size]}
     ${variantClasses[variant]}
     ${loading ? "cursor-wait" : ""}
