@@ -23,6 +23,7 @@ import {
   XClose,
 } from "@untitled-ui/icons-react";
 import AmplificaLogo from "./AmplificaLogo";
+import { type Role, getAllowedSucursales, getAllowedSellers, can } from "@/lib/roles";
 
 type Child = { label: string; href: string };
 type MenuItem = {
@@ -93,8 +94,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
   const [openMenus, setOpenMenus]   = useState<string[]>(["Recepciones"]);
 
   // ── Role switcher ───────────────────────────────────────────────────────
-  const ROLES = ["Super Admin", "Operador", "Seller", "KAM"] as const;
-  type Role = typeof ROLES[number];
+  const ROLES: Role[] = ["Super Admin", "Operador", "Seller", "KAM"];
   const [currentRole, setCurrentRole] = useState<Role>("Super Admin");
   const [roleOpen, setRoleOpen]       = useState(false);
   const roleRef = useRef<HTMLDivElement>(null);
@@ -151,11 +151,39 @@ export default function Sidebar({ onClose }: SidebarProps) {
     window.dispatchEvent(new Event("amplifica-filter-change"));
   };
 
+  // ── Role-filtered lists ──────────────────────────────────────────────────
+  const allowedSucursales = getAllowedSucursales(currentRole);
+  const allowedSellers    = getAllowedSellers(currentRole);
+  const canFilterSucursal = can(currentRole, "filter:sucursal");
+  const canFilterSeller   = can(currentRole, "filter:seller");
+
+  const roleSucursales = useMemo(() => {
+    if (allowedSucursales === "all") return sucursales;
+    return sucursales.filter(s => allowedSucursales.includes(s.label));
+  }, [sucursales, allowedSucursales]);
+
+  const baseSellers = useMemo(() => {
+    if (allowedSellers === "all") return DEMO_SELLERS;
+    return DEMO_SELLERS.filter(s => (allowedSellers as string[]).includes(s));
+  }, [allowedSellers]);
+
   const filteredSellers = useMemo(() => {
-    if (!sellerSearch.trim()) return DEMO_SELLERS;
+    if (!sellerSearch.trim()) return baseSellers;
     const q = sellerSearch.toLowerCase();
-    return DEMO_SELLERS.filter(s => s.toLowerCase().includes(q));
-  }, [sellerSearch]);
+    return baseSellers.filter(s => s.toLowerCase().includes(q));
+  }, [sellerSearch, baseSellers]);
+
+  // Filter menu children by role (e.g. hide "Crear Recepción" for Operador)
+  const roleMenu = useMemo(() => {
+    return MENU.map(item => {
+      if (item.label !== "Recepciones" || !item.children) return item;
+      const filtered = item.children.filter(child => {
+        if (child.href === "/recepciones/crear" && !can(currentRole, "or:create")) return false;
+        return true;
+      });
+      return { ...item, children: filtered };
+    });
+  }, [currentRole]);
 
   // Load sucursales from localStorage (synced with configuracion page)
   useEffect(() => {
@@ -167,6 +195,21 @@ export default function Sidebar({ onClose }: SidebarProps) {
       }
     } catch { /* ignore */ }
   }, []);
+
+  // Auto-set filters when role has restricted access
+  useEffect(() => {
+    if (allowedSucursales !== "all" && allowedSucursales.length === 1) {
+      setSelectedSucursal(allowedSucursales[0]);
+    } else if (allowedSucursales === "all") {
+      setSelectedSucursal(null);
+    }
+    if (allowedSellers !== "all" && allowedSellers.length === 1) {
+      setSelectedSeller(allowedSellers[0]);
+    } else if (allowedSellers === "all") {
+      setSelectedSeller(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentRole]);
 
   // Close dropdowns on click-outside
   useEffect(() => {
@@ -221,29 +264,35 @@ export default function Sidebar({ onClose }: SidebarProps) {
           {/* ── Sucursal selector ──────────────────────────────────────── */}
           <div ref={sucursalRef} className="relative">
             <button
-              onClick={() => { setSucursalOpen(o => !o); setSellerOpen(false); setSellerSearch(""); }}
-              className="w-full flex items-center justify-between bg-white/5 hover:bg-white/10 rounded-lg px-3 py-1.5 text-xs transition-colors duration-300"
+              onClick={() => { if (!canFilterSucursal && roleSucursales.length <= 1) return; setSucursalOpen(o => !o); setSellerOpen(false); setSellerSearch(""); }}
+              className={`w-full flex items-center justify-between bg-white/5 rounded-lg px-3 py-1.5 text-xs transition-colors duration-300 ${
+                canFilterSucursal || roleSucursales.length > 1 ? "hover:bg-white/10 cursor-pointer" : "opacity-70 cursor-default"
+              }`}
             >
               <div className="text-left">
                 <p className="text-white/40 text-[10px] leading-none mb-0.5">Sucursal</p>
                 <p className="text-white font-medium">{selectedSucursal ?? "Todas"}</p>
               </div>
-              <ChevronSelectorVertical className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
+              {(canFilterSucursal || roleSucursales.length > 1) && (
+                <ChevronSelectorVertical className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
+              )}
             </button>
 
             {sucursalOpen && (
               <div className="absolute left-0 right-0 top-full mt-1 bg-[#1a1a1a] border border-white/10 rounded-lg shadow-xl z-50 py-1 max-h-52 overflow-y-auto sidebar-scroll">
-                <button
-                  onClick={() => { setSelectedSucursal(null); setSucursalOpen(false); }}
-                  className={`w-full text-left px-3 py-1.5 text-xs transition-colors duration-150 ${
-                    selectedSucursal === null
-                      ? "text-white bg-white/10 font-medium"
-                      : "text-white/70 hover:text-white hover:bg-white/5"
-                  }`}
-                >
-                  Todas
-                </button>
-                {sucursales.map(s => (
+                {(allowedSucursales === "all" || roleSucursales.length > 1) && (
+                  <button
+                    onClick={() => { setSelectedSucursal(null); setSucursalOpen(false); }}
+                    className={`w-full text-left px-3 py-1.5 text-xs transition-colors duration-150 ${
+                      selectedSucursal === null
+                        ? "text-white bg-white/10 font-medium"
+                        : "text-white/70 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    Todas
+                  </button>
+                )}
+                {roleSucursales.map(s => (
                   <button
                     key={s.id}
                     onClick={() => { setSelectedSucursal(s.label); setSucursalOpen(false); }}
@@ -263,14 +312,18 @@ export default function Sidebar({ onClose }: SidebarProps) {
           {/* ── Tienda (seller) selector ───────────────────────────────── */}
           <div ref={sellerRef} className="relative">
             <button
-              onClick={() => { setSellerOpen(o => !o); setSucursalOpen(false); }}
-              className="w-full flex items-center justify-between bg-white/5 hover:bg-white/10 rounded-lg px-3 py-1.5 text-xs transition-colors duration-300"
+              onClick={() => { if (!canFilterSeller && baseSellers.length <= 1) return; setSellerOpen(o => !o); setSucursalOpen(false); }}
+              className={`w-full flex items-center justify-between bg-white/5 rounded-lg px-3 py-1.5 text-xs transition-colors duration-300 ${
+                canFilterSeller || baseSellers.length > 1 ? "hover:bg-white/10 cursor-pointer" : "opacity-70 cursor-default"
+              }`}
             >
               <div className="text-left">
                 <p className="text-white/40 text-[10px] leading-none mb-0.5">Tienda</p>
                 <p className="text-white font-medium">{selectedSeller ?? "Todas"}</p>
               </div>
-              <ChevronSelectorVertical className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
+              {(canFilterSeller || baseSellers.length > 1) && (
+                <ChevronSelectorVertical className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
+              )}
             </button>
 
             {sellerOpen && (
@@ -290,16 +343,18 @@ export default function Sidebar({ onClose }: SidebarProps) {
                 </div>
                 {/* List — 5 visible items (~155px) then scroll */}
                 <div className="max-h-[155px] overflow-y-auto sidebar-scroll py-1">
-                  <button
-                    onClick={() => { setSelectedSeller(null); setSellerOpen(false); setSellerSearch(""); }}
-                    className={`w-full text-left px-3 py-1.5 text-xs transition-colors duration-150 ${
-                      selectedSeller === null
-                        ? "text-white bg-white/10 font-medium"
-                        : "text-white/70 hover:text-white hover:bg-white/5"
-                    }`}
-                  >
-                    Todas
-                  </button>
+                  {(allowedSellers === "all" || baseSellers.length > 1) && (
+                    <button
+                      onClick={() => { setSelectedSeller(null); setSellerOpen(false); setSellerSearch(""); }}
+                      className={`w-full text-left px-3 py-1.5 text-xs transition-colors duration-150 ${
+                        selectedSeller === null
+                          ? "text-white bg-white/10 font-medium"
+                          : "text-white/70 hover:text-white hover:bg-white/5"
+                      }`}
+                    >
+                      Todas
+                    </button>
+                  )}
                   {filteredSellers.map(s => (
                     <button
                       key={s}
@@ -515,7 +570,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
           </p>
         )}
         <ul className="space-y-0.5">
-          {MENU.map(item => {
+          {roleMenu.map(item => {
             const Icon = item.icon;
             const isOpen   = openMenus.includes(item.label);
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");

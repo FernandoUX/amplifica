@@ -9,7 +9,7 @@ import {
   ChevronDown, ChevronUp, MoreHorizontal, Package,
   X, Check, Upload, Search, HelpCircle, FileText,
   Bell, PlusCircle, CalendarDays, CheckCircle2, Shield,
-  Download, Camera,
+  Download, Camera, MessageSquare,
 } from "lucide-react";
 import {
   Plus, ClipboardCheck, LockUnlocked01, AlertTriangle,
@@ -21,8 +21,10 @@ import {
 import FormField from "@/components/ui/FormField";
 import ProductsModal, { type AddProduct } from "@/components/recepciones/ProductsModal";
 import QrDisplaySection from "@/components/recepciones/QrDisplaySection";
+import StatusBadge, { type Status } from "@/components/recepciones/StatusBadge";
 import { playScanSuccessSound, playScanErrorSound } from "@/lib/scan-sounds";
 import Button from "@/components/ui/Button";
+import { type Role, getRole, can } from "@/lib/roles";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ProductConteo = {
@@ -56,6 +58,10 @@ type OrdenData = {
   sucursal: string;
   fechaAgendada: string;
   estado?: string;           // original status from list page (e.g. "Creado", "Programado")
+  pallets?: number;
+  bultos?: number;
+  comentarios?: string;
+  comentarioRecepcion?: string;
   products: ProductConteo[];
 };
 
@@ -86,6 +92,18 @@ type NewProductForm = {
   categoria: string;
 };
 
+type AuditEvent = {
+  id: string;
+  tipo: string;
+  titulo: string;
+  timestamp: string;
+  usuario: string;
+  rol: string;
+  detalle?: string;
+  estadoAnterior?: string;
+  estadoPosterior?: string;
+};
+
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const MOCK_ORDENES: Record<string, OrdenData> = {
   "RO-BARRA-180": {
@@ -93,6 +111,10 @@ const MOCK_ORDENES: Record<string, OrdenData> = {
     seller: "Extra Life",
     sucursal: "Quilicura",
     fechaAgendada: "08/03/2026 16:30",
+    pallets: 2,
+    bultos: 4,
+    comentarios: "Mercancía frágil, manipular con cuidado. Entregar en andén 3.",
+    comentarioRecepcion: "Recibido en andén 3. 2 pallets en buen estado, 4 bultos verificados. Sin novedades.",
     products: [
       { id: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 20 Sachets Tropical Delight", barcode: "8500942860946", imagen: "/products/extra-life-tropical-delight.png", esperadas: 100, contadasSesion: 0 },
       { id: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",     barcode: "8500942860625", imagen: "/products/extra-life-variety-pack.png",      esperadas: 150, contadasSesion: 0 },
@@ -103,6 +125,8 @@ const MOCK_ORDENES: Record<string, OrdenData> = {
     seller: "Extra Life",
     sucursal: "Quilicura",
     fechaAgendada: "19/02/2026 10:00",
+    pallets: 3,
+    bultos: 6,
     products: [
       { id: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 20 Sachets Tropical Delight", barcode: "8500942860946", imagen: "/products/extra-life-tropical-delight.png", esperadas: 100, contadasSesion: 0 },
       { id: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",     barcode: "8500942860625", imagen: "/products/extra-life-variety-pack.png",      esperadas: 150, contadasSesion: 0 },
@@ -134,6 +158,9 @@ const MOCK_ORDENES: Record<string, OrdenData> = {
     seller: "Extra Life",
     sucursal: "Quilicura",
     fechaAgendada: "15/02/2026 08:00",
+    pallets: 5,
+    bultos: 12,
+    comentarios: "Mercancía frágil, manipular con cuidado. Entregar en andén 3.",
     products: [
       { id: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 20 Sachets Tropical Delight", barcode: "8500942860946", imagen: "/products/extra-life-tropical-delight.png", esperadas: 1200, contadasSesion: 0 },
       { id: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",     barcode: "8500942860625", imagen: "/products/extra-life-variety-pack.png",      esperadas: 800,  contadasSesion: 0 },
@@ -145,6 +172,8 @@ const MOCK_ORDENES: Record<string, OrdenData> = {
     seller: "VitaFit",
     sucursal: "La Reina",
     fechaAgendada: "01/03/2026 09:00",
+    pallets: 3,
+    bultos: 8,
     products: [
       { id: "p1", sku: "VF-101", nombre: "VitaFit Proteína Vegana 1kg Vainilla",   barcode: "7801234560101", esperadas: 600,  contadasSesion: 0 },
       { id: "p2", sku: "VF-102", nombre: "VitaFit Omega-3 Cápsulas 120 uds",       barcode: "7801234560102", esperadas: 500,  contadasSesion: 0 },
@@ -157,6 +186,8 @@ const MOCK_ORDENES: Record<string, OrdenData> = {
     seller: "Le Vice",
     sucursal: "Santiago Centro",
     fechaAgendada: "13/02/2026 15:30",
+    pallets: 2,
+    bultos: 6,
     products: [
       { id: "p1", sku: "LV-001", nombre: "Le Vice Colágeno Hidrolizado 500g",  barcode: "7891234560201", esperadas: 400, contadasSesion: 0 },
       { id: "p2", sku: "LV-002", nombre: "Le Vice Vitamina C Liposomal 60 caps", barcode: "7891234560202", esperadas: 350, contadasSesion: 0 },
@@ -167,6 +198,8 @@ const MOCK_ORDENES: Record<string, OrdenData> = {
     seller: "BioNature",
     sucursal: "Quilicura",
     fechaAgendada: "04/03/2026 15:00",
+    pallets: 4,
+    bultos: 10,
     products: [
       { id: "p1", sku: "BN-001", nombre: "BioNature Spirulina Orgánica 300g",  barcode: "7891234560301", esperadas: 500, contadasSesion: 0 },
       { id: "p2", sku: "BN-002", nombre: "BioNature Chlorella 200 Tabs",       barcode: "7891234560302", esperadas: 300, contadasSesion: 0 },
@@ -411,6 +444,10 @@ function getFallbackOrden(id: string): OrdenData {
     sucursal: seed?.sucursal ?? "Quilicura",
     fechaAgendada: seed?.fechaAgendada ?? "—",
     estado: seed?.estado,
+    pallets: seed?.pallets,
+    bultos: seed?.bultos,
+    comentarios: seed?.comentarios,
+    comentarioRecepcion: seed?.comentarioRecepcion,
     products: [
       { id: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 20 Sachets Tropical Delight", barcode: "8500942860946", imagen: "/products/extra-life-tropical-delight.png", esperadas: 100, contadasSesion: 0 },
       { id: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",      barcode: "8500942860625", imagen: "/products/extra-life-variety-pack.png",      esperadas: 100, contadasSesion: 0 },
@@ -436,6 +473,60 @@ function fmtDT(iso: string) {
 }
 
 function sesionId(n: number) { return `SES-${String(n).padStart(3, "0")}`; }
+
+// ─── Audit log seed data ──────────────────────────────────────────────────────
+const SEED_AUDIT: Record<string, AuditEvent[]> = {
+  "RO-BARRA-186": [
+    { id: "a10", tipo: "OR_CERRADA", titulo: "Recepción cerrada — Completada con diferencias", timestamp: "2026-03-08T14:15:00Z", usuario: "María López", rol: "Supervisor", detalle: "Aprobó cierre. Diferencia validada con seller. Diferencia total: -50 uds. · 4 incidencias categorizadas", estadoAnterior: "Pendiente de aprobación", estadoPosterior: "Completada" },
+    { id: "a9", tipo: "OR_APROBADA", titulo: "Recepción aprobada por supervisor", timestamp: "2026-03-08T14:10:00Z", usuario: "María López", rol: "Supervisor", detalle: "Diferencia dentro de tolerancia configurada para el seller" },
+    { id: "a8", tipo: "SESION_FINALIZADA", titulo: "Sesión de conteo #2 finalizada", timestamp: "2026-03-08T13:45:00Z", usuario: "Fernando Roblero", rol: "Operador", detalle: "Duración: 42 min · 3 SKUs · 550 uds. · 2 incidencias detectadas" },
+    { id: "a7", tipo: "INCIDENCIA_REGISTRADA", titulo: "Incidencia: Daño parcial", timestamp: "2026-03-08T13:40:00Z", usuario: "Fernando Roblero", rol: "Operador", detalle: "SKU 300034 · 15 uds. afectadas · 2 fotos adjuntas" },
+    { id: "a6", tipo: "INCIDENCIA_REGISTRADA", titulo: "Incidencia: Sin etiqueta nutricional", timestamp: "2026-03-08T13:35:00Z", usuario: "Fernando Roblero", rol: "Operador", detalle: "SKU 300052 · 20 uds. afectadas · 1 foto adjunta" },
+    { id: "a5", tipo: "SESION_INICIADA", titulo: "Sesión de conteo #2 iniciada", timestamp: "2026-03-08T13:03:00Z", usuario: "Fernando Roblero", rol: "Operador" },
+    { id: "a4", tipo: "SESION_FINALIZADA", titulo: "Sesión de conteo #1 finalizada", timestamp: "2026-03-08T12:30:00Z", usuario: "Fernando Roblero", rol: "Operador", detalle: "Duración: 90 min · 3 SKUs · 1.450 uds. · 2 incidencias detectadas" },
+    { id: "a3", tipo: "SESION_INICIADA", titulo: "Sesión de conteo #1 iniciada", timestamp: "2026-03-08T11:00:00Z", usuario: "Fernando Roblero", rol: "Operador" },
+    { id: "a2", tipo: "OR_RECEPCIONADA", titulo: "Recepcionado en bodega", timestamp: "2026-03-08T10:47:00Z", usuario: "Fernando Roblero", rol: "Operador", detalle: "QR escaneado. Sucursal: Quilicura", estadoAnterior: "Programado", estadoPosterior: "Recepcionado en bodega" },
+    { id: "a1", tipo: "QR_GENERADO", titulo: "QR generado para la OR", timestamp: "2026-03-07T16:00:00Z", usuario: "Sistema", rol: "Sistema", detalle: "Token QR asignado al agendar" },
+    { id: "a0", tipo: "OR_AGENDADA", titulo: "OR agendada", timestamp: "2026-03-07T15:30:00Z", usuario: "Seller Extra Life", rol: "Seller", detalle: "Slot: 08/03/2026 10:00–12:00 · Sucursal: Quilicura · 2.550 uds. · 3 SKUs", estadoAnterior: "Creado", estadoPosterior: "Programado" },
+    { id: "a00", tipo: "OR_CREADA", titulo: "OR creada", timestamp: "2026-03-07T15:20:00Z", usuario: "Seller Extra Life", rol: "Seller", detalle: "2.550 uds. teóricas · 3 SKUs", estadoPosterior: "Creado" },
+  ],
+  "RO-BARRA-183": [
+    { id: "b3", tipo: "QR_GENERADO", titulo: "QR generado para la OR", timestamp: "2026-02-16T17:00:00Z", usuario: "Sistema", rol: "Sistema" },
+    { id: "b2", tipo: "OR_AGENDADA", titulo: "OR agendada", timestamp: "2026-02-16T16:30:00Z", usuario: "Seller Extra Life", rol: "Seller", detalle: "Slot: 20/02/2026 16:30 · Sucursal: Quilicura · 2.550 uds. · 5 SKUs", estadoAnterior: "Creado", estadoPosterior: "Programado" },
+    { id: "b1", tipo: "OR_CREADA", titulo: "OR creada", timestamp: "2026-02-16T14:00:00Z", usuario: "Seller Extra Life", rol: "Seller", detalle: "2.550 uds. teóricas · 5 SKUs", estadoPosterior: "Creado" },
+  ],
+};
+
+function getAuditIcon(tipo: string) {
+  switch (tipo) {
+    case "OR_CREADA": return "bg-neutral-100 text-neutral-600";
+    case "OR_AGENDADA": case "OR_REAGENDADA": return "bg-sky-100 text-sky-600";
+    case "OR_RECEPCIONADA": return "bg-indigo-100 text-indigo-600";
+    case "SESION_INICIADA": return "bg-primary-100 text-primary-600";
+    case "SESION_FINALIZADA": return "bg-green-100 text-green-600";
+    case "INCIDENCIA_REGISTRADA": return "bg-amber-100 text-amber-600";
+    case "OR_CERRADA": case "OR_APROBADA": case "OR_AUTO_APROBADA": return "bg-green-100 text-green-700";
+    case "OR_CANCELADA": return "bg-red-100 text-red-600";
+    case "QR_GENERADO": case "QR_ESCANEADO": return "bg-violet-100 text-violet-600";
+    case "CUARENTENA_INGRESO": case "CUARENTENA_EN_GESTION": case "CUARENTENA_SALIDA": return "bg-orange-100 text-orange-600";
+    default: return "bg-neutral-100 text-neutral-500";
+  }
+}
+
+function getAuditIconElement(tipo: string) {
+  switch (tipo) {
+    case "OR_CREADA": return <PlusCircle className="w-3.5 h-3.5" />;
+    case "OR_AGENDADA": case "OR_REAGENDADA": return <CalendarDays className="w-3.5 h-3.5" />;
+    case "OR_RECEPCIONADA": return <Package className="w-3.5 h-3.5" />;
+    case "SESION_INICIADA": return <PlayCircle className="w-3.5 h-3.5" />;
+    case "SESION_FINALIZADA": return <CheckCircle2 className="w-3.5 h-3.5" />;
+    case "INCIDENCIA_REGISTRADA": return <AlertTriangle className="w-3.5 h-3.5" />;
+    case "OR_CERRADA": case "OR_APROBADA": return <Shield className="w-3.5 h-3.5" />;
+    case "OR_CANCELADA": return <X className="w-3.5 h-3.5" />;
+    case "QR_GENERADO": case "QR_ESCANEADO": return <Scan className="w-3.5 h-3.5" />;
+    default: return <Clock className="w-3.5 h-3.5" />;
+  }
+}
 
 // ─── Incidencia tags ──────────────────────────────────────────────────────────
 const INCIDENCIA_TAGS: {
@@ -694,9 +785,9 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
 
           {/* SKU + barcode */}
           <div className="flex items-center gap-2 mt-1 text-xs text-neutral-400 truncate">
-            <span><span className="font-semibold text-neutral-500">SKU:</span> <span className="font-mono">{product.sku}</span></span>
+            <span><span className="font-semibold text-neutral-500">SKU:</span> <span className="font-sans">{product.sku}</span></span>
             <span className="hidden sm:inline text-neutral-200">|</span>
-            <span className="hidden sm:inline"><span className="font-semibold text-neutral-500">C. DE BARRA:</span> <span className="font-mono">{product.barcode}</span></span>
+            <span className="hidden sm:inline"><span className="font-semibold text-neutral-500">C. DE BARRA:</span> <span className="font-sans">{product.barcode}</span></span>
           </div>
 
           {/* Desktop: counter row inline */}
@@ -923,7 +1014,7 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
             <span className="text-[13px] text-neutral-600 truncate">{sesion.operador}</span>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            <span className="text-[13px] font-bold text-neutral-800 tabular-nums">{totalUds.toLocaleString("es-CL")} uds</span>
+            <span className="text-[13px] font-bold text-neutral-800 tabular-nums">{totalUds.toLocaleString("es-CL")} uds.</span>
             {open ? <ChevronUp className="w-4 h-4 text-neutral-400" />
                    : <ChevronDown className="w-4 h-4 text-neutral-400" />}
           </div>
@@ -977,8 +1068,8 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
                   {/* Row 1: SKU + badge */}
                   <div className="flex items-start justify-between gap-2 mb-1.5">
                     <div className="min-w-0">
-                      <p className="font-mono text-xs text-neutral-500">{item.sku}</p>
-                      <p className="text-[13px] font-medium text-neutral-800 leading-snug mt-0.5">{item.nombre}</p>
+                      <p className="text-[13px] font-medium text-neutral-800 leading-snug">{item.nombre}</p>
+                      <p className="font-mono text-[11px] text-neutral-400 mt-0.5">{item.sku}</p>
                     </div>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-[6px] text-xs font-medium border whitespace-nowrap flex-shrink-0 ${
                       status === "completo"   ? "bg-green-50  text-green-700  border-green-200"  :
@@ -1002,7 +1093,7 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
                         const tag = INCIDENCIA_TAGS.find(t => t.key === r.tag);
                         if (!tag) return null;
                         return (
-                          <span key={r.rowId} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
+                          <span key={r.rowId} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] text-xs sm:text-[10px] font-medium leading-none border ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
                             {tag.label}
                             <span className="opacity-60 font-normal">· {r.cantidad}</span>
                           </span>
@@ -1016,68 +1107,71 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
           </div>
 
           {/* Desktop: full table */}
-          <table className="w-full text-sm hidden sm:table">
-            <thead>
-              <tr className="text-neutral-400 border-b border-neutral-100">
-                <th className="text-left py-2 text-[13px] font-semibold">SKU</th>
-                <th className="text-left py-2 text-[13px] font-semibold">Producto</th>
-                <th className="text-left py-2 text-[13px] font-semibold">Incidencias</th>
-                <th className="text-left py-2 text-[13px] font-semibold">Estado</th>
-                <th className="text-right py-2 text-[13px] font-semibold">Contadas</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sesion.items.map(item => {
-                const rows      = incidencias[item.pid] ?? [];
-                const incTotal  = rows.reduce((s, r) => s + r.cantidad, 0);
-                const esperadas = products.find(p => p.id === item.pid)?.esperadas ?? 0;
-                const overallTotal = (acumulado[item.pid] ?? 0) + incTotal;
-                const status = getProductStatus(overallTotal, esperadas);
-                return (
-                  <tr key={item.pid} className="border-b border-neutral-50 last:border-0">
-                    <td className="py-2 pr-4 font-mono text-neutral-500 text-xs align-top">{item.sku}</td>
-                    <td className="py-2 text-neutral-700 align-top">{item.nombre}</td>
-                    <td className="py-2 align-top">
-                      {rows.length === 0 ? (
-                        <span className="text-xs text-neutral-300">—</span>
-                      ) : (
-                        <div className="flex flex-wrap gap-1">
-                          {rows.map(r => {
-                            const tag = INCIDENCIA_TAGS.find(t => t.key === r.tag);
-                            if (!tag) return null;
-                            return (
-                              <span key={r.rowId} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium border ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
-                                {tag.label}
-                                <span className="opacity-60 font-normal">· {r.cantidad} uds</span>
-                              </span>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-2 align-top">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-[6px] text-xs font-medium border ${
-                        status === "completo"   ? "bg-green-50  text-green-700  border-green-200"  :
-                        status === "diferencia" ? "bg-amber-50  text-amber-700  border-amber-200"  :
-                        status === "exceso"     ? "bg-red-50    text-red-600    border-red-200"    :
-                                                  "bg-neutral-100  text-neutral-500   border-neutral-200"
-                      }`}>
-                        {status === "completo"   ? "Completo"          :
-                         status === "diferencia" ? "Con diferencias"   :
-                         status === "exceso"     ? "Exceso"            : "Pendiente"}
-                        <span className="ml-1 font-normal opacity-70 tabular-nums">
-                          {overallTotal}/{esperadas}
+          <div className="hidden sm:block overflow-x-auto table-scroll">
+            <table className="text-sm border-collapse font-sans" style={{ width: "max-content", minWidth: "100%" }}>
+              <thead>
+                <tr className="border-b border-neutral-100 bg-neutral-50">
+                  <th className="py-3 px-4 text-xs font-semibold text-neutral-500 text-left">Producto</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-neutral-500 text-left">Incidencias</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-neutral-500 text-left">Estado</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-neutral-500 text-right">Contadas</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-50">
+                {sesion.items.map(item => {
+                  const rows      = incidencias[item.pid] ?? [];
+                  const incTotal  = rows.reduce((s, r) => s + r.cantidad, 0);
+                  const esperadas = products.find(p => p.id === item.pid)?.esperadas ?? 0;
+                  const overallTotal = (acumulado[item.pid] ?? 0) + incTotal;
+                  const status = getProductStatus(overallTotal, esperadas);
+                  return (
+                    <tr key={item.pid} className="hover:bg-neutral-50/60 transition-colors duration-300">
+                      <td className="py-3 px-4 align-top max-w-[240px]">
+                        <p className="text-[13px] text-neutral-800 leading-snug font-medium">{item.nombre}</p>
+                        <p className="text-[11px] text-neutral-400 mt-0.5 font-mono">{item.sku}</p>
+                      </td>
+                      <td className="py-3 px-4 align-top">
+                        {rows.length === 0 ? (
+                          <span className="text-[13px] text-neutral-300">—</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {rows.map(r => {
+                              const tag = INCIDENCIA_TAGS.find(t => t.key === r.tag);
+                              if (!tag) return null;
+                              return (
+                                <span key={r.rowId} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] text-[12px] font-medium leading-none border ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
+                                  {tag.label}
+                                  <span className="opacity-60 font-normal">· {r.cantidad} uds.</span>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 align-top">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-[6px] text-[12px] font-medium border whitespace-nowrap ${
+                          status === "completo"   ? "bg-green-50  text-green-700  border-green-200"  :
+                          status === "diferencia" ? "bg-amber-50  text-amber-700  border-amber-200"  :
+                          status === "exceso"     ? "bg-red-50    text-red-600    border-red-200"    :
+                                                    "bg-neutral-100  text-neutral-500   border-neutral-200"
+                        }`}>
+                          {status === "completo"   ? "Completo"          :
+                           status === "diferencia" ? "Con diferencias"   :
+                           status === "exceso"     ? "Exceso"            : "Pendiente"}
+                          <span className="ml-1 font-normal opacity-70 tabular-nums">
+                            {overallTotal}/{esperadas}
+                          </span>
                         </span>
-                      </span>
-                    </td>
-                    <td className="py-2 text-right font-semibold text-neutral-800 tabular-nums align-top">
-                      {(item.cantidad + incTotal).toLocaleString("es-CL")}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                      <td className="py-3 px-4 text-right text-[13px] font-semibold text-neutral-800 tabular-nums align-top">
+                        {(item.cantidad + incTotal).toLocaleString("es-CL")}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
@@ -1113,7 +1207,7 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
         <div className="flex items-center gap-2">
           {collapsed ? <ChevronRight className="w-3.5 h-3.5 text-neutral-400" /> : <ChevronDown className="w-3.5 h-3.5 text-neutral-400" />}
           <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Incidencia #{index + 1}</span>
-          {collapsed && <span className="text-xs text-neutral-400">· {summary} · {row.cantidad} uds · {row.imagenes.length} img</span>}
+          {collapsed && <span className="text-xs text-neutral-400">· {summary} · {row.cantidad} uds. · {row.imagenes.length} img</span>}
         </div>
         <button
           onClick={e => { e.stopPropagation(); onRemove(row.rowId); }}
@@ -1217,7 +1311,7 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
 
           {/* Tag resolution badge */}
           {tag && (
-            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border ${tagColorCls(row.tag as IncidenciaTagKey)}`}>
+            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[6px] text-xs font-medium leading-none border ${tagColorCls(row.tag as IncidenciaTagKey)}`}>
               Resuelve: <span className="font-semibold">{tag.resuelve}</span>
             </div>
           )}
@@ -1289,7 +1383,7 @@ function IncidenciasSKUModal({ product, initialRows, onClose, onSave, onLiveUpda
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-neutral-900 truncate">{product.nombre}</p>
-            <p className="text-xs text-neutral-400 mt-0.5">SKU: {product.sku} · {product.esperadas} uds declaradas</p>
+            <p className="text-xs text-neutral-400 mt-0.5">SKU: {product.sku} · {product.esperadas} uds. declaradas</p>
           </div>
           <button onClick={onClose} className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300 flex-shrink-0">
             <X className="w-4 h-4" />
@@ -1739,8 +1833,8 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
                       <p className="text-base font-bold text-neutral-900">Registrar decisión del seller</p>
                       <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">
                         {catCModal.productName}
-                        <span className="font-mono ml-1 text-neutral-400">· {catCModal.sku}</span>
-                        <span className="ml-1 text-neutral-400">· {catCModal.cantidad} uds</span>
+                        <span className="font-sans ml-1 text-neutral-400">· {catCModal.sku}</span>
+                        <span className="ml-1 text-neutral-400">· {catCModal.cantidad} uds.</span>
                       </p>
                     </div>
 
@@ -1799,7 +1893,7 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
                     {decisionMode === "mixto" && (
                       <div className="grid grid-cols-2 gap-3">
                         <FormField
-                          label="Uds a stock disponible"
+                          label="Uds. a stock disponible"
                           type="number"
                           value={String(stockQty)}
                           onChange={v => {
@@ -1808,7 +1902,7 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
                           }}
                         />
                         <FormField
-                          label="Uds a mermar"
+                          label="Uds. a mermar"
                           type="number"
                           value={String(mermaQty)}
                           onChange={v => {
@@ -1883,7 +1977,7 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
               <div key={rec.id} className="px-4 py-3.5">
                 {/* Row 1: SKU + Estado */}
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="font-mono text-xs text-neutral-500">{rec.sku}</span>
+                  <span className="font-sans text-xs text-neutral-500">{rec.sku}</span>
                   <span className={`inline-flex px-2 py-0.5 rounded-[6px] text-xs font-medium border whitespace-nowrap ${est.cls}`}>
                     {est.label}
                   </span>
@@ -1892,7 +1986,7 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
                 <p className="text-sm text-neutral-800 font-medium leading-snug">{rec.productName}</p>
                 <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                   {tagInfo && (
-                    <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium border ${
+                    <span className={`inline-flex px-1.5 py-0.5 rounded text-xs font-medium border ${
                       tagInfo.color === "amber"  ? "bg-amber-50 text-amber-700 border-amber-200"  :
                       tagInfo.color === "orange" ? "bg-orange-50 text-orange-700 border-orange-200":
                       tagInfo.color === "purple" ? "bg-purple-50 text-purple-700 border-purple-200":
@@ -1981,7 +2075,7 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
                 const tagInfo = INCIDENCIA_TAGS.find(t => t.key === rec.tag);
                 return (
                   <tr key={rec.id} className="hover:bg-neutral-50/40 transition-colors duration-300">
-                    <td className="px-4 py-3 font-mono text-xs text-neutral-500 whitespace-nowrap align-top">{rec.sku}</td>
+                    <td className="px-4 py-3 font-sans text-xs text-neutral-500 whitespace-nowrap align-top">{rec.sku}</td>
                     <td className="px-4 py-3 align-top max-w-[180px]">
                       <p className="text-xs text-neutral-700 leading-snug">{rec.productName}</p>
                       {tagInfo && (
@@ -2063,18 +2157,72 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
 }
 
 // ─── ResumenOR ────────────────────────────────────────────────────────────────
-function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, acumulado, OPERADOR }: {
+function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, acumulado, OPERADOR, canApprove, quarantineRecs, onUpdateQuarantine }: {
   id: string; baseData: OrdenData; orEstado: OrOutcome | null;
   sesiones: Sesion[]; products: ProductConteo[];
   incidencias: Record<string, IncidenciaRow[]>;
-  acumulado: Record<string, number>; OPERADOR: string;
+  acumulado: Record<string, number>; OPERADOR: string; canApprove: boolean;
+  quarantineRecs: QuarantineRecord[];
+  onUpdateQuarantine: (qrId: string, patch: Partial<QuarantineRecord>) => void;
 }) {
   const [viewMode, setViewMode] = useState<"consolidado" | "por-sesion">("consolidado");
+  const [incFilter, setIncFilter] = useState<"all" | "A" | "B" | "C">("all");
   const [lightbox, setLightbox] = useState<File | null>(null);
   const [imageSlider, setImageSlider] = useState<{
     images: { file?: File; url?: string; sku: string; nombre: string; cantidad: number; tag: string; nota: string }[];
     index: number;
   } | null>(null);
+
+  // ── Quarantine (Cat C decision modal) ──
+  const [catCModal,    setCatCModal]    = useState<QuarantineRecord | null>(null);
+  const [decisionMode, setDecisionMode] = useState<"stock" | "merma" | "mixto">("stock");
+  const [stockQty,     setStockQty]     = useState(0);
+  const [mermaQty,     setMermaQty]     = useState(0);
+  const [decisionNota, setDecisionNota] = useState("");
+  const [slideIdx,     setSlideIdx]     = useState(0);
+
+  function openCatC(rec: QuarantineRecord) {
+    setCatCModal(rec);
+    setDecisionMode("stock");
+    setStockQty(rec.cantidad);
+    setMermaQty(0);
+    setDecisionNota("");
+    setSlideIdx(0);
+  }
+  function confirmCatC() {
+    if (!catCModal) return;
+    const res: QuarantineResolution =
+      decisionMode === "merma" ? "merma" : "stock_disponible";
+    onUpdateQuarantine(catCModal.id, {
+      estado:         "resuelto",
+      resolucion:     res,
+      stockCantidad:  decisionMode === "stock" ? catCModal.cantidad : decisionMode === "mixto" ? stockQty : 0,
+      mermaCantidad:  decisionMode === "merma" ? catCModal.cantidad : decisionMode === "mixto" ? mermaQty : 0,
+      decisionSeller: decisionNota || undefined,
+      resueltoen:     new Date().toISOString(),
+    });
+    setCatCModal(null);
+  }
+  function qEstadoBadge(estado: QuarantineStatus) {
+    if (estado === "pendiente")  return { label: "Pendiente",  cls: "bg-neutral-100 text-neutral-600 border-neutral-200" };
+    if (estado === "en_gestion") return { label: "En gestión", cls: "bg-blue-50 text-blue-700 border-blue-200" };
+    return                              { label: "Resuelto",   cls: "bg-green-50 text-green-700 border-green-200" };
+  }
+  function qResolucionLabel(r: QuarantineResolution, rec: QuarantineRecord) {
+    if (!r) return "—";
+    if (r === "stock_disponible") {
+      if (rec.stockCantidad && rec.mermaCantidad)
+        return `Stock (${rec.stockCantidad}) + Merma (${rec.mermaCantidad})`;
+      return "Stock disponible";
+    }
+    if (r === "merma") return "Merma";
+    return "Devolución";
+  }
+  function findQR(productId: string, row: IncidenciaRow): QuarantineRecord | undefined {
+    return quarantineRecs.find(qr => qr.skuId === productId && qr.tag === row.tag);
+  }
+  const pendientesQ = quarantineRecs.filter(r => r.estado !== "resuelto").length;
+  const hasQuarantine = quarantineRecs.length > 0;
 
   const skuRows = products.map(p => {
     const acc     = acumulado[p.id] ?? 0;
@@ -2131,6 +2279,159 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
 
   return (
     <>
+      {/* ── Cat C decision modal (quarantine) ── */}
+      {catCModal && (() => {
+        const matchingInc = (incidencias[catCModal.skuId] ?? []).find(r => r.tag === catCModal.tag);
+        const tagInfo = INCIDENCIA_TAGS.find(t => t.key === catCModal.tag);
+        const realImages = matchingInc?.imagenes ?? [];
+        const demoImagesByTag: Record<string, string[]> = {
+          "sin-codigo-barra": [
+            "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=480&h=360&fit=crop",
+            "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=480&h=360&fit=crop",
+            "https://images.unsplash.com/photo-1607082349566-187342175e2f?w=480&h=360&fit=crop",
+          ],
+          "codigo-incorrecto": [
+            "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=480&h=360&fit=crop",
+            "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=480&h=360&fit=crop",
+            "https://images.unsplash.com/photo-1607082349566-187342175e2f?w=480&h=360&fit=crop",
+          ],
+          "codigo-ilegible": [
+            "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=480&h=360&fit=crop",
+            "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=480&h=360&fit=crop",
+            "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=480&h=360&fit=crop",
+          ],
+          "sin-nutricional": [
+            "https://images.unsplash.com/photo-1542838132-92c53300491e?w=480&h=360&fit=crop",
+            "https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=480&h=360&fit=crop",
+            "https://images.unsplash.com/photo-1625740650964-168e296f04cd?w=480&h=360&fit=crop",
+          ],
+          "sin-vencimiento": [
+            "https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=480&h=360&fit=crop",
+            "https://images.unsplash.com/photo-1542838132-92c53300491e?w=480&h=360&fit=crop",
+            "https://images.unsplash.com/photo-1625740650964-168e296f04cd?w=480&h=360&fit=crop",
+          ],
+          "danio-parcial": [
+            "https://images.unsplash.com/photo-1586769852044-692d6e3703f0?w=480&h=360&fit=crop",
+            "https://images.unsplash.com/photo-1620706857370-e1b9770e8bb1?w=480&h=360&fit=crop",
+            "https://images.unsplash.com/photo-1607082350899-7e105aa886ae?w=480&h=360&fit=crop",
+          ],
+          "danio-total": [
+            "https://images.unsplash.com/photo-1586769852044-692d6e3703f0?w=480&h=360&fit=crop",
+            "https://images.unsplash.com/photo-1620706857370-e1b9770e8bb1?w=480&h=360&fit=crop",
+            "https://images.unsplash.com/photo-1530982011887-3cc11cc85693?w=480&h=360&fit=crop",
+          ],
+          "no-en-sistema": [
+            "https://images.unsplash.com/photo-1607082349566-187342175e2f?w=480&h=360&fit=crop",
+            "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=480&h=360&fit=crop",
+            "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=480&h=360&fit=crop",
+          ],
+        };
+        const fallbackImgs = [
+          "https://images.unsplash.com/photo-1607082349566-187342175e2f?w=480&h=360&fit=crop",
+          "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=480&h=360&fit=crop",
+          "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=480&h=360&fit=crop",
+        ];
+        const imgUrls: string[] = realImages.length > 0
+          ? realImages.map(f => URL.createObjectURL(f))
+          : (demoImagesByTag[catCModal.tag] ?? fallbackImgs);
+        const total = imgUrls.length;
+        const safeIdx = Math.min(slideIdx, total - 1);
+        const operatorNote = matchingInc?.nota || catCModal.notas || "";
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+            <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+              <div className="flex flex-col lg:grid lg:grid-cols-2 gap-4 lg:gap-6">
+                {/* Left: image gallery */}
+                <div className="flex flex-col gap-3">
+                  <div className="relative rounded-xl overflow-hidden bg-neutral-100 border border-neutral-200 flex-1 min-h-[260px]">
+                    <img src={imgUrls[safeIdx]} alt={`Evidencia ${safeIdx + 1}`} className="w-full h-full object-cover absolute inset-0" />
+                    {total > 1 && (
+                      <button onClick={() => setSlideIdx(i => (i - 1 + total) % total)} className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center transition-colors">
+                        <ChevronRight className="w-4 h-4 text-neutral-700 rotate-180" />
+                      </button>
+                    )}
+                    {total > 1 && (
+                      <button onClick={() => setSlideIdx(i => (i + 1) % total)} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center transition-colors">
+                        <ChevronRight className="w-4 h-4 text-neutral-700" />
+                      </button>
+                    )}
+                    <span className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[11px] font-semibold text-white bg-black/50 rounded-full px-2.5 py-0.5 tabular-nums">{safeIdx + 1}/{total}</span>
+                  </div>
+                  {total > 1 && (
+                    <div className="flex gap-1.5 justify-center">
+                      {imgUrls.map((url, i) => (
+                        <button key={i} onClick={() => setSlideIdx(i)} className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${i === safeIdx ? "border-primary-400 ring-1 ring-primary-200" : "border-transparent opacity-60 hover:opacity-100"}`}>
+                          <img src={url} alt="" className="w-full h-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {/* Right: info + form */}
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <p className="text-base font-bold text-neutral-900">Registrar decisión del seller</p>
+                    <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">
+                      {catCModal.productName}
+                      <span className="font-sans ml-1 text-neutral-400">· {catCModal.sku}</span>
+                      <span className="ml-1 text-neutral-400">· {catCModal.cantidad} uds.</span>
+                    </p>
+                  </div>
+                  {tagInfo && (
+                    <div className="space-y-2 p-3 bg-neutral-50 rounded-lg border border-neutral-100">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-neutral-500">Incidencia:</span>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-[6px] border ${
+                          tagInfo.color === "amber"  ? "bg-amber-50 text-amber-700 border-amber-200" :
+                          tagInfo.color === "orange" ? "bg-orange-50 text-orange-700 border-orange-200" :
+                          tagInfo.color === "purple" ? "bg-purple-50 text-purple-700 border-purple-200" :
+                                                       "bg-red-50 text-red-700 border-red-200"
+                        }`}>{tagInfo.label}</span>
+                      </div>
+                      {operatorNote && (
+                        <div>
+                          <p className="text-xs text-neutral-500 mb-1">Comentario del operador</p>
+                          <p className="text-sm text-neutral-700 bg-white rounded-md px-3 py-2 border border-neutral-100">{operatorNote}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    {(["stock", "merma", "mixto"] as const).map(mode => (
+                      <button key={mode} onClick={() => {
+                        setDecisionMode(mode);
+                        if (mode === "stock") { setStockQty(catCModal.cantidad); setMermaQty(0); }
+                        if (mode === "merma") { setStockQty(0); setMermaQty(catCModal.cantidad); }
+                        if (mode === "mixto") { const half = Math.floor(catCModal.cantidad / 2); setStockQty(half); setMermaQty(catCModal.cantidad - half); }
+                      }} className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm transition-colors duration-300 ${
+                        decisionMode === mode ? "border-primary-300 bg-primary-50 text-primary-600 font-medium" : "border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+                      }`}>
+                        {mode === "stock" ? "Ingresar a stock (tal como está)" : mode === "merma" ? "Mermar (dar de baja)" : "Dividir lote — parcial stock + parcial merma"}
+                      </button>
+                    ))}
+                  </div>
+                  {decisionMode === "mixto" && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <FormField label="Uds. a stock disponible" type="number" value={String(stockQty)} onChange={v => { const n = Math.max(0, Math.min(catCModal.cantidad, parseInt(v) || 0)); setStockQty(n); setMermaQty(catCModal.cantidad - n); }} />
+                      <FormField label="Uds. a mermar" type="number" value={String(mermaQty)} onChange={v => { const n = Math.max(0, Math.min(catCModal.cantidad, parseInt(v) || 0)); setMermaQty(n); setStockQty(catCModal.cantidad - n); }} />
+                      <p className={`col-span-2 text-xs font-medium ${stockQty + mermaQty === catCModal.cantidad ? "text-green-600" : "text-red-500"}`}>
+                        Total asignado: {(stockQty + mermaQty).toLocaleString("es-CL")} / {catCModal.cantidad.toLocaleString("es-CL")} uds.
+                      </p>
+                    </div>
+                  )}
+                  <FormField as="textarea" label="Nota / decisión del seller (opcional)" value={decisionNota} onChange={setDecisionNota} rows={2} placeholder="Ej: Seller acepta daño cosmético, autoriza venta con descuento" />
+                  <div className="flex gap-3 mt-auto">
+                    <Button variant="secondary" size="lg" onClick={() => setCatCModal(null)} className="flex-1">Cancelar</Button>
+                    <button onClick={confirmCatC} disabled={decisionMode === "mixto" && stockQty + mermaQty !== catCModal.cantidad} className="flex-1 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:bg-neutral-100 disabled:text-neutral-400 text-white text-sm font-semibold rounded-lg transition-colors duration-300">Confirmar</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Image slider modal */}
       {imageSlider && (() => {
         const { images, index } = imageSlider;
@@ -2177,14 +2478,14 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
               <div className="px-5 py-4 space-y-2.5">
                 <div className="flex items-baseline gap-2">
                   <span className="text-sm font-semibold text-neutral-800">{current.nombre}</span>
-                  <span className="font-mono text-xs text-neutral-400">{current.sku}</span>
+                  <span className="font-sans text-xs text-neutral-400">{current.sku}</span>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
-                  <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-medium">
+                  <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-[6px] bg-amber-50 text-amber-700 border border-amber-200 font-medium leading-none">
                     {current.tag}
                   </span>
                   <span className="text-xs text-neutral-500">
-                    <span className="font-semibold tabular-nums">{current.cantidad.toLocaleString("es-CL")}</span> uds afectadas
+                    <span className="font-semibold tabular-nums">{current.cantidad.toLocaleString("es-CL")}</span> uds. afectadas
                   </span>
                 </div>
                 {current.nota && (
@@ -2228,28 +2529,30 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
         </div>
       )}
 
-      <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+      <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden font-sans">
 
         {/* ── Header ── */}
-        <div className="px-5 py-4 border-b border-neutral-100 flex items-center justify-between gap-4">
-          <div>
+        <div className="border-b border-neutral-100">
+          <div className="px-5 pt-4 pb-3">
             <p className="text-base font-semibold text-neutral-900">Resumen de recepción</p>
             <p className="text-xs text-neutral-400 mt-0.5">
               {sesiones.length} sesión{sesiones.length !== 1 ? "es" : ""} · detalle por SKU
             </p>
           </div>
           {sesiones.length > 1 && (
-            <div className="flex items-center gap-0.5 bg-neutral-100 rounded-lg p-0.5 flex-shrink-0">
-              {(["consolidado", "por-sesion"] as const).map(m => (
-                <button
-                  key={m} onClick={() => setViewMode(m)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors duration-300 ${
-                    viewMode === m ? "bg-white text-neutral-800 shadow-sm" : "text-neutral-500 hover:text-neutral-700"
-                  }`}
-                >
-                  {m === "consolidado" ? "Consolidado" : "Por sesión"}
-                </button>
-              ))}
+            <div className="px-5 pb-3">
+              <div className="flex items-center gap-0.5 bg-neutral-100 rounded-lg p-0.5 w-full">
+                {(["consolidado", "por-sesion"] as const).map(m => (
+                  <button
+                    key={m} onClick={() => setViewMode(m)}
+                    className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors duration-300 ${
+                      viewMode === m ? "bg-white text-neutral-800 shadow-sm" : "text-neutral-500 hover:text-neutral-700"
+                    }`}
+                  >
+                    {m === "consolidado" ? "Consolidado" : "Por sesión"}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -2258,74 +2561,70 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
 
         {/* ── Consolidated view ── */}
         {viewMode === "consolidado" && (<>
-          {/* Mobile: card layout */}
-          <div className="sm:hidden divide-y divide-neutral-100">
+          {/* Mobile: card layout — matches OR card UI */}
+          <div className="sm:hidden flex flex-col gap-3 px-4 py-4">
             {skuRows.map(({ p, received, diff, status, incRows }) => {
               const allImgCount = countAllImages(incRows);
               return (
-                <div key={p.id} className="px-4 py-3.5">
+                <div key={p.id} className="bg-white border border-neutral-200 rounded-2xl p-4">
                   {/* Row 1: SKU + Estado */}
-                  <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="font-mono text-xs text-neutral-500">{p.sku}</p>
-                      <p className="text-sm font-medium text-neutral-800 leading-snug mt-0.5">{p.nombre}</p>
+                      <p className="text-sm font-medium text-neutral-800 leading-snug">{p.nombre}</p>
+                      <p className="font-mono text-[11px] text-neutral-400 mt-0.5">{p.sku}{p.barcode ? ` · ${p.barcode}` : ""}</p>
                     </div>
-                    <span className={`inline-flex px-2 py-0.5 rounded-[6px] text-xs font-medium border whitespace-nowrap flex-shrink-0 ${
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-[6px] text-xs font-medium leading-none border whitespace-nowrap flex-shrink-0 ${
                       status === "Correcto"       ? "bg-green-50 text-green-700 border-green-200" :
                       status === "Con incidencia" ? "bg-amber-50 text-amber-700 border-amber-200" :
                       status === "Exceso"         ? "bg-blue-50  text-blue-700  border-blue-200"  :
                                                     "bg-red-50   text-red-600   border-red-200"
                     }`}>{status}</span>
                   </div>
-                  {/* Row 2: Numbers grid */}
-                  <div className="grid grid-cols-3 gap-2 bg-neutral-50 rounded-lg p-2.5 mb-2">
-                    <div>
-                      <p className="text-[10px] text-neutral-400 uppercase font-semibold">Teórica</p>
-                      <p className="text-sm tabular-nums text-neutral-600">{p.esperadas.toLocaleString("es-CL")}</p>
+
+                  {/* Row 2: Numbers */}
+                  <div className="flex items-center gap-4 text-xs mt-3">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-neutral-400">Recibida</span>
+                      <span className="text-neutral-800 font-bold font-sans tabular-nums">{received.toLocaleString("es-CL")}<span className="text-neutral-300 font-normal">/{p.esperadas.toLocaleString("es-CL")}</span></span>
                     </div>
-                    <div>
-                      <p className="text-[10px] text-neutral-400 uppercase font-semibold">Recibida</p>
-                      <p className="text-sm tabular-nums font-bold text-neutral-800">{received.toLocaleString("es-CL")}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-neutral-400 uppercase font-semibold">Diferencia</p>
-                      <p className={`text-sm tabular-nums font-bold ${
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-neutral-400">Dif.</span>
+                      <span className={`font-bold font-sans tabular-nums ${
                         diff === 0 ? "text-green-600" : diff > 0 ? "text-blue-600" : "text-red-600"
                       }`}>
                         {diff === 0 ? "0" : diff > 0 ? `+${diff.toLocaleString("es-CL")}` : diff.toLocaleString("es-CL")}
-                      </p>
+                      </span>
                     </div>
                   </div>
-                  {/* Row 3: Tags + images (only when present) */}
-                  {(incRows.length > 0 || allImgCount > 0) && (
-                    <div className="flex items-center justify-between gap-2 mt-1">
-                      {incRows.length > 0 ? (
-                        <div className="flex flex-wrap gap-1 min-w-0">
-                          {incRows.map(r => {
-                            const tag = INCIDENCIA_TAGS.find(t => t.key === r.tag);
-                            if (!tag) return null;
-                            return (
-                              <span key={r.rowId} className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium border ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
-                                {tag.label}
-                              </span>
-                            );
-                          })}
-                          <span className="text-xs font-semibold text-amber-700 tabular-nums ml-1">
-                            ({incRows.reduce((s, r) => s + r.cantidad, 0).toLocaleString("es-CL")} uds)
+
+                  {/* Row 3: Tags (only when present) */}
+                  {incRows.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2.5">
+                      {incRows.map(r => {
+                        const tag = INCIDENCIA_TAGS.find(t => t.key === r.tag);
+                        if (!tag) return null;
+                        return (
+                          <span key={r.rowId} className={`inline-flex px-1.5 py-0.5 rounded-[6px] text-xs font-medium leading-none border ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
+                            {tag.label}
                           </span>
-                        </div>
-                      ) : <div />}
-                      {allImgCount > 0 && (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => openImageSlider(p, incRows)}
-                          iconLeft={<Image className="w-3.5 h-3.5" />}
-                          className="flex-shrink-0"
-                        >
-                          Ver
-                        </Button>
-                      )}
+                        );
+                      })}
+                      <span className="text-xs font-semibold text-amber-700 tabular-nums ml-1">
+                        ({incRows.reduce((s, r) => s + r.cantidad, 0).toLocaleString("es-CL")} uds.)
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Actions footer */}
+                  {allImgCount > 0 && (
+                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-neutral-100">
+                      <button
+                        onClick={() => openImageSlider(p, incRows)}
+                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors duration-200"
+                      >
+                        <Eye className="w-4 h-4" />
+                        Ver evidencia
+                      </button>
                     </div>
                   )}
                 </div>
@@ -2334,13 +2633,13 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
           </div>
 
           {/* Desktop: full table */}
-          <div className="hidden sm:block overflow-x-auto">
-            <table className="w-full text-sm min-w-[700px]">
+          <div className="hidden sm:block overflow-x-auto table-scroll">
+            <table className="text-sm border-collapse font-sans" style={{ width: "max-content", minWidth: "100%" }}>
               <thead>
-                <tr className="border-b border-neutral-100 bg-neutral-50/60">
-                  {["SKU", "Nombre", "Teórica", "Recibida", "Diferencia", "Estado", "Tag incidencia", "Uds c/inc.", "Imágenes"].map(h => (
-                    <th key={h} className={`px-3 py-2.5 text-[13px] font-semibold text-neutral-500 ${
-                      ["Teórica","Recibida","Diferencia","Uds c/inc."].includes(h) ? "text-right" :
+                <tr className="border-b border-neutral-100 bg-neutral-50">
+                  {["Producto", "Recibida", "Diferencia", "Estado", "Tag incidencia", "Uds. c/inc.", "Imágenes"].map(h => (
+                    <th key={h} className={`py-3 px-4 text-xs font-semibold text-neutral-500 ${
+                      ["Recibida","Diferencia","Uds. c/inc."].includes(h) ? "text-right" :
                       h === "Estado" ? "text-center" : "text-left"
                     }`}>{h}</th>
                   ))}
@@ -2350,51 +2649,56 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                 {skuRows.map(({ p, received, diff, status, incRows }) => {
                   const allImgCount = countAllImages(incRows);
                   return (
-                    <tr key={p.id} className="hover:bg-neutral-50/40 transition-colors duration-300">
-                      <td className="px-3 py-3 font-mono text-xs text-neutral-500 align-top whitespace-nowrap">{p.sku}</td>
-                      <td className="px-3 py-3 text-xs text-neutral-700 align-top leading-relaxed max-w-[160px]">{p.nombre}</td>
-                      <td className="px-3 py-3 text-right tabular-nums text-xs text-neutral-500 align-top">{p.esperadas.toLocaleString("es-CL")}</td>
-                      <td className="px-3 py-3 text-right tabular-nums text-sm font-semibold text-neutral-800 align-top">{received.toLocaleString("es-CL")}</td>
-                      <td className={`px-3 py-3 text-right tabular-nums font-bold align-top ${
+                    <tr key={p.id} className="hover:bg-neutral-50/60 transition-colors duration-300">
+                      <td className="py-3 px-4 align-top max-w-[240px]">
+                        <p className="text-[13px] text-neutral-800 leading-snug font-medium">{p.nombre}</p>
+                        <p className="text-[11px] text-neutral-400 mt-0.5 font-mono">{p.sku}{p.barcode ? ` · ${p.barcode}` : ""}</p>
+                      </td>
+                      <td className="py-3 px-4 text-right tabular-nums align-top whitespace-nowrap">
+                        <span className="text-[13px] font-semibold text-neutral-800">{received.toLocaleString("es-CL")}</span>
+                        <span className="text-[11px] text-neutral-400">/{p.esperadas.toLocaleString("es-CL")}</span>
+                      </td>
+                      <td className={`py-3 px-4 text-right tabular-nums text-[13px] font-bold align-top ${
                         diff === 0 ? "text-green-600" : diff > 0 ? "text-blue-600" : "text-red-600"
                       }`}>
                         {diff === 0 ? "0" : diff > 0 ? `+${diff.toLocaleString("es-CL")}` : diff.toLocaleString("es-CL")}
                       </td>
-                      <td className="px-3 py-3 text-center align-top">
-                        <span className={`inline-flex px-2 py-0.5 rounded-[6px] text-xs font-medium border whitespace-nowrap ${
+                      <td className="py-3 px-4 text-center align-top">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-[6px] text-[12px] font-medium leading-none border whitespace-nowrap ${
                           status === "Correcto"       ? "bg-green-50 text-green-700 border-green-200" :
                           status === "Con incidencia" ? "bg-amber-50 text-amber-700 border-amber-200" :
                           status === "Exceso"         ? "bg-blue-50  text-blue-700  border-blue-200"  :
                                                         "bg-red-50   text-red-600   border-red-200"
                         }`}>{status}</span>
                       </td>
-                      <td className="px-3 py-3 align-top">
+                      <td className="py-3 px-4 align-top">
                         {incRows.length === 0
-                          ? <span className="text-neutral-200 text-xs">—</span>
-                          : <div className="flex flex-wrap gap-1">
+                          ? <span className="text-neutral-300 text-[13px]">—</span>
+                          : <div className="flex flex-col gap-1">
                               {incRows.map(r => {
                                 const tag = INCIDENCIA_TAGS.find(t => t.key === r.tag);
                                 if (!tag) return null;
                                 return (
-                                  <span key={r.rowId} className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium border whitespace-nowrap ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
+                                  <span key={r.rowId} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] text-[12px] font-medium leading-none border whitespace-nowrap ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
                                     {tag.label}
+                                    <span className="opacity-60 font-normal">· {r.cantidad} uds.</span>
                                   </span>
                                 );
                               })}
                             </div>
                         }
                       </td>
-                      <td className="px-3 py-3 text-right align-top">
+                      <td className="py-3 px-4 text-right align-top tabular-nums">
                         {incRows.length === 0
-                          ? <span className="text-neutral-200 text-xs">—</span>
-                          : <span className="font-semibold text-amber-700 tabular-nums">
+                          ? <span className="text-neutral-300 text-[13px]">—</span>
+                          : <span className="text-[13px] font-semibold text-amber-700">
                               {incRows.reduce((s, r) => s + r.cantidad, 0).toLocaleString("es-CL")}
                             </span>
                         }
                       </td>
-                      <td className="px-3 py-3 align-top">
+                      <td className="py-3 px-4 align-top">
                         {allImgCount === 0
-                          ? <span className="text-neutral-200 text-xs">—</span>
+                          ? <span className="text-neutral-300 text-xs">—</span>
                           : <Button
                               variant="secondary"
                               size="sm"
@@ -2427,24 +2731,25 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                     <Clock className="w-3 h-3" />
                     {fmtDT(ses.inicio)} <span className="text-neutral-300">→</span> {fmtDT(ses.fin)}
                   </span>
-                  <span className="ml-auto text-xs font-bold text-primary-500 tabular-nums">
-                    {ses.items.reduce((s, i) => s + i.cantidad, 0).toLocaleString("es-CL")} uds
+                  <span className="ml-auto text-xs font-bold text-primary-500 font-sans tabular-nums">
+                    {ses.items.reduce((s, i) => s + i.cantidad, 0).toLocaleString("es-CL")} uds.
                   </span>
                 </div>
-                <table className="w-full text-sm">
+                <table className="w-full text-sm font-sans">
                   <thead>
                     <tr className="bg-neutral-50/60 border-b border-neutral-100">
-                      <th className="px-4 py-2 text-left text-[13px] font-semibold text-neutral-400">SKU</th>
-                      <th className="px-4 py-2 text-left text-[13px] font-semibold text-neutral-400">Producto</th>
-                      <th className="px-4 py-2 text-right text-[13px] font-semibold text-neutral-400">Contadas</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-neutral-400">Producto</th>
+                      <th className="px-4 py-2 text-right text-xs font-semibold text-neutral-400">Contadas</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-50">
                     {ses.items.map(item => (
                       <tr key={item.pid}>
-                        <td className="px-4 py-2.5 font-mono text-xs text-neutral-500">{item.sku}</td>
-                        <td className="px-4 py-2.5 text-xs text-neutral-700">{item.nombre}</td>
-                        <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-neutral-800">{item.cantidad.toLocaleString("es-CL")}</td>
+                        <td className="px-4 py-2.5">
+                          <p className="text-[13px] text-neutral-800 leading-snug font-medium">{item.nombre}</p>
+                          <p className="text-[11px] text-neutral-400 mt-0.5 font-mono">{item.sku}</p>
+                        </td>
+                        <td className="px-4 py-2.5 font-sans text-right text-[13px] font-semibold tabular-nums text-neutral-800">{item.cantidad.toLocaleString("es-CL")}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -2454,75 +2759,218 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
           </div>
         )}
 
-        {/* ── Incidencias por categoría de resolución ── */}
-        {flatInc.length > 0 && (
-          <div className="border-t border-neutral-100 px-5 py-4 space-y-3">
-            <p className="text-sm font-semibold text-neutral-800">Incidencias por categoría de resolución</p>
-            {catGroups.map(({ cat, label, desc, color, rows }) => {
-              const borderCls  = color === "primary" ? "border-primary-200" : color === "red" ? "border-red-200" : "border-amber-200";
-              const headerCls  = color === "primary" ? "bg-primary-50"      : color === "red" ? "bg-red-50"      : "bg-amber-50";
-              const badgeCls   = color === "primary" ? "bg-primary-500"     : color === "red" ? "bg-red-600"     : "bg-amber-500";
-              const titleCls   = color === "primary" ? "text-primary-700"   : color === "red" ? "text-red-800"   : "text-amber-800";
-              const subCls     = color === "primary" ? "text-primary-500"   : color === "red" ? "text-red-500"   : "text-amber-600";
-              return (
-                <div key={cat} className={`rounded-xl border overflow-hidden ${borderCls}`}>
-                  <div className={`px-4 py-2.5 flex items-center gap-2.5 ${headerCls}`}>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full text-white ${badgeCls}`}>Cat. {cat}</span>
-                    <div>
-                      <p className={`text-xs font-semibold ${titleCls}`}>{label}</p>
-                      <p className={`text-[10px] ${subCls}`}>{desc}</p>
-                    </div>
-                  </div>
-                  <div className="divide-y divide-neutral-100">
-                    {rows.map(({ product, row }) => {
-                      const tag = INCIDENCIA_TAGS.find(t => t.key === row.tag);
-                      return (
-                        <div key={row.rowId} className="px-4 py-3 flex items-start gap-4 bg-white">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-baseline gap-2 flex-wrap">
-                              <span className="text-xs font-semibold text-neutral-800">{product.nombre}</span>
-                              <span className="font-mono text-[10px] text-neutral-400">{product.sku}</span>
-                            </div>
-                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                              {tag && (
-                                <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium border ${tagColorCls(row.tag as IncidenciaTagKey)}`}>{tag.label}</span>
-                              )}
-                              <span className="text-xs text-neutral-500">
-                                <span className="font-semibold tabular-nums">{row.cantidad.toLocaleString("es-CL")}</span> uds afectadas
-                              </span>
-                            </div>
-                            {row.nota && <p className="text-xs text-neutral-400 italic mt-1">"{row.nota}"</p>}
-                            {row.tag === "no-en-sistema" && row.descripcion && (
-                              <p className="text-xs text-purple-700 mt-1.5">{row.descripcion}</p>
-                            )}
-                          </div>
-                          {row.imagenes.length > 0 ? (
-                            <div className="flex gap-1.5 flex-wrap flex-shrink-0">
-                              {row.imagenes.map((img, i) => (
-                                <button
-                                  key={i} onClick={() => setLightbox(img)}
-                                  className="w-10 h-10 rounded-lg overflow-hidden border border-neutral-200 hover:border-primary-400 flex-shrink-0 transition-colors duration-300"
-                                >
-                                  <img src={URL.createObjectURL(img)} alt="" className="w-full h-full object-cover" />
-                                </button>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="flex items-center gap-1 text-[10px] text-neutral-300 flex-shrink-0">
-                              <ImageOff className="w-3 h-3" /> Sin imágenes
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
       </div>
+
+      {/* ── Incidencias por categoría (card independiente) ── */}
+      {flatInc.length > 0 && (() => {
+        const catTabs = catGroups.map(g => ({
+          ...g,
+          dotCls: g.color === "primary" ? "bg-primary-500" : g.color === "red" ? "bg-red-500" : "bg-amber-500",
+          textCls: g.color === "primary" ? "text-primary-700" : g.color === "red" ? "text-red-700" : "text-amber-700",
+          labelShort: g.color === "primary" ? "Interno" : g.color === "red" ? "Devolución" : "Revisión seller",
+        }));
+
+        const visibleGroups = incFilter === "all" ? catTabs : catTabs.filter(g => g.cat === incFilter);
+
+        return (
+          <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
+
+            {/* Section title */}
+            <div className="px-5 pt-4 pb-3 flex items-start justify-between">
+              <div>
+                <p className="text-base font-semibold text-neutral-900">Resolución de incidencias</p>
+                <p className="text-xs text-neutral-400 mt-0.5">{flatInc.length} incidencia{flatInc.length !== 1 ? "s" : ""} registrada{flatInc.length !== 1 ? "s" : ""}</p>
+              </div>
+              {hasQuarantine && (
+                <span className={`whitespace-nowrap text-xs font-semibold px-2.5 py-1 rounded-[6px] border leading-none ${
+                  pendientesQ === 0
+                    ? "bg-green-50 text-green-700 border-green-200"
+                    : "bg-amber-50 text-amber-700 border-amber-200"
+                }`}>
+                  {pendientesQ === 0 ? "Todo resuelto" : `${pendientesQ} pendiente${pendientesQ !== 1 ? "s" : ""}`}
+                </span>
+              )}
+            </div>
+
+              {/* Filter: mobile select */}
+              <div className="sm:hidden px-5 pb-4">
+                <select
+                  value={incFilter}
+                  onChange={e => setIncFilter(e.target.value as "all" | "A" | "B" | "C")}
+                  className="w-full appearance-none bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-2.5 text-sm font-medium text-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="all">Todas ({flatInc.length})</option>
+                  {catTabs.map(g => (
+                    <option key={g.cat} value={g.cat}>{g.labelShort} ({g.rows.length})</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Filter: desktop tabs */}
+              <div className="hidden sm:flex items-center gap-1.5 px-5 overflow-x-auto pb-4">
+                <button
+                  onClick={() => setIncFilter("all")}
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors duration-200 ${
+                    incFilter === "all"
+                      ? "bg-neutral-900 text-white font-medium"
+                      : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                  }`}
+                >
+                  Todas
+                  <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md leading-none ${incFilter === "all" ? "bg-white/20 text-white" : "bg-neutral-200 text-neutral-500"}`}>{flatInc.length}</span>
+                </button>
+                {catTabs.map(g => (
+                  <button
+                    key={g.cat}
+                    onClick={() => setIncFilter(g.cat as "A" | "B" | "C")}
+                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors duration-200 ${
+                      incFilter === g.cat
+                        ? "bg-neutral-900 text-white font-medium"
+                        : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                    }`}
+                  >
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${g.dotCls}`} />
+                    {g.labelShort}
+                    <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md leading-none ${incFilter === g.cat ? "bg-white/20 text-white" : "bg-neutral-200 text-neutral-500"}`}>{g.rows.length}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Category groups */}
+              <div className="px-5 pb-5 space-y-6">
+                {visibleGroups.map(g => {
+                  const resolLabel = g.color === "primary" ? "Resolución interna" : g.color === "red" ? "Devolución al seller" : "Decisión del seller";
+                  return (
+                    <div key={g.cat}>
+                      {/* Category header with left bar */}
+                      <div className="flex items-center gap-2.5 mb-3">
+                        <div className={`w-1 self-stretch rounded-full ${g.dotCls}`} />
+                        <span className="text-sm font-bold text-neutral-800">{resolLabel}</span>
+                      </div>
+
+                      {/* Incident cards */}
+                      <div className="space-y-3">
+                        {g.rows.map(({ product, row }) => {
+                          const tag = INCIDENCIA_TAGS.find(t => t.key === row.tag);
+                          const allImgs = [...row.imagenes.map(f => ({ file: f })), ...(row.imageUrls ?? []).map(u => ({ url: u }))];
+                          const qr = findQR(product.id, row);
+                          const qrEstado = qr ? qEstadoBadge(qr.estado) : null;
+                          const isResuelto = qr?.estado === "resuelto";
+
+                          return (
+                            <div key={row.rowId} className="rounded-xl border border-neutral-200 bg-white">
+                              {/* Card header: tag + units + quarantine estado */}
+                              <div className="px-4 pt-3.5 pb-3 border-b border-neutral-100 flex items-start justify-between gap-2">
+                                <div>
+                                  <p className="text-xs font-bold text-neutral-800 uppercase tracking-wide">{tag?.label ?? row.tag}</p>
+                                  <p className="text-xs text-neutral-500 mt-0.5">
+                                    <span className="font-semibold tabular-nums">{row.cantidad.toLocaleString("es-CL")}</span> uds. afectadas
+                                  </p>
+                                </div>
+                                {qrEstado && (
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-[6px] text-xs font-medium border whitespace-nowrap leading-none ${qrEstado.cls}`}>
+                                    {isResuelto && <Check className="w-3 h-3 mr-1 flex-shrink-0" />}
+                                    {qrEstado.label}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Card body: product + comment + resolution info */}
+                              <div className="px-4 py-3 space-y-2.5">
+                                <div>
+                                  <p className="text-sm font-semibold text-neutral-800">{product.nombre}</p>
+                                  <p className="text-xs text-neutral-400 mt-0.5 font-sans">SKU: {product.sku}</p>
+                                </div>
+
+                                {row.nota && (
+                                  <div className="flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2">
+                                    <MessageSquare className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0 mt-0.5" />
+                                    <p className="text-xs text-neutral-600">{row.nota}</p>
+                                  </div>
+                                )}
+                                {row.tag === "no-en-sistema" && row.descripcion && (
+                                  <div className="flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2">
+                                    <MessageSquare className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0 mt-0.5" />
+                                    <p className="text-xs text-neutral-600">{row.descripcion}</p>
+                                  </div>
+                                )}
+                                {isResuelto && qr.resolucion && (
+                                  <div className="flex items-center gap-1.5 text-xs">
+                                    <span className="text-neutral-400">Resolución:</span>
+                                    <span className="text-neutral-700 font-medium">{qResolucionLabel(qr.resolucion, qr)}</span>
+                                  </div>
+                                )}
+                                {isResuelto && qr.decisionSeller && (
+                                  <div className="flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2">
+                                    <MessageSquare className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0 mt-0.5" />
+                                    <p className="text-xs text-neutral-600">{qr.decisionSeller}</p>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Actions footer — quarantine-aware */}
+                              <div className="flex items-center gap-2 px-4 pb-3.5 pt-1">
+                                {qr && !isResuelto ? (
+                                  // ── Quarantine action buttons ──
+                                  qr.estado === "pendiente" ? (
+                                    <button
+                                      onClick={() => onUpdateQuarantine(qr.id, { estado: "en_gestion" })}
+                                      className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition-colors duration-200"
+                                    >
+                                      Iniciar gestión
+                                    </button>
+                                  ) : qr.estado === "en_gestion" && qr.categoria === "interna" ? (
+                                    <button
+                                      onClick={() => onUpdateQuarantine(qr.id, { estado: "resuelto", resolucion: "stock_disponible", resueltoen: new Date().toISOString() })}
+                                      className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors duration-200"
+                                    >
+                                      Confirmar re-etiquetado
+                                    </button>
+                                  ) : qr.estado === "en_gestion" && qr.categoria === "devolucion_seller" ? (
+                                    <button
+                                      onClick={() => onUpdateQuarantine(qr.id, { estado: "resuelto", resolucion: "devolucion", resueltoen: new Date().toISOString() })}
+                                      className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors duration-200"
+                                    >
+                                      Confirmar retiro seller
+                                    </button>
+                                  ) : qr.estado === "en_gestion" && qr.categoria === "decision_seller" ? (
+                                    <button
+                                      onClick={() => openCatC(qr)}
+                                      className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition-colors duration-200"
+                                    >
+                                      Registrar decisión
+                                    </button>
+                                  ) : <div className="flex-1" />
+                                ) : !qr ? (
+                                  // ── No quarantine yet (pre-completion) — show info actions ──
+                                  (row.tag === "danio-total" || row.tag === "danio-parcial") && allImgs.length === 0 ? (
+                                    <button className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors duration-200">
+                                      <Camera className="w-4 h-4" /> Adjuntar evidencia
+                                    </button>
+                                  ) : <div className="flex-1" />
+                                ) : (
+                                  // ── Resuelto — just spacer ──
+                                  <div className="flex-1" />
+                                )}
+                                <button
+                                  onClick={() => openImageSlider(product, [row])}
+                                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors duration-200"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                  Ver detalle
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+        );
+      })()}
     </>
   );
 }
@@ -2565,6 +3013,21 @@ export default function ConteoORPage() {
   const [scanError,        setScanError]        = useState(false);
   const scanFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scanErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Role (initialise with SSR-safe default, sync from localStorage on mount) ──
+  const [currentRole, setCurrentRole] = useState<Role>("Super Admin");
+  useEffect(() => {
+    setCurrentRole(getRole());
+    const sync = () => setCurrentRole(getRole());
+    window.addEventListener("amplifica-role-change", sync);
+    return () => window.removeEventListener("amplifica-role-change", sync);
+  }, []);
+
+  const canComplete    = can(currentRole, "or:complete");
+  const canStartSesion = can(currentRole, "session:start");
+  const canFinSesion   = can(currentRole, "session:finalize");
+  const canRelSesion   = can(currentRole, "session:release");
+  const canScanPallet  = can(currentRole, "scan:pallet_bulto");
 
   // Capture snapshot of incidencias for a SKU when the modal opens (to revert on cancel)
   useEffect(() => {
@@ -2909,7 +3372,7 @@ export default function ConteoORPage() {
             </div>
             <h3 className="text-lg font-bold text-neutral-900 mb-1">¿Liberar sesión activa?</h3>
             <p className="text-sm text-neutral-500 mb-6">
-              Se descartarán todas las unidades escaneadas en esta sesión ({stats.totalSesionAct} uds). Esta acción no se puede deshacer.
+              Se descartarán todas las unidades escaneadas en esta sesión ({stats.totalSesionAct} uds.). Esta acción no se puede deshacer.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <button onClick={() => { liberarSesion(); setConfirmLiberar(false); }}
@@ -3002,7 +3465,7 @@ export default function ConteoORPage() {
         <span className="text-neutral-700 font-medium">Orden de Recepción</span>
       </nav>
 
-      <div className="max-w-4xl mx-auto px-4 lg:px-6 pt-3 pb-32 lg:pb-6 space-y-2 sm:space-y-5">
+      <div className="max-w-4xl mx-auto px-4 lg:px-6 pt-3 pb-32 lg:pb-6 space-y-4 sm:space-y-5">
 
         {/* ── Title row ── */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-4">
@@ -3010,11 +3473,11 @@ export default function ConteoORPage() {
             <h1 className={`font-bold text-neutral-900 ${sesionActiva ? "text-sm sm:text-2xl" : "text-xl sm:text-2xl"}`}>
               {sesionActiva ? (
                 <>
-                  <span className="sm:hidden font-mono">#{id}</span>
-                  <span className="hidden sm:inline">Orden de Recepción <span className="font-mono">#{id}</span></span>
+                  <span className="sm:hidden font-sans">#{id}</span>
+                  <span className="hidden sm:inline">Orden de Recepción <span className="font-sans">#{id}</span></span>
                 </>
               ) : (
-                <>Orden de Recepción{" "}<span className="font-mono text-neutral-900">#{id}</span></>
+                <>Orden de Recepción{" "}<span className="font-sans text-neutral-900">#{id}</span></>
               )}
             </h1>
             {!sesionActiva && (
@@ -3036,7 +3499,7 @@ export default function ConteoORPage() {
               >
                 Ver Guía de despacho
               </Button>
-            ) : originalEstado === "Creado" ? (
+            ) : originalEstado === "Creado" && canComplete ? (
               <Link
                 href={`/recepciones/crear?startStep=2&mode=completar&sucursal=${encodeURIComponent(baseData.sucursal)}&seller=${encodeURIComponent(baseData.seller)}&orId=${id}`}
                 className="flex items-center gap-2.5 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300 whitespace-nowrap"
@@ -3044,7 +3507,7 @@ export default function ConteoORPage() {
                 <CheckCircle2 className="w-4 h-4" />
                 Completar
               </Link>
-            ) : (
+            ) : canStartSesion && originalEstado !== "Creado" ? (
               sesionActiva ? (
                 <button
                   onClick={() => setConfirmFinalizar(true)}
@@ -3062,7 +3525,7 @@ export default function ConteoORPage() {
                   Iniciar sesión de conteo
                 </button>
               )
-            )}
+            ) : null}
           </div>
 
           {/* Mobile: Guía de despacho button for closed OR */}
@@ -3080,49 +3543,99 @@ export default function ConteoORPage() {
           )}
         </div>
 
-        {/* ── QR Display: solo en "Programado" y "Recibir en bodega" (antes de iniciar conteo) ── */}
-        {/* El operador imprime etiquetas de bultos/pallets para que el operador de conteo escanee y encuentre la OR rápido */}
-        {!orCerrada && !sesionActiva && sesiones.length === 0 && (
-          <QrDisplaySection
-            orId={id}
-            seller={baseData.seller}
-            sucursal={baseData.sucursal}
-            fechaAgendada={baseData.fechaAgendada}
-            skus={products.length}
-            uTotales={stats.totalEsperadas.toLocaleString("es-CL")}
-            sesiones={0}
-          />
-        )}
+        {/* ── Resumen unificado de la OR (estado + datos + QR) ── */}
+        {!orCerrada && (() => {
+          const showQr = !sesionActiva && sesiones.length === 0;
+          const displayEstado: Status =
+            sesionActiva || sesiones.length > 0
+              ? "En proceso de conteo"
+              : (originalEstado as Status) ?? "Programado";
 
-        {/* ── Info compacta: durante y después del conteo ── */}
-        {!orCerrada && (sesionActiva || sesiones.length > 0) && (
-          <div className={`bg-white border border-neutral-200 rounded-xl px-4 py-3 ${sesionActiva ? "hidden sm:block" : ""}`}>
-            <div className="flex items-center gap-5 flex-wrap">
-              <div>
-                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Orden</p>
-                <p className="text-sm font-semibold text-neutral-800 mt-0.5 font-mono">{id}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Tienda</p>
-                <p className="text-sm font-medium text-neutral-700 mt-0.5">{baseData.seller}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Sucursal</p>
-                <p className="text-sm font-medium text-neutral-700 mt-0.5">{baseData.sucursal}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Productos</p>
-                <p className="text-sm font-medium text-neutral-700 mt-0.5">{products.length} SKUs · {stats.totalEsperadas.toLocaleString("es-CL")} Uds.</p>
-              </div>
-              {sesiones.length > 0 && (
-                <div>
-                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Sesiones</p>
-                  <p className="text-sm font-medium text-neutral-700 mt-0.5">{sesiones.length + (sesionActiva ? 1 : 0)}</p>
+          return (
+            <div className={`bg-white border border-neutral-200 rounded-xl overflow-hidden ${sesionActiva ? "hidden sm:block" : ""}`}>
+              <div className="flex flex-col lg:flex-row">
+                {/* Left: info summary */}
+                <div className="flex-1 min-w-0 px-4 py-3">
+                  {/* Estado badge */}
+                  <div className="mb-3">
+                    <StatusBadge status={displayEstado} />
+                  </div>
+
+                  {/* Data grid */}
+                  <div className="flex items-start gap-x-5 gap-y-2.5 flex-wrap">
+                    <div>
+                      <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Orden</p>
+                      <p className="text-sm font-semibold text-neutral-800 mt-0.5 font-sans">{id}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Tienda</p>
+                      <p className="text-sm font-medium text-neutral-700 mt-0.5">{baseData.seller}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Sucursal</p>
+                      <p className="text-sm font-medium text-neutral-700 mt-0.5">{baseData.sucursal}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Productos</p>
+                      <p className="text-sm font-medium text-neutral-700 mt-0.5">{products.length} SKUs · {stats.totalEsperadas.toLocaleString("es-CL")} Uds.</p>
+                    </div>
+                    {baseData.pallets != null && (
+                      <div>
+                        <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Pallets</p>
+                        <p className="text-sm font-medium text-neutral-700 mt-0.5">{baseData.pallets}</p>
+                      </div>
+                    )}
+                    {baseData.bultos != null && (
+                      <div>
+                        <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Bultos</p>
+                        <p className="text-sm font-medium text-neutral-700 mt-0.5">{baseData.bultos}</p>
+                      </div>
+                    )}
+                    {sesiones.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Sesiones</p>
+                        <p className="text-sm font-medium text-neutral-700 mt-0.5">{sesiones.length + (sesionActiva ? 1 : 0)}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Comentarios — contextuales según estado */}
+                  {(() => {
+                    const isRecepcionado = displayEstado === "Recepcionado en bodega" || displayEstado === "En proceso de conteo" || displayEstado === "Pendiente de aprobación";
+                    const comentario = isRecepcionado ? baseData.comentarioRecepcion : baseData.comentarios;
+                    const label = isRecepcionado ? "Comentarios del operador" : "Comentarios del seller";
+                    if (!comentario) return null;
+                    return (
+                      <div className="mt-2.5 pt-2.5 border-t border-neutral-100">
+                        <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">{label}</p>
+                        <div className="mt-1.5 flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2.5">
+                          <MessageSquare className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0 mt-0.5" />
+                          <p className="text-sm text-neutral-600 leading-relaxed">{comentario}</p>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
-              )}
+
+                {/* Right: QR widget (only pre-count) */}
+                {showQr && (
+                  <>
+                    {/* Divider — horizontal on mobile, vertical on desktop */}
+                    <div className="w-full h-px bg-neutral-200 lg:w-px lg:h-auto lg:self-stretch" />
+                    <div className="px-4 py-3 lg:py-4 flex justify-center">
+                      <QrDisplaySection
+                        orId={id}
+                        seller={baseData.seller}
+                        sucursal={baseData.sucursal}
+                        bultos={baseData.bultos}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ── Active session: mobile compact card ── */}
         {sesionActiva && (
@@ -3269,7 +3782,7 @@ export default function ConteoORPage() {
                   const tag = INCIDENCIA_TAGS.find(t => t.key === tagKey);
                   if (!tag || total === 0) return null;
                   return (
-                    <span key={tagKey} className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border ${tagColorCls(tagKey)}`}>
+                    <span key={tagKey} className={`inline-flex items-center gap-1 text-[11px] font-medium leading-none px-2 py-0.5 rounded-[6px] border ${tagColorCls(tagKey)}`}>
                       {tag.label}
                       <span className="opacity-60 font-normal tabular-nums ml-0.5">· {total}</span>
                     </span>
@@ -3328,7 +3841,7 @@ export default function ConteoORPage() {
               const tag = INCIDENCIA_TAGS.find(t => t.key === tagKey);
               if (!tag || total === 0) return null;
               return (
-                <span key={tagKey} className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border ${tagColorCls(tagKey)}`}>
+                <span key={tagKey} className={`inline-flex items-center gap-1 text-[11px] font-medium leading-none px-2 py-0.5 rounded-[6px] border ${tagColorCls(tagKey)}`}>
                   {tag.label}
                   <span className="opacity-60 font-normal tabular-nums ml-0.5">· {total}</span>
                 </span>
@@ -3359,7 +3872,7 @@ export default function ConteoORPage() {
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-neutral-800 leading-snug">{p.nombre}</p>
-                              <p className="text-xs text-neutral-400 font-mono mt-0.5">{p.sku}</p>
+                              <p className="text-xs text-neutral-400 font-sans mt-0.5">{p.sku}</p>
                             </div>
                             <span className={`inline-flex px-2 py-0.5 rounded-[6px] text-xs font-medium flex-shrink-0 ${statusConf.cls}`}>
                               {statusConf.label}
@@ -3420,7 +3933,7 @@ export default function ConteoORPage() {
                           }[status];
                           return (
                             <tr key={p.id} className="hover:bg-neutral-50/50">
-                              <td className="px-3 py-2 text-neutral-500 font-mono">{p.sku}</td>
+                              <td className="px-3 py-2 text-neutral-500 font-sans">{p.sku}</td>
                               <td className="px-3 py-2 text-neutral-800 max-w-[180px] truncate">{p.nombre}</td>
                               <td className="px-3 py-2 text-right tabular-nums text-neutral-600">{p.esperadas}</td>
                               <td className="px-3 py-2 text-right tabular-nums font-semibold text-neutral-800">{total}</td>
@@ -3457,30 +3970,7 @@ export default function ConteoORPage() {
         </div>
         )}
 
-        {/* ── OR closed result banner ── */}
-        {orCerrada && (
-            <div className="rounded-xl px-4 py-4 border bg-green-50 border-green-200">
-              <div className="flex items-start gap-3 sm:items-center sm:gap-4">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-lg font-bold bg-green-100 text-green-600">✓</div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-green-700">
-                    Recepción completada
-                  </p>
-                  <p className="text-xs mt-0.5 text-green-600">
-                    El proceso de conteo fue finalizado correctamente.
-                  </p>
-                  <span className="sm:hidden inline-flex mt-2 text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap bg-green-100 text-green-700">
-                    Completada
-                  </span>
-                </div>
-                <span className="hidden sm:inline-flex flex-shrink-0 text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap bg-green-100 text-green-700">
-                  Completada
-                </span>
-              </div>
-            </div>
-        )}
-
-        {/* ── Stats resumen dark bar (OR cerrada) ── */}
+        {/* ── Stats resumen dark bar (OR cerrada) — estado incluido ── */}
         {orCerrada && (() => {
           const totalEsperadas = products.reduce((s, p) => s + p.esperadas, 0);
           const totalRecibidas = products.reduce((s, p) => {
@@ -3490,7 +3980,8 @@ export default function ConteoORPage() {
           }, 0);
           const diffNeta = totalRecibidas - totalEsperadas;
           const totalInc = products.reduce((s, p) => (incidencias[p.id] ?? []).filter(r => r.tag !== "").length + s, 0);
-          const summaryItems = [
+          const summaryItems: { label: string; value: string; cls?: string; badge?: boolean }[] = [
+            { label: "Estado", value: "Completada", badge: true },
             { label: "SKUs", value: products.length.toString() },
             { label: "Uds. esperadas", value: totalEsperadas.toLocaleString("es-CL") },
             { label: "Uds. recibidas", value: totalRecibidas.toLocaleString("es-CL") },
@@ -3501,17 +3992,21 @@ export default function ConteoORPage() {
           ];
           return (
             <div className="bg-neutral-900 rounded-xl overflow-hidden">
-              {/* Mobile: 3+2 */}
+              {/* Mobile: 3+3 */}
               <div className="sm:hidden px-4 py-3.5 space-y-2">
                 <div className="grid grid-cols-3 gap-2">
                   {summaryItems.slice(0, 3).map(s => (
                     <div key={s.label} className="text-center">
                       <p className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider">{s.label}</p>
-                      <p className={`text-base font-bold mt-0.5 tabular-nums ${s.cls ?? "text-white"}`}>{s.value}</p>
+                      {s.badge ? (
+                        <span className="inline-flex mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">{s.value}</span>
+                      ) : (
+                        <p className={`text-base font-bold mt-0.5 tabular-nums ${s.cls ?? "text-white"}`}>{s.value}</p>
+                      )}
                     </div>
                   ))}
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {summaryItems.slice(3).map(s => (
                     <div key={s.label} className="text-center">
                       <p className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider">{s.label}</p>
@@ -3520,12 +4015,16 @@ export default function ConteoORPage() {
                   ))}
                 </div>
               </div>
-              {/* Desktop: 5-col */}
-              <div className="hidden sm:grid grid-cols-5 gap-3 px-5 py-4">
+              {/* Desktop: 6-col */}
+              <div className="hidden sm:grid grid-cols-6 gap-3 px-5 py-4">
                 {summaryItems.map(s => (
                   <div key={s.label} className="text-left">
                     <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">{s.label}</p>
-                    <p className={`text-sm font-bold mt-1 tabular-nums ${s.cls ?? "text-white"}`}>{s.value}</p>
+                    {s.badge ? (
+                      <span className="inline-flex mt-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-green-500/20 text-green-400">{s.value}</span>
+                    ) : (
+                      <p className={`text-sm font-bold mt-1 tabular-nums ${s.cls ?? "text-white"}`}>{s.value}</p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -3537,14 +4036,17 @@ export default function ConteoORPage() {
         {orCerrada && (
           <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
             <div className="px-4 py-3.5 border-b border-neutral-100">
-              <span className="text-base font-semibold text-neutral-800">Información de la OR</span>
+              <div className="flex items-center gap-2.5">
+                <span className="text-base font-semibold text-neutral-800">Información de la OR</span>
+                <StatusBadge status="Completada" />
+              </div>
               <p className="text-xs text-neutral-400 mt-0.5">Datos ingresados por el seller al crear la orden</p>
             </div>
             <div className="p-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
                 <div>
                   <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">ID de OR</p>
-                  <p className="text-sm font-semibold text-neutral-800 mt-0.5 font-mono">{id}</p>
+                  <p className="text-sm font-semibold text-neutral-800 mt-0.5 font-sans">{id}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Seller</p>
@@ -3566,14 +4068,32 @@ export default function ConteoORPage() {
                   <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Unidades declaradas</p>
                   <p className="text-sm font-semibold text-neutral-800 mt-0.5">{stats.totalEsperadas.toLocaleString("es-CL")}</p>
                 </div>
-                <div>
-                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Formato de carga</p>
-                  <p className="text-sm font-semibold text-neutral-800 mt-0.5">2 Pallets · 4 Bultos</p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Comentarios del seller</p>
-                  <p className="text-sm text-neutral-600 mt-0.5 italic">"Mercancía frágil, manipular con cuidado. Entregar en andén 3."</p>
-                </div>
+                {(baseData.pallets != null || baseData.bultos != null) && (
+                  <div>
+                    <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Formato de carga</p>
+                    <p className="text-sm font-semibold text-neutral-800 mt-0.5">
+                      {[baseData.pallets != null && `${baseData.pallets} Pallets`, baseData.bultos != null && `${baseData.bultos} Bultos`].filter(Boolean).join(" · ")}
+                    </p>
+                  </div>
+                )}
+                {baseData.comentarios && (
+                  <div className="col-span-2">
+                    <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Comentarios del seller</p>
+                    <div className="mt-1.5 flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2.5">
+                      <MessageSquare className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-neutral-600 leading-relaxed">{baseData.comentarios}</p>
+                    </div>
+                  </div>
+                )}
+                {baseData.comentarioRecepcion && (
+                  <div className="col-span-2">
+                    <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Comentarios del operador</p>
+                    <div className="mt-1.5 flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2.5">
+                      <MessageSquare className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-neutral-600 leading-relaxed">{baseData.comentarioRecepcion}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -3585,27 +4105,10 @@ export default function ConteoORPage() {
             id={id} baseData={baseData} orEstado={orEstado}
             sesiones={sesiones} products={products}
             incidencias={incidencias} acumulado={acumulado}
-            OPERADOR={OPERADOR}
+            OPERADOR={OPERADOR} canApprove={can(currentRole, "or:approve")}
+            quarantineRecs={quarantineRecs}
+            onUpdateQuarantine={updateQuarantineRecord}
           />
-        )}
-
-        {/* ── Historial de sesiones (OR cerrada) ── */}
-        {orCerrada && sesiones.length > 0 && (
-          <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
-            <div className="px-4 py-3.5 border-b border-neutral-100 flex items-center justify-between">
-              <div>
-                <p className="text-base font-semibold text-neutral-900">Historial de sesiones</p>
-                <p className="text-xs text-neutral-400 mt-0.5">
-                  {sesiones.length} sesión{sesiones.length !== 1 ? "es" : ""} · {[...new Set(sesiones.map(s => s.operador))].length} operador{[...new Set(sesiones.map(s => s.operador))].length !== 1 ? "es" : ""}
-                </p>
-              </div>
-            </div>
-            <div className="divide-y divide-neutral-100">
-              {sesiones.map(s => (
-                <SesionRow key={s.id} sesion={s} incidencias={incidencias} products={products} acumulado={acumulado} />
-              ))}
-            </div>
-          </div>
         )}
 
         {/* ── Products container (hidden when OR closed — ResumenOR has details) ── */}
@@ -3653,18 +4156,13 @@ export default function ConteoORPage() {
           </div>
         )}
 
-        {/* ── Gestión de cuarentena (OR cerrada con registros) ── */}
-        {orCerrada && quarantineRecs.length > 0 && (
-          <GestionCuarentena records={quarantineRecs} onUpdate={updateQuarantineRecord} incidencias={incidencias} />
-        )}
-
         {/* ── Session history ── */}
         {sesiones.length > 0 && (
           <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
             <div className="px-4 py-3.5 border-b border-neutral-100 flex items-center justify-between">
               <span className="text-base font-semibold text-neutral-800">Historial de sesiones</span>
               <span className="text-sm text-neutral-400 tabular-nums">
-                {totalAcumUds.toLocaleString("es-CL")} uds acumuladas
+                {totalAcumUds.toLocaleString("es-CL")} uds. acumuladas
               </span>
             </div>
             {sesiones.map(ses => (
@@ -3792,6 +4290,68 @@ export default function ConteoORPage() {
           );
         })()}
 
+        {/* ── Registros de auditoría (solo Super Admin) ── */}
+        {can(currentRole, "audit:view") && (() => {
+          const auditEvents = SEED_AUDIT[id] ?? [];
+          if (auditEvents.length === 0) return null;
+          return (
+            <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
+              <div className="px-5 pt-4 pb-3 border-b border-neutral-100">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-neutral-400" />
+                  <p className="text-base font-semibold text-neutral-900">Registros de auditoría</p>
+                </div>
+                <p className="text-xs text-neutral-400 mt-0.5">{auditEvents.length} evento{auditEvents.length !== 1 ? "s" : ""} registrado{auditEvents.length !== 1 ? "s" : ""} · Solo visible para Super Admin</p>
+              </div>
+              <div className="px-5 py-4">
+                <div className="relative">
+                  {/* Vertical timeline line */}
+                  <div className="absolute left-[13px] top-3 bottom-3 w-px bg-neutral-200" />
+
+                  <div className="space-y-0">
+                    {auditEvents.map((evt, idx) => (
+                      <div key={evt.id} className="relative flex gap-3 pb-5 last:pb-0">
+                        {/* Icon dot */}
+                        <div className={`relative z-10 flex-shrink-0 w-[28px] h-[28px] rounded-full flex items-center justify-center ${getAuditIcon(evt.tipo)}`}>
+                          {getAuditIconElement(evt.tipo)}
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0 pt-0.5">
+                          <p className="text-sm font-medium text-neutral-800 leading-snug">{evt.titulo}</p>
+                          <div className="flex items-center gap-1.5 mt-1 text-xs text-neutral-400 flex-wrap">
+                            <span className="tabular-nums">{fmtDT(evt.timestamp)}</span>
+                            <span className="text-neutral-300">·</span>
+                            <span>{evt.usuario}</span>
+                            <span className="text-neutral-300">·</span>
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium leading-none ${
+                              evt.rol === "Supervisor" ? "bg-purple-50 text-purple-600" :
+                              evt.rol === "Operador"   ? "bg-sky-50 text-sky-600" :
+                              evt.rol === "Seller"     ? "bg-amber-50 text-amber-600" :
+                              evt.rol === "Sistema"    ? "bg-neutral-100 text-neutral-500" :
+                                                         "bg-neutral-50 text-neutral-500"
+                            }`}>{evt.rol}</span>
+                          </div>
+                          {evt.detalle && (
+                            <p className="text-xs text-neutral-500 mt-1.5 leading-relaxed">{evt.detalle}</p>
+                          )}
+                          {(evt.estadoAnterior || evt.estadoPosterior) && (
+                            <div className="flex items-center gap-1.5 mt-1.5 text-[11px]">
+                              {evt.estadoAnterior && <span className="text-neutral-400">{evt.estadoAnterior}</span>}
+                              {evt.estadoAnterior && evt.estadoPosterior && <span className="text-neutral-300">→</span>}
+                              {evt.estadoPosterior && <span className="font-medium text-neutral-600">{evt.estadoPosterior}</span>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* ── Footer: Liberar + Terminar recepción (always visible when OR open, hidden for Creado) ── */}
         {!orCerrada && originalEstado !== "Creado" && (<>
           {/* No-units alert modal */}
@@ -3846,7 +4406,7 @@ export default function ConteoORPage() {
       {/* ── Mobile sticky bottom bar ── */}
       {!orCerrada && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 pt-3 pb-6 z-30 lg:hidden">
-          {originalEstado === "Creado" ? (
+          {originalEstado === "Creado" && canComplete ? (
             <Link
               href={`/recepciones/crear?startStep=2&mode=completar&sucursal=${encodeURIComponent(baseData.sucursal)}&seller=${encodeURIComponent(baseData.seller)}&orId=${id}`}
               className="w-full h-12 flex items-center justify-center gap-2.5 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
@@ -3854,47 +4414,53 @@ export default function ConteoORPage() {
               <CheckCircle2 className="w-4 h-4" />
               Completar
             </Link>
-          ) : sesionActiva ? (
-            <div className="flex flex-col gap-1">
-              <button
-                onClick={() => setConfirmFinalizar(true)}
-                className="w-full h-12 flex items-center justify-center gap-2 bg-primary-500 hover:bg-primary-600 active:bg-primary-700 text-white text-sm font-semibold rounded-lg active:scale-[0.97] transition-all duration-300"
-              >
-                <StopCircle className="w-4 h-4" />
-                Finalizar sesión
-              </button>
-              <button
-                onClick={() => setConfirmLiberar(true)}
-                className="w-full h-10 flex items-center justify-center gap-2 text-red-500 text-sm font-medium hover:text-red-600 active:scale-[0.97] transition-all duration-300"
-              >
-                <LockUnlocked01 className="w-4 h-4" />
-                Liberar sesión
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={iniciarSesion}
-                className="w-full h-12 flex items-center justify-center gap-2.5 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
-              >
-                <PlayCircle className="w-4 h-4" />
-                Iniciar sesión de conteo
-              </button>
-              {sesiones.length > 0 && (
+          ) : canStartSesion && originalEstado !== "Creado" ? (
+            sesionActiva ? (
+              <div className="flex flex-col gap-1">
+                {canFinSesion && (
+                  <button
+                    onClick={() => setConfirmFinalizar(true)}
+                    className="w-full h-12 flex items-center justify-center gap-2 bg-primary-500 hover:bg-primary-600 active:bg-primary-700 text-white text-sm font-semibold rounded-lg active:scale-[0.97] transition-all duration-300"
+                  >
+                    <StopCircle className="w-4 h-4" />
+                    Finalizar sesión
+                  </button>
+                )}
+                {canRelSesion && (
+                  <button
+                    onClick={() => setConfirmLiberar(true)}
+                    className="w-full h-10 flex items-center justify-center gap-2 text-red-500 text-sm font-medium hover:text-red-600 active:scale-[0.97] transition-all duration-300"
+                  >
+                    <LockUnlocked01 className="w-4 h-4" />
+                    Liberar sesión
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
                 <button
-                  onClick={() => {
-                    if (stats.totalContadas === 0) { setNoUnitsAlert(true); return; }
-                    setNoUnitsAlert(false);
-                    setConfirmClose(true);
-                  }}
-                  className="w-full h-12 flex items-center justify-center gap-2 px-4 py-2.5 text-red-600 text-sm font-medium rounded-lg hover:bg-red-50 active:bg-red-100 transition-colors duration-300"
+                  onClick={iniciarSesion}
+                  className="w-full h-12 flex items-center justify-center gap-2.5 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
                 >
-                  <ClipboardCheck className="w-4 h-4" />
-                  Terminar recepción
+                  <PlayCircle className="w-4 h-4" />
+                  Iniciar sesión de conteo
                 </button>
-              )}
-            </div>
-          )}
+                {sesiones.length > 0 && (
+                  <button
+                    onClick={() => {
+                      if (stats.totalContadas === 0) { setNoUnitsAlert(true); return; }
+                      setNoUnitsAlert(false);
+                      setConfirmClose(true);
+                    }}
+                    className="w-full h-12 flex items-center justify-center gap-2 px-4 py-2.5 text-red-600 text-sm font-medium rounded-lg hover:bg-red-50 active:bg-red-100 transition-colors duration-300"
+                  >
+                    <ClipboardCheck className="w-4 h-4" />
+                    Terminar recepción
+                  </button>
+                )}
+              </div>
+            )
+          ) : null}
         </div>
       )}
     </div>

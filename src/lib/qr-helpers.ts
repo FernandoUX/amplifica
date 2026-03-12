@@ -192,6 +192,10 @@ const PROGRAMADO_ORS = [
   "RO-BARRA-228",
   "RO-BARRA-229",
   "RO-BARRA-230",
+  // Recepcionado en bodega
+  "RO-BARRA-180",
+  "RO-BARRA-196",
+  "RO-BARRA-197",
 ];
 
 function buildSeedTokens(): QrToken[] {

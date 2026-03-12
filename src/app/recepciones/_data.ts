@@ -68,6 +68,10 @@ export type CalOrEntry = {
   sucursal: string;
   seller: string;
   estado: string;
+  pallets?: number;
+  bultos?: number;
+  comentarios?: string;
+  comentarioRecepcion?: string;
 };
 
 // ─── Shared OR product & session seed data ──────────────────────────────────
@@ -184,27 +188,27 @@ export const ORDENES_SEED: CalOrEntry[] = [
   { id: "RO-BARRA-216", fechaAgendada: "—",                sucursal: "Santiago Centro",  seller: "Le Vice",    estado: "Creado" },
   { id: "RO-BARRA-225", fechaAgendada: "—",                sucursal: "La Reina",        seller: "NutriPro",   estado: "Creado" },
   // ─── Programado ─────────────────────────────────────────────────────────────
-  { id: "RO-BARRA-183", fechaAgendada: "20/02/2026 16:30", sucursal: "Quilicura",       seller: "Extra Life", estado: "Programado" },
-  { id: "RO-BARRA-182", fechaAgendada: "20/02/2026 16:30", sucursal: "La Reina",        seller: "Extra Life", estado: "Programado" },
-  { id: "RO-BARRA-190", fechaAgendada: "21/02/2026 09:00", sucursal: "Lo Barnechea",    seller: "Le Vice",    estado: "Programado" },
-  { id: "RO-BARRA-194", fechaAgendada: "11/03/2026 10:00", sucursal: "Quilicura",       seller: "VitaFit",    estado: "Programado" },
-  { id: "RO-BARRA-195", fechaAgendada: "12/03/2026 14:30", sucursal: "La Reina",        seller: "NutriPro",   estado: "Programado" },
-  { id: "RO-BARRA-226", fechaAgendada: "14/03/2026 09:00", sucursal: "Las Condes",      seller: "Gohard",     estado: "Programado" },
-  { id: "RO-BARRA-227", fechaAgendada: "15/03/2026 08:30", sucursal: "Providencia",     seller: "Le Vice",    estado: "Programado" },
-  { id: "RO-BARRA-228", fechaAgendada: "15/03/2026 14:00", sucursal: "Quilicura",       seller: "VitaFit",    estado: "Programado" },
-  { id: "RO-BARRA-229", fechaAgendada: "16/03/2026 10:00", sucursal: "Lo Barnechea",    seller: "NutriPro",   estado: "Programado" },
-  { id: "RO-BARRA-230", fechaAgendada: "17/03/2026 11:30", sucursal: "La Reina",        seller: "Extra Life", estado: "Programado" },
-  { id: "RO-BARRA-180", fechaAgendada: "20/02/2026 16:30", sucursal: "Santiago Centro",  seller: "Le Vice",    estado: "Recepcionado en bodega" },
-  { id: "RO-BARRA-196", fechaAgendada: "09/03/2026 09:00", sucursal: "Lo Barnechea",    seller: "BioNature",  estado: "Recepcionado en bodega" },
-  { id: "RO-BARRA-197", fechaAgendada: "08/03/2026 11:00", sucursal: "Providencia",     seller: "Extra Life", estado: "Recepcionado en bodega" },
+  { id: "RO-BARRA-183", fechaAgendada: "20/02/2026 16:30", sucursal: "Quilicura",       seller: "Extra Life", estado: "Programado", pallets: 10, bultos: 32, comentarios: "Llegará en un camión blanco patente XXNN33, preguntar por Carlos." },
+  { id: "RO-BARRA-182", fechaAgendada: "20/02/2026 16:30", sucursal: "La Reina",        seller: "Extra Life", estado: "Programado", pallets: 8, bultos: 28 },
+  { id: "RO-BARRA-190", fechaAgendada: "21/02/2026 09:00", sucursal: "Lo Barnechea",    seller: "Le Vice",    estado: "Programado", pallets: 3, bultos: 15, comentarios: "Entrega parcial, solo 2 pallets llegarán hoy." },
+  { id: "RO-BARRA-194", fechaAgendada: "11/03/2026 10:00", sucursal: "Quilicura",       seller: "VitaFit",    estado: "Programado", pallets: 6, bultos: 18, comentarios: "Incluye 4 pallets de colágeno que requieren temperatura controlada." },
+  { id: "RO-BARRA-195", fechaAgendada: "12/03/2026 14:30", sucursal: "La Reina",        seller: "NutriPro",   estado: "Programado", pallets: 4, bultos: 12 },
+  { id: "RO-BARRA-226", fechaAgendada: "14/03/2026 09:00", sucursal: "Las Condes",      seller: "Gohard",     estado: "Programado", pallets: 3, bultos: 10 },
+  { id: "RO-BARRA-227", fechaAgendada: "15/03/2026 08:30", sucursal: "Providencia",     seller: "Le Vice",    estado: "Programado", pallets: 5, bultos: 16 },
+  { id: "RO-BARRA-228", fechaAgendada: "15/03/2026 14:00", sucursal: "Quilicura",       seller: "VitaFit",    estado: "Programado", pallets: 8, bultos: 24 },
+  { id: "RO-BARRA-229", fechaAgendada: "16/03/2026 10:00", sucursal: "Lo Barnechea",    seller: "NutriPro",   estado: "Programado", pallets: 2, bultos: 8 },
+  { id: "RO-BARRA-230", fechaAgendada: "17/03/2026 11:30", sucursal: "La Reina",        seller: "Extra Life", estado: "Programado", pallets: 4, bultos: 14 },
+  { id: "RO-BARRA-180", fechaAgendada: "20/02/2026 16:30", sucursal: "Santiago Centro",  seller: "Le Vice",    estado: "Recepcionado en bodega", pallets: 2, bultos: 4, comentarios: "Mercancía frágil, manipular con cuidado. Entregar en andén 3.", comentarioRecepcion: "Recibido en andén 3. 2 pallets en buen estado, 4 bultos verificados. Sin novedades." },
+  { id: "RO-BARRA-196", fechaAgendada: "09/03/2026 09:00", sucursal: "Lo Barnechea",    seller: "BioNature",  estado: "Recepcionado en bodega", pallets: 3, bultos: 10, comentarioRecepcion: "Recibido completo. 1 bulto con embalaje dañado, contenido intacto." },
+  { id: "RO-BARRA-197", fechaAgendada: "08/03/2026 11:00", sucursal: "Providencia",     seller: "Extra Life", estado: "Recepcionado en bodega", pallets: 1, bultos: 6, comentarios: "Entregar a operador Juan Pérez en andén 2.", comentarioRecepcion: "Recibido por Juan Pérez. Todo en orden." },
   { id: "RO-BARRA-184", fechaAgendada: "19/02/2026 10:00", sucursal: "Quilicura",       seller: "Extra Life", estado: "En proceso de conteo" },
   { id: "RO-BARRA-179", fechaAgendada: "18/02/2026 09:00", sucursal: "La Reina",        seller: "Gohard",     estado: "En proceso de conteo" },
   { id: "RO-BARRA-185", fechaAgendada: "17/02/2026 14:00", sucursal: "Lo Barnechea",    seller: "Gohard",     estado: "En proceso de conteo" },
   { id: "RO-BARRA-198", fechaAgendada: "07/03/2026 08:30", sucursal: "Santiago Centro",  seller: "VitaFit",    estado: "En proceso de conteo" },
   { id: "RO-BARRA-187", fechaAgendada: "14/02/2026 13:00", sucursal: "La Reina",        seller: "Le Vice",    estado: "Pendiente de aprobación" },
   { id: "RO-BARRA-199", fechaAgendada: "06/03/2026 10:00", sucursal: "Las Condes",      seller: "NutriPro",   estado: "Pendiente de aprobación" },
-  { id: "RO-BARRA-186", fechaAgendada: "15/02/2026 08:00", sucursal: "Quilicura",       seller: "Extra Life", estado: "Completada" },
-  { id: "RO-BARRA-201", fechaAgendada: "01/03/2026 09:00", sucursal: "La Reina",        seller: "VitaFit",    estado: "Completada" },
-  { id: "RO-BARRA-189", fechaAgendada: "13/02/2026 15:30", sucursal: "Santiago Centro",  seller: "Le Vice",    estado: "Completada" },
-  { id: "RO-BARRA-200", fechaAgendada: "04/03/2026 15:00", sucursal: "Quilicura",       seller: "BioNature",  estado: "Completada" },
+  { id: "RO-BARRA-186", fechaAgendada: "15/02/2026 08:00", sucursal: "Quilicura",       seller: "Extra Life", estado: "Completada", pallets: 5, bultos: 12, comentarios: "Mercancía frágil, manipular con cuidado. Entregar en andén 3." },
+  { id: "RO-BARRA-201", fechaAgendada: "01/03/2026 09:00", sucursal: "La Reina",        seller: "VitaFit",    estado: "Completada", pallets: 3, bultos: 8 },
+  { id: "RO-BARRA-189", fechaAgendada: "13/02/2026 15:30", sucursal: "Santiago Centro",  seller: "Le Vice",    estado: "Completada", pallets: 2, bultos: 6 },
+  { id: "RO-BARRA-200", fechaAgendada: "04/03/2026 15:00", sucursal: "Quilicura",       seller: "BioNature",  estado: "Completada", pallets: 4, bultos: 10 },
 ];

@@ -7,12 +7,13 @@ import { createPortal } from "react-dom";
 import {
   AlertCircle, ChevronDown, Upload, Trash2, MoreVertical,
   Package, ArrowRight, ChevronLeft, ChevronRight, Check,
-  PlusCircle, FileSpreadsheet,
+  PlusCircle, FileSpreadsheet, Plus,
 } from "lucide-react";
 import StepIndicator from "@/components/recepciones/StepIndicator";
 import ProductsModal, { AddProduct } from "@/components/recepciones/ProductsModal";
 import FormField from "@/components/ui/FormField";
 import Button from "@/components/ui/Button";
+import { getRole, can } from "@/lib/roles";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Product = { sku: string; nombre: string; barcode: string; qty: number };
@@ -198,6 +199,7 @@ function Step1({ form, setForm, lockedSucursal, lockedSeller }: { form: FormData
 // ─── Step 2 ───────────────────────────────────────────────────────────────────
 function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<React.SetStateAction<FormData>> }) {
   const [showModal, setShowModal] = useState(false);
+  const csvInputRef = useRef<HTMLInputElement>(null);
 
   const addProducts = (incoming: AddProduct[]) => {
     setForm(f => {
@@ -255,14 +257,32 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
               Comienza a agregar los SKUs de esta orden para habilitar el proceso de descarga. Puedes importar un archivo CSV o buscar productos manualmente.
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <Button variant="primary" size="md" onClick={() => setShowModal(true)} iconLeft={<PlusCircle className="w-4 h-4" />} className="w-full sm:w-auto">
-              Agregar productos
-            </Button>
-            <Button variant="secondary" size="md" iconLeft={<Upload className="w-4 h-4" />} className="w-full sm:w-auto">
-              Importar planilla
-            </Button>
-            <Button variant="tertiary" size="md" iconLeft={<FileSpreadsheet className="w-4 h-4" />} className="w-full sm:w-auto">
+          <div className="flex flex-col items-center w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <Button variant="primary" size="md" onClick={() => setShowModal(true)} iconLeft={<PlusCircle className="w-4 h-4" />} className="w-full sm:w-auto">
+                Agregar productos
+              </Button>
+              <input
+                ref={csvInputRef}
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    addProducts([
+                      { sku: "300034", nombre: "Extra Life Boost De Hidratación 20 Sachets Tropical Delight", barcode: "8500942860946", qty: 50 },
+                      { sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",     barcode: "8500942860625", qty: 50 },
+                    ]);
+                  }
+                  e.target.value = "";
+                }}
+              />
+              <Button variant="secondary" size="md" iconLeft={<Upload className="w-4 h-4" />} className="w-full sm:w-auto" onClick={() => csvInputRef.current?.click()}>
+                Importar planilla
+              </Button>
+            </div>
+            <Button variant="tertiary" size="sm" iconLeft={<FileSpreadsheet className="w-4 h-4" />} className="mt-4">
               Descargar plantilla
             </Button>
           </div>
@@ -277,7 +297,7 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-neutral-800 font-medium leading-snug">{product.nombre}</p>
-                    <p className="text-xs text-neutral-500 mt-1">{product.sku} · {product.barcode}</p>
+                    <p className="text-xs text-neutral-500 mt-1 font-sans">{product.sku} · {product.barcode}</p>
                   </div>
                   <button onClick={() => removeProduct(product.sku)}
                     className="p-1.5 hover:bg-red-50 rounded text-neutral-400 hover:text-red-500 flex-shrink-0">
@@ -285,16 +305,16 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
                   </button>
                 </div>
                 <div className="flex items-center gap-2 mt-2.5">
-                  <button onClick={() => updateQty(product.sku, product.qty - 1)}
-                    className="w-7 h-7 border border-neutral-200 rounded flex items-center justify-center hover:bg-neutral-100 font-medium text-neutral-600">−</button>
+                  <Button variant="secondary" size="sm" onClick={() => updateQty(product.sku, product.qty - 1)}
+                    className="!w-8 !h-8 !min-w-0 !p-0 !rounded-md !gap-0">−</Button>
                   <input
                     type="number"
                     value={product.qty}
                     onChange={e => updateQty(product.sku, parseInt(e.target.value) || 1)}
-                    className="w-14 border border-neutral-200 rounded px-2 py-1 text-center text-sm text-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className="w-20 h-8 border border-neutral-200 rounded-md px-2 text-center text-sm text-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
-                  <button onClick={() => updateQty(product.sku, product.qty + 1)}
-                    className="w-7 h-7 border border-neutral-200 rounded flex items-center justify-center hover:bg-neutral-100 font-medium text-neutral-600">+</button>
+                  <Button variant="secondary" size="sm" onClick={() => updateQty(product.sku, product.qty + 1)}
+                    className="!w-8 !h-8 !min-w-0 !p-0 !rounded-md !gap-0">+</Button>
                 </div>
               </div>
             ))}
@@ -314,21 +334,21 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
             <tbody className="divide-y divide-neutral-50">
               {filtered.map(product => (
                 <tr key={product.sku} className="hover:bg-neutral-50">
-                  <td className="py-3 px-4 font-medium text-neutral-700 whitespace-nowrap">{product.sku}</td>
+                  <td className="py-3 px-4 font-medium text-neutral-700 whitespace-nowrap font-sans">{product.sku}</td>
                   <td className="py-3 px-4 text-neutral-700">{product.nombre}</td>
-                  <td className="py-3 px-4 text-neutral-500 font-mono text-xs">{product.barcode}</td>
+                  <td className="py-3 px-4 text-neutral-500 font-sans text-xs">{product.barcode}</td>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
-                      <button onClick={() => updateQty(product.sku, product.qty - 1)}
-                        className="w-7 h-7 border border-neutral-200 rounded flex items-center justify-center hover:bg-neutral-100 font-medium text-neutral-600">−</button>
+                      <Button variant="secondary" size="sm" onClick={() => updateQty(product.sku, product.qty - 1)}
+                        className="!w-8 !h-8 !min-w-0 !p-0 !rounded-md !gap-0">−</Button>
                       <input
                         type="number"
                         value={product.qty}
                         onChange={e => updateQty(product.sku, parseInt(e.target.value) || 1)}
-                        className="w-14 border border-neutral-200 rounded px-2 py-1 text-center text-sm text-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-200 placeholder-neutral-500"
+                        className="w-20 h-8 border border-neutral-200 rounded-md px-2 text-center text-sm text-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-200 placeholder-neutral-500"
                       />
-                      <button onClick={() => updateQty(product.sku, product.qty + 1)}
-                        className="w-7 h-7 border border-neutral-200 rounded flex items-center justify-center hover:bg-neutral-100 font-medium text-neutral-600">+</button>
+                      <Button variant="secondary" size="sm" onClick={() => updateQty(product.sku, product.qty + 1)}
+                        className="!w-8 !h-8 !min-w-0 !p-0 !rounded-md !gap-0">+</Button>
                     </div>
                   </td>
                   <td className="py-3 px-4">
@@ -343,13 +363,18 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
           </table>
 
           {/* ── Footer ── */}
-          <div className="px-4 py-3 border-t border-neutral-100 flex flex-col sm:flex-row sm:justify-between items-center gap-2">
-            <p className="text-xs text-neutral-500">
+          <div className="px-4 py-3 border-t border-neutral-100">
+            <p className="text-xs text-neutral-500 text-center sm:text-left">
               {form.products.length} SKU(s) · {form.products.reduce((s, p) => s + p.qty, 0)} unidades
             </p>
+          </div>
+          <div className="border-t border-dashed border-neutral-200">
             <button onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 text-sm text-primary-500 hover:text-primary-700 font-medium">
-              + Agregar más productos
+              className="w-full flex items-center justify-center gap-2 py-3.5 text-[14px] text-neutral-400 hover:text-primary-500 hover:bg-primary-50/50 transition-colors duration-300 font-medium">
+              <span className="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center flex-shrink-0">
+                <Plus className="w-3 h-3" />
+              </span>
+              Agregar más productos
             </button>
           </div>
         </div>
@@ -370,18 +395,44 @@ const SUCURSAL_ADDRESS: Record<string, string> = {
   "Las Condes":     "Av. Apoquindo 4500, Las Condes, Santiago",
 };
 
+// ─── Helpers for slot generation ──────────────────────────────────────────────
+type DiaSemana = "lun" | "mar" | "mie" | "jue" | "vie" | "sab" | "dom";
+type SucConfig = {
+  diasHabilitados?: DiaSemana[];
+  horaInicio?: string;
+  horaFin?: string;
+  duracionSlot?: number;
+  tiempoAnticipado?: number;
+};
+
+function buildSlots(horaInicio: string, horaFin: string, duracionMin: number): string[] {
+  const [sh, sm] = horaInicio.split(":").map(Number);
+  const [eh, em] = horaFin.split(":").map(Number);
+  const startMins = sh * 60 + sm;
+  const endMins   = eh * 60 + em;
+  const slots: string[] = [];
+  for (let m = startMins; m < endMins; m += duracionMin) {
+    const hh = String(Math.floor(m / 60)).padStart(2, "0");
+    const mm = String(m % 60).padStart(2, "0");
+    slots.push(`${hh}:${mm}`);
+  }
+  return slots;
+}
+
+const DIA_MAP: Record<number, DiaSemana> = { 0: "dom", 1: "lun", 2: "mar", 3: "mie", 4: "jue", 5: "vie", 6: "sab" };
+
 function Step3({ form, setForm, isReagendar }: { form: FormData; setForm: React.Dispatch<React.SetStateAction<FormData>>; isReagendar: boolean }) {
   const today = new Date();
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [viewYear,  setViewYear]  = useState(today.getFullYear());
 
-  // Anticipation hours from sucursal config (0 = no minimum advance)
-  const [tiempoAnticipado, setTiempoAnticipado] = useState(0);
+  // Sucursal config from localStorage
+  const [sucCfg, setSucCfg] = useState<SucConfig>({});
   useEffect(() => {
     try {
       const raw = localStorage.getItem("amplifica_recepciones_config");
       if (!raw) return;
-      const allConfigs = JSON.parse(raw) as Record<string, { tiempoAnticipado?: number }>;
+      const allConfigs = JSON.parse(raw) as Record<string, SucConfig>;
       const sucId = (form.sucursal ?? "")
         .toLowerCase()
         .normalize("NFD")
@@ -389,18 +440,21 @@ function Step3({ form, setForm, isReagendar }: { form: FormData; setForm: React.
         .replace(/\s+/g, "-")
         .replace(/[^a-z0-9-]/g, "");
       const cfg = allConfigs[sucId];
-      if (cfg?.tiempoAnticipado) setTiempoAnticipado(cfg.tiempoAnticipado);
-    } catch { /* ignore */ }
+      if (cfg) setSucCfg(cfg);
+      else setSucCfg({});
+    } catch { setSucCfg({}); }
   }, [form.sucursal]);
 
-  // All time slots flat — rendered in a 2-column grid
-  const ALL_SLOTS = [
-    "08:00","08:30","09:00","09:30","10:00","10:30",
-    "11:00","11:30","12:00","12:30","13:00","13:30",
-    "14:00","14:30","15:00","15:30","16:00","16:30",
-    "17:00","17:30",
-  ];
-  const DISABLED_SLOTS = new Set(["10:00","10:30"]); // mock: agenda completa
+  const tiempoAnticipado   = sucCfg.tiempoAnticipado ?? 0;
+  const diasHabilitados    = sucCfg.diasHabilitados ?? ["lun","mar","mie","jue","vie"];
+  const horaInicio         = sucCfg.horaInicio ?? "08:00";
+  const horaFin            = sucCfg.horaFin ?? "18:00";
+  const duracionSlot       = sucCfg.duracionSlot ?? 30;
+
+  // Generate slots from config
+  const ALL_SLOTS = buildSlots(horaInicio, horaFin, duracionSlot);
+  const DISABLED_SLOTS   = new Set(["10:00","10:30"]); // mock: agenda completa
+  const SOBRECUPO_SLOTS  = new Set(["11:00"]);         // mock: sobrecupo disponible
 
   // Calendar data
   const MONTH_NAMES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -428,8 +482,9 @@ function Step3({ form, setForm, isReagendar }: { form: FormData; setForm: React.
     setForm(f => ({ ...f, fechaReserva: `${yy}-${mm}-${dd}`, horaReserva: "" }));
   };
 
-  // Mock: days 17–19 are "agenda completa"
-  const AGENDA_COMPLETA = new Set([17, 18, 19]);
+  // Mock: days 17–19 are "agenda completa", day 13 has sobrecupo
+  const AGENDA_COMPLETA  = new Set([17, 18, 19]);
+  const SOBRECUPO_DIAS   = new Set([13]);
 
   const selectedLabel = selected
     ? `${DAY_NAMES[selected.getDay()]} ${selected.getDate()} de ${MONTH_ES[selected.getMonth()]}`
@@ -542,30 +597,35 @@ function Step3({ form, setForm, isReagendar }: { form: FormData; setForm: React.
           </div>
 
           {/* Day cells */}
-          <div className="grid grid-cols-7">
+          <div className="grid grid-cols-7 text-center text-sm">
             {cells.map((day, i) => {
-              if (!day) return <div key={i} className="h-10" />;
+              if (!day) return <div key={i} />;
 
-              const date      = new Date(viewYear, viewMonth, day);
-              const isPast    = date < todayMidnight;
-              const isToday   = date.getTime() === todayMidnight.getTime();
-              const isSel     = selected ? date.toDateString() === selected.toDateString() : false;
-              const isAgenda  = AGENDA_COMPLETA.has(day) && !isPast;
-              const dotColor  = isSel     ? "bg-primary-500"
-                              : isAgenda  ? "bg-neutral-400"
-                              : !isPast   ? "bg-green-500"
-                              : "";
+              const date         = new Date(viewYear, viewMonth, day);
+              const isPast       = date < todayMidnight;
+              const dayKey       = DIA_MAP[date.getDay()];
+              const isDayOff     = !diasHabilitados.includes(dayKey);
+              const isDisabled   = isPast || isDayOff;
+              const isToday      = date.getTime() === todayMidnight.getTime();
+              const isSel        = selected ? date.toDateString() === selected.toDateString() : false;
+              const isAgenda     = AGENDA_COMPLETA.has(day) && !isDisabled;
+              const isSobrecupoDay = SOBRECUPO_DIAS.has(day) && !isDisabled && !isAgenda;
+              const dotColor     = isSel          ? "bg-primary-500"
+                                 : isAgenda       ? "bg-neutral-400"
+                                 : isSobrecupoDay ? "bg-amber-400"
+                                 : !isDisabled    ? "bg-green-500"
+                                 : "";
 
               return (
-                <div key={i} className="flex flex-col items-center py-0.5">
+                <div key={i} className="flex flex-col items-center">
                   <button
-                    disabled={isPast}
-                    onClick={() => { if (!isPast) pickDay(day); }}
-                    className={`w-8 h-8 text-xs rounded-full flex items-center justify-center transition-colors duration-300 font-medium
-                      ${isSel                           ? "bg-primary-500 text-white" : ""}
-                      ${!isSel && isToday               ? "border border-primary-500 text-primary-500" : ""}
-                      ${!isSel && !isToday && !isPast   ? "hover:bg-primary-50 text-neutral-700" : ""}
-                      ${isPast                          ? "text-neutral-300 cursor-not-allowed" : ""}
+                    disabled={isDisabled}
+                    onClick={() => { if (!isDisabled) pickDay(day); }}
+                    className={`py-1.5 w-full rounded-lg transition-colors duration-150 font-medium
+                      ${isSel                                ? "bg-primary-500 text-white" : ""}
+                      ${!isSel && isToday && !isDisabled     ? "bg-primary-50 text-primary-600 font-semibold" : ""}
+                      ${!isSel && !isToday && !isDisabled    ? "text-neutral-700 hover:bg-neutral-50" : ""}
+                      ${isDisabled                           ? "text-neutral-300 cursor-not-allowed" : ""}
                     `}
                   >
                     {day}
@@ -581,8 +641,8 @@ function Step3({ form, setForm, isReagendar }: { form: FormData; setForm: React.
             <p className="text-xs font-semibold text-neutral-600 mb-1">Simbología</p>
             {[
               { color: "bg-primary-500", label: "Fecha y hora seleccionada" },
-              { color: "bg-neutral-400",   label: "Agenda completa" },
-              { color: "bg-green-500",  label: "Bloques disponibles" },
+              { color: "bg-amber-400",   label: "Sobrecupo disponible" },
+              { color: "bg-green-500",   label: "Bloques disponibles" },
             ].map(({ color, label }) => (
               <div key={label} className="flex items-center gap-2">
                 <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${color}`} />
@@ -605,17 +665,18 @@ function Step3({ form, setForm, isReagendar }: { form: FormData; setForm: React.
                     const cutoff = today.getTime() + tiempoAnticipado * 3_600_000;
                     if (slotMs <= cutoff) return null;
                   }
-                  const isDisabled = DISABLED_SLOTS.has(slot);
-                  const isSlotSel  = form.horaReserva === slot;
+                  // Hide full-agenda slots entirely
+                  if (DISABLED_SLOTS.has(slot)) return null;
+                  const isSobrecupo  = SOBRECUPO_SLOTS.has(slot);
+                  const isSlotSel    = form.horaReserva === slot;
                   return (
                     <button
                       key={slot}
-                      disabled={isDisabled}
-                      onClick={() => { if (!isDisabled) setForm(f => ({ ...f, horaReserva: slot })); }}
+                      onClick={() => setForm(f => ({ ...f, horaReserva: slot }))}
                       className={`py-2 rounded-lg text-sm font-medium transition-colors duration-300 text-center
                         ${isSlotSel                       ? "bg-primary-500 text-white" : ""}
-                        ${!isSlotSel && !isDisabled       ? "border border-neutral-200 text-neutral-700 hover:border-primary-300 hover:bg-primary-50" : ""}
-                        ${isDisabled                      ? "bg-neutral-50 text-neutral-300 border border-neutral-100 cursor-not-allowed" : ""}
+                        ${!isSlotSel && isSobrecupo       ? "border border-amber-300 bg-amber-50 text-amber-700 hover:border-amber-400 hover:bg-amber-100" : ""}
+                        ${!isSlotSel && !isSobrecupo      ? "border border-neutral-200 text-neutral-700 hover:border-primary-300 hover:bg-primary-50" : ""}
                       `}
                     >
                       {slot}
@@ -701,6 +762,12 @@ const STEPS_SIN_AGENDA = [
 function CrearORPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // Block roles that cannot create ORs (e.g. Operador)
+  useEffect(() => {
+    if (!can(getRole(), "or:create")) router.replace("/recepciones");
+  }, [router]);
+
   const initialStep   = Math.max(1, Math.min(3, parseInt(searchParams.get("startStep") ?? "1") || 1));
   const isReagendar   = searchParams.get("mode") === "reagendar";
   const isSinAgenda   = searchParams.get("mode") === "sin-agenda";
@@ -829,7 +896,7 @@ function CrearORPageInner() {
         <span className="text-neutral-700 font-medium">{pageTitle}</span>
       </nav>
 
-      <div className="max-w-5xl mx-auto px-4 lg:px-6 pt-3 pb-28 lg:pb-8">
+      <div className="max-w-5xl mx-auto px-4 lg:px-6 pt-3 pb-40 lg:pb-8">
         {/* Title */}
         <div className="flex items-center justify-center sm:justify-start gap-2 mb-6">
           <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">{pageTitle}</h1>

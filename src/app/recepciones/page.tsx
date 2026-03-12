@@ -19,11 +19,21 @@ import QrScannerModal from "@/components/recepciones/QrScannerModal";
 import PageInfoModal from "@/components/ui/PageInfoModal";
 import FormField from "@/components/ui/FormField";
 import { playScanSuccessSound, playScanErrorSound } from "@/lib/scan-sounds";
+import { type Role, getRole, can } from "@/lib/roles";
+
+// ─── Icon lookup (tree-shaking safe) ──────────────────────────────────────────
+type TagIconKey = "check" | "alert" | "x" | "clock";
+const TAG_ICON_MAP: Record<TagIconKey, React.ComponentType<{ className?: string }>> = {
+  check: CheckCircle,
+  alert: AlertTriangle,
+  x:     XCircle,
+  clock: ClockRefresh,
+};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 /** Feature 4: multi-label resultado tags (aparecen solo en "Completada") */
 type ResultTag = {
-  Icon: React.ComponentType<{ className?: string }>;
+  icon: TagIconKey;
   iconClass: string;
   label: string;
   className: string;
@@ -61,13 +71,13 @@ function makeTags(opts: {
 }): ResultTag[] {
   const tags: ResultTag[] = [];
   if (opts.sinDiferencias)
-    tags.push({ Icon: CheckCircle,    iconClass: "text-green-600",  label: `${opts.sinDiferencias.toLocaleString("es-CL")} sin diferencias`, className: "bg-green-50 text-green-700 border border-green-200" });
+    tags.push({ icon: "check", iconClass: "text-green-600",  label: `${opts.sinDiferencias.toLocaleString("es-CL")} sin diferencias`, className: "bg-green-50 text-green-700 border border-green-200" });
   if (opts.conDiferencias)
-    tags.push({ Icon: AlertTriangle,  iconClass: "text-amber-500",  label: `${opts.conDiferencias} con diferencias`,      className: "bg-amber-50 text-amber-700 border border-amber-200" });
+    tags.push({ icon: "alert", iconClass: "text-amber-500",  label: `${opts.conDiferencias} con diferencias`,      className: "bg-amber-50 text-amber-700 border border-amber-200" });
   if (opts.noPickeables)
-    tags.push({ Icon: XCircle,        iconClass: "text-red-500",    label: `${opts.noPickeables} no pickeables`,          className: "bg-red-50 text-red-600 border border-red-200" });
+    tags.push({ icon: "x",     iconClass: "text-red-500",    label: `${opts.noPickeables} no pickeables`,          className: "bg-red-50 text-red-600 border border-red-200" });
   if (opts.pendiente)
-    tags.push({ Icon: ClockRefresh,   iconClass: "text-orange-500", label: "Pendiente de aprobación",                     className: "bg-orange-50 text-orange-600 border border-orange-200" });
+    tags.push({ icon: "clock", iconClass: "text-orange-500", label: "Pendiente de aprobación",                     className: "bg-orange-50 text-orange-600 border border-orange-200" });
   return tags;
 }
 
@@ -75,13 +85,13 @@ function makeTags(opts: {
 const TAG_FILTER_OPTIONS: {
   label: string;
   key: string;
-  Icon: React.ComponentType<{ className?: string }>;
+  icon: TagIconKey;
   iconClass: string;
 }[] = [
-  { label: "Sin diferencias",         key: "sin diferencias",         Icon: CheckCircle,   iconClass: "text-green-600" },
-  { label: "Con diferencias",         key: "con diferencias",         Icon: AlertTriangle, iconClass: "text-amber-500" },
-  { label: "No pickeables",           key: "no pickeables",           Icon: XCircle,       iconClass: "text-red-500"   },
-  { label: "Pendiente de aprobación", key: "pendiente de aprobación", Icon: ClockRefresh,  iconClass: "text-orange-500"},
+  { label: "Sin diferencias",         key: "sin diferencias",         icon: "check", iconClass: "text-green-600" },
+  { label: "Con diferencias",         key: "con diferencias",         icon: "alert", iconClass: "text-amber-500" },
+  { label: "No pickeables",           key: "no pickeables",           icon: "x",     iconClass: "text-red-500"   },
+  { label: "Pendiente de aprobación", key: "pendiente de aprobación", icon: "clock", iconClass: "text-orange-500"},
 ];
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
@@ -236,58 +246,69 @@ type PrimaryAction = {
 };
 type ActionConfig = { primary?: PrimaryAction; menu: MenuItem[] };
 
-function getActions(estado: Status, id: string, orden?: Orden, onCancel?: (id: string) => void): ActionConfig {
+function getActions(estado: Status, id: string, orden?: Orden, onCancel?: (id: string) => void, role?: Role): ActionConfig {
+  const r = role ?? "Super Admin";
   const cancelItem: MenuItem = { label: "Cancelar", icon: SlashCircle01, danger: true, onClick: () => onCancel?.(id) };
+  const canCancelRole = can(r, "or:cancel");
 
   switch (estado) {
     case "Creado": {
       const params = new URLSearchParams({ startStep: "2", mode: "completar", orId: id });
       if (orden?.sucursal) params.set("sucursal", orden.sucursal);
       if (orden?.seller)   params.set("seller", orden.seller);
+      const menu: MenuItem[] = [
+        { label: "Ver",      icon: Eye,    href: `/recepciones/${id}` },
+        { label: "Editar",   icon: Edit01, href: `/recepciones/${id}` },
+      ];
+      if (canCancelRole) menu.push(cancelItem);
       return {
-        primary: { tooltip: "Completar", icon: CalendarPlus01, href: `/recepciones/crear?${params}` },
-        menu: [
-          { label: "Ver",      icon: Eye,    href: `/recepciones/${id}` },
-          { label: "Editar",   icon: Edit01, href: `/recepciones/${id}` },
-          cancelItem,
-        ],
+        primary: can(r, "or:complete") ? { tooltip: "Completar", icon: CalendarPlus01, href: `/recepciones/crear?${params}` } : undefined,
+        menu,
       };
     }
-    case "Programado":
+    case "Programado": {
+      const menu: MenuItem[] = [
+        { label: "Ver",       icon: Eye },
+        { label: "Editar",    icon: Edit01 },
+      ];
+      if (can(r, "or:complete")) menu.push({ label: "Reagendar", icon: CalendarPlus01, href: "/recepciones/crear?startStep=3&mode=reagendar" });
+      if (canCancelRole) menu.push(cancelItem);
       return {
-        primary: { tooltip: "Recibir", icon: PackageCheck },
-        menu: [
-          { label: "Ver",       icon: Eye },
-          { label: "Editar",    icon: Edit01 },
-          { label: "Reagendar", icon: CalendarPlus01, href: "/recepciones/crear?startStep=3&mode=reagendar" },
-          cancelItem,
-        ],
+        primary: can(r, "or:receive") ? { tooltip: "Recibir", icon: PackageCheck } : undefined,
+        menu,
       };
-    case "Recepcionado en bodega":
+    }
+    case "Recepcionado en bodega": {
+      const menu: MenuItem[] = [
+        { label: "Ver",      icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
+        { label: "Editar",   icon: Edit01 },
+      ];
+      if (canCancelRole) menu.push(cancelItem);
       return {
-        primary: { tooltip: "Empezar conteo", icon: Play, href: `/recepciones/${encodeURIComponent(id)}` },
-        menu: [
-          { label: "Ver",      icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
-          { label: "Editar",   icon: Edit01 },
-          cancelItem,
-        ],
+        primary: can(r, "session:start") ? { tooltip: "Empezar conteo", icon: Play, href: `/recepciones/${encodeURIComponent(id)}` } : { tooltip: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
+        menu,
       };
+    }
     case "En proceso de conteo":
       return {
-        primary: { tooltip: "Continuar", icon: ClipboardCheck, href: `/recepciones/${encodeURIComponent(id)}` },
+        primary: can(r, "session:start") ? { tooltip: "Continuar", icon: ClipboardCheck, href: `/recepciones/${encodeURIComponent(id)}` } : { tooltip: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
         menu: [
           { label: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
         ],
       };
-    case "Pendiente de aprobación":
+    case "Pendiente de aprobación": {
+      const menu: MenuItem[] = [
+        { label: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
+      ];
+      if (can(r, "or:approve")) {
+        menu.push({ label: "Aprobar con diferencias", icon: CheckCircle });
+        menu.push({ label: "Devolver a conteo",       icon: LockUnlocked01 });
+      }
       return {
-        primary: { tooltip: "Revisar", icon: ClipboardCheck, href: `/recepciones/${encodeURIComponent(id)}` },
-        menu: [
-          { label: "Ver",                      icon: Eye,            href: `/recepciones/${encodeURIComponent(id)}` },
-          { label: "Aprobar con diferencias",  icon: CheckCircle },
-          { label: "Devolver a conteo",        icon: LockUnlocked01 },
-        ],
+        primary: { tooltip: can(r, "or:approve") ? "Revisar" : "Ver", icon: can(r, "or:approve") ? ClipboardCheck : Eye, href: `/recepciones/${encodeURIComponent(id)}` },
+        menu,
       };
+    }
     case "Completada":
       return {
         primary: { tooltip: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
@@ -409,7 +430,7 @@ function RecebirModal({ orden, onCancel, onConfirm }: {
         <div className="flex items-start justify-between px-5 pt-5 pb-3 flex-shrink-0">
           <div>
             <p className="text-xs font-medium text-neutral-500">Recepción</p>
-            <h3 className="text-base font-bold text-neutral-900 font-mono leading-tight">{orden.id}</h3>
+            <h3 className="text-base font-bold text-neutral-900 font-sans leading-tight">{orden.id}</h3>
             <p className="text-xs font-semibold text-neutral-700 mt-0.5">{orden.seller}</p>
           </div>
           <button onClick={onCancel} className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300 ml-4 flex-shrink-0 mt-0.5">
@@ -506,7 +527,7 @@ function RecebirModal({ orden, onCancel, onConfirm }: {
                         <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
                         <p className="text-xs text-neutral-700">
                           <span className="font-medium">{entry.type}</span>{" "}
-                          <span className="font-mono font-semibold text-neutral-800">{entry.code}</span>{" "}
+                          <span className="font-sans font-semibold text-neutral-800">{entry.code}</span>{" "}
                           <span className="text-neutral-500">registrado</span>
                         </p>
                       </>
@@ -590,14 +611,14 @@ function RecebirModal({ orden, onCancel, onConfirm }: {
 }
 
 // ─── Actions cell ─────────────────────────────────────────────────────────────
-function ActionsCell({ orden, onPrimaryAction, onCancel }: { orden: Orden; onPrimaryAction?: () => void; onCancel?: (id: string) => void }) {
+function ActionsCell({ orden, onPrimaryAction, onCancel, role }: { orden: Orden; onPrimaryAction?: () => void; onCancel?: (id: string) => void; role?: Role }) {
   const router        = useRouter();
   const [menuPos,    setMenuPos]    = useState<{ top: number; right: number } | null>(null);
   const [tipVisible, setTipVisible] = useState(false);
   const [mounted,    setMounted]    = useState(false);
   const dotsRef       = useRef<HTMLButtonElement>(null);
   const primaryWrap   = useRef<HTMLDivElement>(null);
-  const { primary, menu } = getActions(orden.estado, orden.id, orden, onCancel);
+  const { primary, menu } = getActions(orden.estado, orden.id, orden, onCancel, role);
   const Icon = primary?.icon;
 
   // Portal only works client-side
@@ -803,6 +824,19 @@ function OrdenesPageInner() {
   const [bottomMenuOpen,    setBottomMenuOpen]    = useState(false);
   const [cancelTarget,      setCancelTarget]      = useState<string | null>(null);
 
+  // ── Role (initialise with SSR-safe default, sync from localStorage on mount) ──
+  const [currentRole, setCurrentRole] = useState<Role>("Super Admin");
+  useEffect(() => {
+    setCurrentRole(getRole());
+    const sync = () => setCurrentRole(getRole());
+    window.addEventListener("amplifica-role-change", sync);
+    return () => window.removeEventListener("amplifica-role-change", sync);
+  }, []);
+
+  const canCreate  = can(currentRole, "or:create");
+  const canScanQr  = can(currentRole, "or:scan_qr");
+  const canReceive = can(currentRole, "or:receive");
+
   // Close card menu / bottom menu on outside click
   useEffect(() => {
     if (!cardMenuId && !bottomMenuOpen) return;
@@ -864,9 +898,15 @@ function OrdenesPageInner() {
   const [filterSucursales, setFilterSucursales] = useState<Set<string>>(new Set());
   const [filterTagTypes,   setFilterTagTypes]   = useState<Set<string>>(new Set());
 
-  // Merge created ORs with static data, apply localStorage overrides, and enrich with OR_STATS
-  const ordenesEffective = useMemo(() =>
-    [...createdOrs, ...ORDENES].map(o => {
+  // Merge created ORs with static data (dedup by id), apply localStorage overrides, and enrich with OR_STATS
+  const ordenesEffective = useMemo(() => {
+    const seen = new Set<string>();
+    const merged = [...createdOrs, ...ORDENES].filter(o => {
+      if (seen.has(o.id)) return false;
+      seen.add(o.id);
+      return true;
+    });
+    return merged.map(o => {
       const override = orStatusOverrides[o.id];
       const enriched = override ? { ...o, estado: override.estado, ...(override.fechaAgendada ? { fechaAgendada: override.fechaAgendada } : {}) } : { ...o };
       const stats = OR_STATS[o.id];
@@ -877,9 +917,8 @@ function OrdenesPageInner() {
         enriched.sesiones = stats.sesiones;
       }
       return enriched;
-    }),
-    [orStatusOverrides, createdOrs]
-  );
+    });
+  }, [orStatusOverrides, createdOrs]);
 
   // ── QR scanner helpers ──
   const getOrInfo = useCallback((orId: string) => {
@@ -1076,9 +1115,9 @@ function OrdenesPageInner() {
 
       {/* Toast */}
       {showToast && (
-        <div className="fixed top-5 right-5 z-50 bg-white border border-green-200 rounded-xl shadow-xl p-4 flex items-start gap-3 max-w-xs">
+        <div className="fixed top-5 left-4 right-4 sm:left-auto sm:right-5 sm:w-auto z-50 bg-white border border-green-200 rounded-xl shadow-xl p-4 flex items-start gap-3 sm:max-w-xs">
           <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-neutral-800">{toastMsg.title}</p>
             <p className="text-xs text-neutral-500 mt-0.5">{toastMsg.subtitle}</p>
           </div>
@@ -1129,9 +1168,9 @@ function OrdenesPageInner() {
             <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-4 mx-auto">
               <SlashCircle01 className="w-7 h-7 text-red-500" />
             </div>
-            <h3 className="text-lg font-bold text-neutral-900 text-center mb-1">¿Cancelar orden?</h3>
+            <h3 className="text-lg font-bold text-neutral-900 text-center mb-1">¿Cancelar esta orden?</h3>
             <p className="text-sm text-neutral-500 text-center mb-6">
-              La orden <span className="font-semibold text-neutral-700">{cancelTarget}</span> será cancelada y no podrá procesarse.
+              La orden <span className="font-semibold text-neutral-700">{cancelTarget}</span> se cancelará de forma permanente. Esta acción no se puede deshacer.
             </p>
             <div className="flex flex-col gap-2">
               <button
@@ -1203,10 +1242,10 @@ function OrdenesPageInner() {
                 renderOption={key => {
                   const opt = TAG_FILTER_OPTIONS.find(t => t.key === key);
                   if (!opt) return <span className="text-sm text-neutral-700">{key}</span>;
-                  const OptIcon = opt.Icon;
+                  const OptIcon = TAG_ICON_MAP[opt.icon];
                   return (
                     <span className="flex items-center gap-2">
-                      <OptIcon className={`w-4 h-4 flex-shrink-0 ${opt.iconClass}`} />
+                      {OptIcon && <OptIcon className={`w-4 h-4 flex-shrink-0 ${opt.iconClass}`} />}
                       <span className="text-sm text-neutral-700">{opt.label}</span>
                     </span>
                   );
@@ -1270,14 +1309,6 @@ function OrdenesPageInner() {
                   <Download01 className="w-4 h-4 flex-shrink-0 text-neutral-400" />
                   Exportar
                 </button>
-                <Link
-                  href="/recepciones/crear?mode=sin-agenda"
-                  onClick={() => setBottomMenuOpen(false)}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors duration-300"
-                >
-                  <Plus className="w-4 h-4 flex-shrink-0 text-neutral-400" />
-                  Recepción sin agenda
-                </Link>
               </div>
             )}
           </div>
@@ -1288,19 +1319,18 @@ function OrdenesPageInner() {
               Exportar
             </Button>
           </div>
-          <div className="hidden lg:block">
-            <Button variant="secondary" className="h-9" href="/recepciones/crear?mode=sin-agenda">
-              Recepción sin agenda
+          {canScanQr && (
+            <div>
+              <Button variant={canCreate ? "secondary" : "primary"} className="h-9" iconLeft={<QrCode02 className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
+                Escanear QR
+              </Button>
+            </div>
+          )}
+          {canCreate && (
+            <Button variant="primary" className="h-9" href="/recepciones/crear" iconLeft={<Plus className="w-4 h-4" />}>
+              Crear recepción
             </Button>
-          </div>
-          <div>
-            <Button variant="secondary" className="h-9" iconLeft={<QrCode02 className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
-              Escanear QR
-            </Button>
-          </div>
-          <Button variant="primary" className="h-9" href="/recepciones/crear" iconLeft={<Plus className="w-4 h-4" />}>
-            Crear recepción
-          </Button>
+          )}
         </div>
       </div>
 
@@ -1451,7 +1481,7 @@ function OrdenesPageInner() {
           <span className="text-xs text-neutral-500 font-medium">Filtros activos:</span>
           {[...filterTagTypes].map(k => {
             const opt = TAG_FILTER_OPTIONS.find(t => t.key === k);
-            const ChipIcon = opt?.Icon;
+            const ChipIcon = opt ? TAG_ICON_MAP[opt.icon] : null;
             return (
               <span key={k} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-primary-50 text-primary-600 border border-primary-200 rounded-full font-medium">
                 {ChipIcon && <ChipIcon className={`w-3 h-3 ${opt?.iconClass}`} />}
@@ -1476,7 +1506,7 @@ function OrdenesPageInner() {
           </div>
         ) : (
           paginatedRows.map((orden, i) => {
-            const actions = getActions(orden.estado, orden.id, orden, setCancelTarget);
+            const actions = getActions(orden.estado, orden.id, orden, setCancelTarget, currentRole);
             const PrimaryIcon = actions.primary?.icon;
             return (
               <div
@@ -1486,7 +1516,7 @@ function OrdenesPageInner() {
                 {/* Row 1: ID + Status */}
                 <div className="flex items-center justify-between gap-2 mb-2.5">
                   <span
-                    className="inline-block bg-neutral-100 text-neutral-700 rounded px-2 py-0.5 font-medium w-fit text-xs font-mono"
+                    className="inline-block bg-neutral-100 text-neutral-700 rounded px-2 py-0.5 font-medium w-fit text-xs"
                   >
                     {orden.id}
                   </span>
@@ -1542,11 +1572,21 @@ function OrdenesPageInner() {
                   const pct = Math.round((orden.progreso.contadas / orden.progreso.total) * 100);
                   const isComplete = pct >= 100;
                   return (
-                    <div className="mt-1.5">
-                      <span className={`text-[11px] font-medium tabular-nums ${isComplete ? "text-green-600" : "text-neutral-500"}`}>
-                        {orden.progreso.contadas.toLocaleString("es-CL")}/{orden.progreso.total.toLocaleString("es-CL")}
-                        {` (${pct}%)`}
-                      </span>
+                    <div className="mt-2 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-[11px] font-medium tabular-nums ${isComplete ? "text-green-600" : "text-neutral-500"}`}>
+                          {orden.progreso.contadas.toLocaleString("es-CL")}/{orden.progreso.total.toLocaleString("es-CL")}
+                        </span>
+                        <span className={`text-[11px] font-medium tabular-nums ${isComplete ? "text-green-600" : "text-neutral-500"}`}>
+                          {pct}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${isComplete ? "bg-green-500" : "bg-primary-500"}`}
+                          style={{ width: `${Math.min(pct, 100)}%` }}
+                        />
+                      </div>
                     </div>
                   );
                 })()}
@@ -1554,11 +1594,12 @@ function OrdenesPageInner() {
                 {/* Tags (if any) */}
                 {orden.tags && orden.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-2.5">
-                    {orden.tags.map(tag => {
-                      const TagIcon = tag.Icon;
+                    {orden.tags.map((tag, ti) => {
+                      const TagIcon = TAG_ICON_MAP[tag.icon];
+                      if (!TagIcon) return null;
                       return (
                         <span
-                          key={tag.label}
+                          key={tag.label ?? ti}
                           className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-medium w-fit ${tag.className}`}
                         >
                           <TagIcon className={`w-3 h-3 flex-shrink-0 ${tag.iconClass}`} />
@@ -1602,7 +1643,7 @@ function OrdenesPageInner() {
                   ) : (
                     <div className="relative">
                       <button
-                        onMouseDown={e => e.stopPropagation()}
+                        onMouseDown={e => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation(); }}
                         onClick={() => setCardMenuId(prev => prev === orden.id ? null : orden.id)}
                         className={`p-2 rounded-lg transition-colors duration-200 ${
                           cardMenuId === orden.id ? "bg-neutral-100 text-neutral-700" : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
@@ -1703,14 +1744,14 @@ function OrdenesPageInner() {
                           <span className="flex items-center gap-1">
                             <span className="text-neutral-300 text-sm select-none pl-1">└</span>
                             <span
-                              className="inline-block bg-neutral-100 text-neutral-500 rounded px-2 py-0.5 w-fit text-[11px] font-mono"
+                              className="inline-block bg-neutral-100 text-neutral-500 rounded px-2 py-0.5 w-fit text-[11px] font-sans"
                             >
                               {orden.id}
                             </span>
                           </span>
                         ) : (
                           <span
-                            className="inline-block bg-neutral-100 text-neutral-700 rounded px-2 py-0.5 w-fit text-xs font-mono"
+                            className="inline-block bg-neutral-100 text-neutral-700 rounded px-2 py-0.5 w-fit text-xs font-sans"
                           >
                             {orden.id}
                           </span>
@@ -1810,11 +1851,12 @@ function OrdenesPageInner() {
                             <td key="tags" className="py-3 px-4">
                               {orden.tags && orden.tags.length > 0 ? (
                                 <div className="flex flex-col gap-1">
-                                  {orden.tags.map(tag => {
-                                    const TagIcon = tag.Icon;
+                                  {orden.tags.map((tag, ti) => {
+                                    const TagIcon = TAG_ICON_MAP[tag.icon];
+                                    if (!TagIcon) return null;
                                     return (
                                       <span
-                                        key={tag.label}
+                                        key={tag.label ?? ti}
                                         className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded font-medium w-fit ${tag.className}`}
                                         style={NW}
                                       >
@@ -1841,8 +1883,9 @@ function OrdenesPageInner() {
                     >
                       <ActionsCell
                         orden={orden}
-                        onPrimaryAction={orden.estado === "Programado" ? () => setRecibirOrden(orden) : undefined}
+                        onPrimaryAction={orden.estado === "Programado" && canReceive ? () => setRecibirOrden(orden) : undefined}
                         onCancel={setCancelTarget}
+                        role={currentRole}
                       />
                     </td>
                   </tr>
@@ -1927,17 +1970,20 @@ function OrdenesPageInner() {
       />
 
       {/* ── Mobile sticky bottom bar ── */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 pt-3 pb-6 flex flex-col gap-2 z-40">
-        {/* Crear recepción — primary full-width 48px */}
-        <Button variant="primary" href="/recepciones/crear" className="w-full h-12" iconLeft={<Plus className="w-4 h-4" />}>
-          Crear recepción
-        </Button>
-
-        {/* Escanear QR — secondary full-width 48px */}
-        <Button variant="secondary" className="w-full h-12" iconLeft={<QrCode02 className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
-          Escanear QR
-        </Button>
-      </div>
+      {(canCreate || canScanQr) && (
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 pt-3 pb-6 flex flex-col gap-2 z-40">
+          {canCreate && (
+            <Button variant="primary" href="/recepciones/crear" className="w-full h-12" iconLeft={<Plus className="w-4 h-4" />}>
+              Crear recepción
+            </Button>
+          )}
+          {canScanQr && (
+            <Button variant={canCreate ? "secondary" : "primary"} className="w-full h-12" iconLeft={<QrCode02 className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
+              Escanear QR
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

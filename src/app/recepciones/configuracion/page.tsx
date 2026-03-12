@@ -1387,7 +1387,7 @@ export default function ConfiguracionPage() {
                         <div className="space-y-2">
                           {ors.map((or, i) => (
                             <div key={i} className="bg-white border border-primary-100 rounded-lg px-3 py-2 flex items-center gap-3 text-sm">
-                              <span className="font-mono text-xs text-neutral-500">{or.id ?? "—"}</span>
+                              <span className="font-sans text-xs text-neutral-500">{or.id ?? "—"}</span>
                               <span className="font-medium text-neutral-800">{or.seller ?? "—"}</span>
                               {or.estado && <StatusBadge status={or.estado as Status} />}
                               {or.id && (

@@ -1,12 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import { Menu01, HelpCircle } from "@untitled-ui/icons-react";
 import AmplificaLogo from "@/components/layout/AmplificaLogo";
 
 export default function RecepcionesLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  /* ── Loading skeleton while hydrating ───────────────────────────── */
+  if (!mounted) {
+    return (
+      <div className="flex h-screen overflow-hidden" style={{ backgroundColor: "#1D1D1F" }}>
+        <main className="flex-1 overflow-y-auto bg-white mt-14 lg:mt-2 lg:mr-2 lg:mb-2 lg:rounded-2xl">
+          <div className="animate-pulse p-6 space-y-4">
+            <div className="h-8 w-56 bg-neutral-100 rounded-lg" />
+            <div className="h-10 w-full bg-neutral-100 rounded-lg" />
+            <div className="space-y-3 mt-6">
+              <div className="h-28 w-full bg-neutral-50 rounded-xl" />
+              <div className="h-28 w-full bg-neutral-50 rounded-xl" />
+              <div className="h-28 w-full bg-neutral-50 rounded-xl" />
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: "#1D1D1F" }}>

@@ -154,8 +154,8 @@ export default function CuarentenaPage() {
               <p className="text-base font-bold text-neutral-900">Registrar decisión del seller</p>
               <p className="text-xs text-neutral-500 mt-0.5">
                 {catCModal.productName}
-                <span className="font-mono ml-1 text-neutral-400">· {catCModal.sku}</span>
-                <span className="ml-1 text-neutral-400">· {catCModal.cantidad} uds</span>
+                <span className="font-sans ml-1 text-neutral-400">· {catCModal.sku}</span>
+                <span className="ml-1 text-neutral-400">· {catCModal.cantidad} uds.</span>
               </p>
             </div>
             <div className="space-y-2">
@@ -186,14 +186,14 @@ export default function CuarentenaPage() {
             {decisionMode === "mixto" && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-neutral-400 mb-1">Uds a stock</label>
+                  <label className="block text-xs text-neutral-400 mb-1">Uds. a stock</label>
                   <input type="number" min={0} max={catCModal.cantidad} value={stockQty}
                     onChange={e => { const v = Math.max(0, Math.min(catCModal.cantidad, parseInt(e.target.value) || 0)); setStockQty(v); setMermaQty(catCModal.cantidad - v); }}
                     className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 tabular-nums"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-neutral-400 mb-1">Uds a mermar</label>
+                  <label className="block text-xs text-neutral-400 mb-1">Uds. a mermar</label>
                   <input type="number" min={0} max={catCModal.cantidad} value={mermaQty}
                     onChange={e => { const v = Math.max(0, Math.min(catCModal.cantidad, parseInt(e.target.value) || 0)); setMermaQty(v); setStockQty(catCModal.cantidad - v); }}
                     className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 tabular-nums"
@@ -391,11 +391,11 @@ export default function CuarentenaPage() {
                         alert7d ? "bg-red-50/40"   : "hover:bg-neutral-50/40"
                       }`}>
                         <td className="px-3 py-3 align-top">
-                          <Link href={`/recepciones/${rec.orId}`} className="text-xs font-mono text-primary-500 hover:underline">
+                          <Link href={`/recepciones/${rec.orId}`} className="text-xs font-sans text-primary-500 hover:underline">
                             {rec.orId}
                           </Link>
                         </td>
-                        <td className="px-3 py-3 font-mono text-xs text-neutral-500 whitespace-nowrap align-top">{rec.sku}</td>
+                        <td className="px-3 py-3 font-sans text-xs text-neutral-500 whitespace-nowrap align-top">{rec.sku}</td>
                         <td className="px-3 py-3 align-top max-w-[160px]">
                           <p className="text-xs text-neutral-700 leading-snug">{rec.productName}</p>
                           {tagInfo && (

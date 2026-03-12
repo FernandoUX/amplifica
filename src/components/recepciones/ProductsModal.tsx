@@ -211,11 +211,11 @@ export default function ProductsModal({ onClose, onAdd, initialSearch = "" }: Pr
         </div>
 
         {/* ── Footer ──────────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between">
-          <Button variant="secondary" size="lg" onClick={onClose}>
+        <div className="flex items-center gap-3">
+          <Button variant="secondary" size="lg" onClick={onClose} className="flex-1">
             Cerrar
           </Button>
-          <Button variant="primary" size="lg" onClick={handleAdd} disabled={selected.length === 0}>
+          <Button variant="primary" size="lg" onClick={handleAdd} disabled={selected.length === 0} className="flex-1">
             Agregar
           </Button>
         </div>
