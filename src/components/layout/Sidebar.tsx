@@ -349,12 +349,11 @@ export default function Sidebar({ onClose }: SidebarProps) {
             </button>
 
             {datePickerOpen && (<>
-              {/* Mobile: fullscreen overlay */}
-              <div className="lg:hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={() => setDatePickerOpen(false)} />
-              <div className={`
-                lg:hidden fixed inset-x-4 top-1/2 -translate-y-1/2 z-50
-                bg-white rounded-2xl shadow-xl border border-neutral-200 p-5
-              `}>
+              {/* Mobile: dropdown below button with equal screen margins */}
+              <div className="lg:hidden fixed inset-0 z-40" onClick={() => setDatePickerOpen(false)} />
+              <div className="lg:hidden fixed left-4 right-4 z-50 bg-white rounded-2xl shadow-xl border border-neutral-200 p-5"
+                style={{ top: dateRef.current ? dateRef.current.getBoundingClientRect().bottom + 8 : 200 }}>
+
                 {(() => {
                   const y = calMonth[0];
                   const m = calMonth[1];
