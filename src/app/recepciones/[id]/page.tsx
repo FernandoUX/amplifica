@@ -21,6 +21,7 @@ import {
 import FormField from "@/components/ui/FormField";
 import ProductsModal, { type AddProduct } from "@/components/recepciones/ProductsModal";
 import QrDisplaySection from "@/components/recepciones/QrDisplaySection";
+import { playScanSuccessSound, playScanErrorSound } from "@/lib/scan-sounds";
 import Button from "@/components/ui/Button";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -2760,47 +2761,9 @@ export default function ConteoORPage() {
     return map;
   }, [products]);
 
-  // Sonic-coin-like sound using Web Audio API
-  const playScanSound = useCallback(() => {
-    try {
-      const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-      const playTone = (freq: number, start: number, dur: number, vol: number) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
-        gain.gain.setValueAtTime(vol, ctx.currentTime + start);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
-        osc.connect(gain).connect(ctx.destination);
-        osc.start(ctx.currentTime + start);
-        osc.stop(ctx.currentTime + start + dur);
-      };
-      // Rising two-tone arpeggio (like a coin collect)
-      playTone(988, 0, 0.12, 0.3);     // B5
-      playTone(1319, 0.08, 0.2, 0.25); // E6
-    } catch { /* silent fallback */ }
-  }, []);
-
-  const playErrorSound = useCallback(() => {
-    try {
-      const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-      const playTone = (freq: number, start: number, dur: number, vol: number) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = "square";
-        osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
-        gain.gain.setValueAtTime(vol, ctx.currentTime + start);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
-        osc.connect(gain).connect(ctx.destination);
-        osc.start(ctx.currentTime + start);
-        osc.stop(ctx.currentTime + start + dur);
-      };
-      // Descending buzz — unmistakable error
-      playTone(440, 0, 0.12, 0.2);     // A4
-      playTone(330, 0.1, 0.18, 0.2);   // E4
-      playTone(220, 0.22, 0.25, 0.15); // A3
-    } catch { /* silent fallback */ }
-  }, []);
+  // Sound aliases — shared module (see src/lib/scan-sounds.ts)
+  const playScanSound = playScanSuccessSound;
+  const playErrorSound = playScanErrorSound;
 
   const handleScan = () => {
     const code = scanner.trim();

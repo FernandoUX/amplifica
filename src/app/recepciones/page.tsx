@@ -18,6 +18,7 @@ import Button from "@/components/ui/Button";
 import QrScannerModal from "@/components/recepciones/QrScannerModal";
 import PageInfoModal from "@/components/ui/PageInfoModal";
 import FormField from "@/components/ui/FormField";
+import { playScanSuccessSound, playScanErrorSound } from "@/lib/scan-sounds";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 /** Feature 4: multi-label resultado tags (aparecen solo en "Completada") */
@@ -383,16 +384,20 @@ function RecebirModal({ orden, onCancel, onConfirm }: {
       // Simular código desconocido
       const unknownCode = `UNK-${String(Math.floor(Math.random() * 999)).padStart(3, "0")}`;
       setEntries(prev => [...prev, { code: unknownCode, type, status: "unknown" }]);
+      playScanErrorSound();
     } else if (rand < 0.2 && entries.some(e => e.type === type && e.status === "ok")) {
       // Simular duplicado — reusar último código válido
       const lastValid = [...entries].reverse().find(e => e.type === type && e.status === "ok");
       if (lastValid) {
         setEntries(prev => [...prev, { code: lastValid.code, type, status: "duplicate" }]);
+        playScanErrorSound();
       } else {
         setEntries(prev => [...prev, { code, type, status: "ok" }]);
+        playScanSuccessSound();
       }
     } else {
       setEntries(prev => [...prev, { code, type, status: "ok" }]);
+      playScanSuccessSound();
     }
   };
 

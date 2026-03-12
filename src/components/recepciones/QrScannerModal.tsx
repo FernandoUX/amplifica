@@ -11,6 +11,7 @@ import {
   markTokenScanned, computeTimeTolerance,
   type QrToken, type ScanError,
 } from "@/lib/qr-helpers";
+import { playScanSuccessSound, playScanErrorSound } from "@/lib/scan-sounds";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -133,6 +134,7 @@ export default function QrScannerModal({ open, onClose, onConfirm, getOrInfo }: 
         setScanError(result.error);
         setMatchedToken(result.token ?? null);
         setStep("error");
+        playScanErrorSound();
         return;
       }
 
@@ -144,6 +146,7 @@ export default function QrScannerModal({ open, onClose, onConfirm, getOrInfo }: 
         setScanError(forcedError);
         setMatchedToken(token);
         setStep("error");
+        playScanErrorSound();
         return;
       }
 
@@ -152,12 +155,14 @@ export default function QrScannerModal({ open, onClose, onConfirm, getOrInfo }: 
         setScanError("not_programado");
         setMatchedToken(token);
         setStep("error");
+        playScanErrorSound();
         return;
       }
 
       setMatchedToken(token);
       setMatchedOr(or ?? null);
       setStep("success");
+      playScanSuccessSound();
     }, 500);
   }, [getOrInfo]);
 
