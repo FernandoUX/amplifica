@@ -26,9 +26,9 @@ type ButtonProps = ButtonAsButton | ButtonAsLink;
 
 // ─── Size tokens ──────────────────────────────────────────────────────────────
 const sizeClasses: Record<Size, string> = {
-  sm: "px-3 py-1.5 text-xs gap-1.5 rounded-lg",
-  md: "px-4 py-2 text-sm gap-2 rounded-lg",
-  lg: "px-5 py-2.5 text-sm gap-2 rounded-lg",
+  sm: "px-3 py-1.5 text-[0.8125rem] sm:text-xs gap-1.5 rounded-lg",
+  md: "px-4 py-2 text-[0.875rem] sm:text-sm gap-2 rounded-lg",
+  lg: "px-5 py-2.5 text-[0.875rem] sm:text-sm gap-2 rounded-lg",
   xl: "px-6 py-3 text-base gap-2.5 rounded-xl",
 };
 

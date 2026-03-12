@@ -74,7 +74,7 @@ export default function FormField(props: FormFieldProps) {
 
   // ── Shared field classes ──────────────────────────────────────────────────
   const fieldCls = [
-    "w-full appearance-none bg-transparent text-sm text-neutral-800 outline-none placeholder-transparent peer",
+    "w-full appearance-none bg-transparent text-base sm:text-sm text-neutral-800 outline-none placeholder-transparent peer",
     disabled ? "cursor-not-allowed text-neutral-400" : "",
     as === "select" ? "pr-8" : "",
   ]
