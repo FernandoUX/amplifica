@@ -1072,7 +1072,7 @@ function OrdenesPageInner() {
 
 
   return (
-    <div className="p-4 lg:p-6 min-w-0 pb-24 sm:pb-4 lg:pb-6 max-w-[1680px] mx-auto">
+    <div className="p-4 lg:p-6 min-w-0 pb-36 sm:pb-4 lg:pb-6 max-w-[1680px] mx-auto">
 
       {/* Toast */}
       {showToast && (

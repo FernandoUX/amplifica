@@ -92,6 +92,28 @@ export default function Sidebar({ onClose }: SidebarProps) {
   const [collapsed, setCollapsed]   = useState(false);
   const [openMenus, setOpenMenus]   = useState<string[]>(["Recepciones"]);
 
+  // ── Role switcher ───────────────────────────────────────────────────────
+  const ROLES = ["Super Admin", "Operador", "Seller", "KAM"] as const;
+  type Role = typeof ROLES[number];
+  const [currentRole, setCurrentRole] = useState<Role>("Super Admin");
+  const [roleOpen, setRoleOpen]       = useState(false);
+  const roleRef = useRef<HTMLDivElement>(null);
+
+  // Load role from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("amplifica_user_role");
+      if (saved && ROLES.includes(saved as Role)) setCurrentRole(saved as Role);
+    } catch { /* ignore */ }
+  }, []);
+
+  const switchRole = (role: Role) => {
+    setCurrentRole(role);
+    setRoleOpen(false);
+    localStorage.setItem("amplifica_user_role", role);
+    window.dispatchEvent(new Event("amplifica-role-change"));
+  };
+
   // ── Sucursal dropdown ────────────────────────────────────────────────────
   const [sucursales, setSucursales]           = useState<SucursalItem[]>(DEFAULT_SUCURSALES);
   const [selectedSucursal, _setSelectedSucursal] = useState<string | null>(null); // null = "Todas"
@@ -152,6 +174,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
       if (sucursalRef.current && !sucursalRef.current.contains(e.target as Node)) setSucursalOpen(false);
       if (sellerRef.current && !sellerRef.current.contains(e.target as Node)) { setSellerOpen(false); setSellerSearch(""); }
       if (dateRef.current && !dateRef.current.contains(e.target as Node)) setDatePickerOpen(false);
+      if (roleRef.current && !roleRef.current.contains(e.target as Node)) setRoleOpen(false);
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -325,8 +348,85 @@ export default function Sidebar({ onClose }: SidebarProps) {
               )}
             </button>
 
-            {datePickerOpen && (
-              <div className="absolute left-full top-0 ml-2 z-50 bg-white rounded-xl shadow-xl border border-neutral-200 p-4 flex gap-4" style={{ width: 560 }}>
+            {datePickerOpen && (<>
+              {/* Mobile: fullscreen overlay */}
+              <div className="lg:hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={() => setDatePickerOpen(false)} />
+              <div className={`
+                lg:hidden fixed inset-x-4 top-1/2 -translate-y-1/2 z-50
+                bg-white rounded-2xl shadow-xl border border-neutral-200 p-5
+              `}>
+                {(() => {
+                  const y = calMonth[0];
+                  const m = calMonth[1];
+                  const firstDay = new Date(y, m, 1).getDay();
+                  const daysInMonth = new Date(y, m + 1, 0).getDate();
+                  const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+                  const cells: (number | null)[] = Array(firstDay).fill(null);
+                  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+                  const pad = (n: number) => String(n).padStart(2, "0");
+                  const today = new Date();
+                  const todayStr = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+                  return (
+                    <>
+                      <div className="flex items-center justify-between mb-4">
+                        <button onClick={() => setCalMonth(([yy,mm]) => mm === 0 ? [yy-1,11] : [yy,mm-1])} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-500">
+                          <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        <span className="text-base font-semibold text-neutral-800">{MONTHS[m]} {y}</span>
+                        <button onClick={() => setCalMonth(([yy,mm]) => mm === 11 ? [yy+1,0] : [yy,mm+1])} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-500">
+                          <ChevronRight className="w-5 h-5" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-7 text-center text-xs text-neutral-400 mb-2">
+                        {["Do","Lu","Ma","Mi","Ju","Vi","Sa"].map(d => <div key={d} className="py-1">{d}</div>)}
+                      </div>
+                      <div className="grid grid-cols-7 text-center text-base">
+                        {cells.map((day, i) => {
+                          if (!day) return <div key={`e${i}`} />;
+                          const ds = `${y}-${pad(m+1)}-${pad(day)}`;
+                          const isToday = ds === todayStr;
+                          const isFrom = ds === dateFrom;
+                          const isTo = ds === dateTo;
+                          const inRange = dateFrom && dateTo && ds > dateFrom && ds < dateTo;
+                          return (
+                            <button
+                              key={day}
+                              onClick={() => {
+                                if (!dateFrom || (dateFrom && dateTo)) {
+                                  setDateRange(ds, null);
+                                } else if (ds < dateFrom) {
+                                  setDateRange(ds, dateFrom);
+                                  setDatePickerOpen(false);
+                                } else {
+                                  setDateRange(dateFrom, ds);
+                                  setDatePickerOpen(false);
+                                }
+                              }}
+                              className={`py-2.5 rounded-lg transition-colors duration-150 ${
+                                isFrom || isTo ? "bg-neutral-900 text-white font-medium" :
+                                inRange ? "bg-neutral-100 text-neutral-800" :
+                                isToday ? "bg-neutral-200 text-neutral-900 font-medium" :
+                                "text-neutral-700 hover:bg-neutral-50"
+                              }`}
+                            >
+                              {day}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {dateFrom && (
+                        <p className="text-xs text-neutral-400 text-center mt-3">
+                          {dateFrom.slice(8)}/{dateFrom.slice(5,7)}/{dateFrom.slice(0,4)}
+                          {dateTo ? ` — ${dateTo.slice(8)}/${dateTo.slice(5,7)}/${dateTo.slice(0,4)}` : " — Selecciona fecha fin"}
+                        </p>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+
+              {/* Desktop: side panel with 2 months */}
+              <div className="hidden lg:flex absolute left-full top-0 ml-2 z-50 bg-white rounded-xl shadow-xl border border-neutral-200 p-4 gap-4" style={{ width: 560 }}>
                 {[0, 1].map(offset => {
                   const y = calMonth[0] + Math.floor((calMonth[1] + offset) / 12);
                   const m = (calMonth[1] + offset) % 12;
@@ -393,7 +493,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
                   );
                 })}
               </div>
-            )}
+            </>)}
           </div>
         </div>
       )}
@@ -498,17 +598,39 @@ export default function Sidebar({ onClose }: SidebarProps) {
         </Link>
 
         {!collapsed && (
-          <div className="flex items-center gap-2.5 px-2 py-2">
-            <div className="w-7 h-7 rounded-full bg-primary-500 flex items-center justify-center text-[11px] font-bold flex-shrink-0">
-              F
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-white text-xs font-medium truncate">Fernando Roblero</p>
-              <p className="text-white/40 text-[10px] truncate">Super Admin</p>
-            </div>
-            <button className="text-white/30 hover:text-white/60 flex-shrink-0">
-              <LogOut01 className="w-3.5 h-3.5" />
+          <div ref={roleRef} className="relative">
+            <button
+              onClick={() => setRoleOpen(o => !o)}
+              className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-white/5 transition-colors duration-300"
+            >
+              <div className="w-7 h-7 rounded-full bg-primary-500 flex items-center justify-center text-[11px] font-bold flex-shrink-0">
+                F
+              </div>
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-white text-xs font-medium truncate">Fernando Roblero</p>
+                <p className="text-white/40 text-[10px] truncate">{currentRole}</p>
+              </div>
+              <ChevronSelectorVertical className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />
             </button>
+
+            {roleOpen && (
+              <div className="absolute left-0 right-0 bottom-full mb-1 bg-[#1a1a1a] border border-white/10 rounded-lg shadow-xl z-50 py-1">
+                <p className="px-3 py-1 text-[10px] text-white/30 uppercase tracking-wider font-medium">Cambiar rol</p>
+                {ROLES.map(role => (
+                  <button
+                    key={role}
+                    onClick={() => switchRole(role)}
+                    className={`w-full text-left px-3 py-1.5 text-xs transition-colors duration-150 ${
+                      currentRole === role
+                        ? "text-white bg-white/10 font-medium"
+                        : "text-white/70 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    {role}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

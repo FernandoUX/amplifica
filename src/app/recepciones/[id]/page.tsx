@@ -2911,15 +2911,15 @@ export default function ConteoORPage() {
             <p className="text-sm text-neutral-500 mb-6">
               Se descartarán todas las unidades escaneadas en esta sesión ({stats.totalSesionAct} uds). Esta acción no se puede deshacer.
             </p>
-            <div className="flex gap-3">
-              <Button variant="secondary" size="lg" onClick={() => setConfirmLiberar(false)} className="flex-1">
-                Cancelar
-              </Button>
+            <div className="flex flex-col sm:flex-row gap-3">
               <button onClick={() => { liberarSesion(); setConfirmLiberar(false); }}
-                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors duration-300 flex items-center justify-center gap-2">
+                className="w-full sm:flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors duration-300 flex items-center justify-center gap-2">
                 <AlertTriangle className="w-4 h-4" />
                 Liberar y descartar
               </button>
+              <Button variant="secondary" size="lg" onClick={() => setConfirmLiberar(false)} className="w-full sm:flex-1">
+                Cancelar
+              </Button>
             </div>
           </div>
         </div>
