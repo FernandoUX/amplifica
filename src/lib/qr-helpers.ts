@@ -179,24 +179,28 @@ export function computeTimeTolerance(
 
 // ─── Seed data ──────────────────────────────────────────────────────────────
 
-const PROGRAMADO_ORS = [
-  "RO-BARRA-183",
-  "RO-BARRA-182",
-  "RO-BARRA-190",
-  "RO-BARRA-194",
-  "RO-BARRA-195",
-  "RO-BARRA-211",
-  "RO-BARRA-217",
-  "RO-BARRA-226",
-  "RO-BARRA-227",
-  "RO-BARRA-228",
-  "RO-BARRA-229",
-  "RO-BARRA-230",
-  // Recepcionado en bodega
-  "RO-BARRA-180",
-  "RO-BARRA-196",
-  "RO-BARRA-197",
-];
+/** Metadata for each seeded OR — seller, sucursal, product counts */
+export type QrOrMeta = { seller: string; sucursal: string; skus: number; uTotales: string; pallets?: number; bultos?: number };
+
+export const QR_OR_META: Record<string, QrOrMeta> = {
+  "RO-BARRA-183": { seller: "Extra Life",  sucursal: "Quilicura",       skus: 3, uTotales: "150", pallets: 2, bultos: 10 },
+  "RO-BARRA-182": { seller: "Extra Life",  sucursal: "La Reina",        skus: 2, uTotales: "80",  pallets: 1, bultos: 6 },
+  "RO-BARRA-190": { seller: "Le Vice",     sucursal: "Lo Barnechea",    skus: 2, uTotales: "200", pallets: 3, bultos: 15 },
+  "RO-BARRA-194": { seller: "VitaFit",     sucursal: "Quilicura",       skus: 4, uTotales: "320", pallets: 4, bultos: 20 },
+  "RO-BARRA-195": { seller: "NutriPro",    sucursal: "La Reina",        skus: 1, uTotales: "60",  pallets: 1, bultos: 4 },
+  "RO-BARRA-211": { seller: "BioNature",   sucursal: "Santiago Centro",  skus: 3, uTotales: "240", pallets: 3, bultos: 12 },
+  "RO-BARRA-217": { seller: "Gohard",      sucursal: "Providencia",     skus: 2, uTotales: "100", pallets: 2, bultos: 8 },
+  "RO-BARRA-226": { seller: "Gohard",      sucursal: "Las Condes",      skus: 5, uTotales: "400", pallets: 5, bultos: 25 },
+  "RO-BARRA-227": { seller: "Le Vice",     sucursal: "Providencia",     skus: 2, uTotales: "180", pallets: 2, bultos: 10 },
+  "RO-BARRA-228": { seller: "VitaFit",     sucursal: "Quilicura",       skus: 3, uTotales: "260", pallets: 3, bultos: 14 },
+  "RO-BARRA-229": { seller: "NutriPro",    sucursal: "Lo Barnechea",    skus: 1, uTotales: "50",  pallets: 1, bultos: 3 },
+  "RO-BARRA-230": { seller: "Extra Life",  sucursal: "La Reina",        skus: 2, uTotales: "120", pallets: 2, bultos: 8 },
+  "RO-BARRA-180": { seller: "Le Vice",     sucursal: "Santiago Centro",  skus: 4, uTotales: "300", pallets: 4, bultos: 18 },
+  "RO-BARRA-196": { seller: "BioNature",   sucursal: "Lo Barnechea",    skus: 2, uTotales: "90",  pallets: 1, bultos: 5 },
+  "RO-BARRA-197": { seller: "Extra Life",  sucursal: "Providencia",     skus: 3, uTotales: "170", pallets: 2, bultos: 9 },
+};
+
+const PROGRAMADO_ORS = Object.keys(QR_OR_META);
 
 function buildSeedTokens(): QrToken[] {
   return PROGRAMADO_ORS.map((orId, i) => ({

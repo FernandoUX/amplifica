@@ -98,14 +98,12 @@ export default function ProductsModal({ onClose, onAdd, initialSearch = "" }: Pr
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div
-        className="bg-white rounded-3xl w-full max-w-2xl mx-4 shadow-2xl flex flex-col p-6 gap-5"
-        style={{ maxHeight: "90vh" }}
-      >
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60">
+      <div className="bg-white w-full sm:max-w-2xl rounded-t-2xl sm:rounded-2xl shadow-xl h-[90vh] sm:h-auto sm:max-h-[90vh] flex flex-col overflow-hidden">
+
         {/* ── Header ──────────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-neutral-900">Agregar productos</h2>
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0">
+          <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900">Agregar productos</h1>
           <button
             onClick={onClose}
             className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-500 transition-colors duration-300"
@@ -115,108 +113,109 @@ export default function ProductsModal({ onClose, onAdd, initialSearch = "" }: Pr
         </div>
 
         {/* ── Search ──────────────────────────────────────────────────────── */}
-        <div className="relative">
-          <SearchLg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Busca por SKU, nombre o código de barras"
-            className="w-full pl-10 pr-4 py-3 bg-neutral-100 rounded-xl text-sm text-neutral-700 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
-            autoFocus
-          />
+        <div className="px-5 pb-3 flex-shrink-0">
+          <div className="relative">
+            <SearchLg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Busca por SKU, nombre o código de barras"
+              className="w-full pl-10 pr-4 py-3 bg-neutral-100 rounded-xl text-sm text-neutral-700 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+              autoFocus
+            />
+          </div>
         </div>
 
-        {/* ── Table card ──────────────────────────────────────────────────── */}
-        <div
-          className="border border-neutral-200 rounded-2xl overflow-hidden flex flex-col flex-1 min-h-0"
-        >
-          {/* Scrollable area */}
-          <div className="overflow-y-auto flex-1">
+        {/* ── Divider ──────────────────────────────────────────────────────── */}
+        <div className="border-t border-neutral-100 flex-shrink-0" />
 
-            {/* ── Mobile card list ── */}
-            <div className="sm:hidden divide-y divide-neutral-100">
-              {filtered.map((product, i) => (
-                <div
-                  key={`m-${product.sku}-${i}`}
-                  className="flex items-start gap-3 px-4 py-3.5 cursor-pointer hover:bg-neutral-50/60 transition-colors duration-300"
-                  onClick={() => toggleCheck(product.sku)}
-                >
-                  <div className="pt-0.5 flex-shrink-0">
-                    <Checkbox checked={product.checked} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-neutral-800 font-medium leading-snug">{product.nombre}</p>
-                    <p className="text-xs text-neutral-500 mt-1">
-                      {product.sku} · {product.barcode}
-                    </p>
-                    <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="number"
-                        value={product.qty}
-                        onChange={(e) => updateQty(product.sku, e.target.value)}
-                        className="w-20 px-2.5 py-1.5 bg-neutral-100 rounded-lg text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                    </div>
+        {/* ── Product list (scrollable) ─────────────────────────────────── */}
+        <div className="overflow-y-auto flex-1 min-h-0">
+
+          {/* ── Mobile card list ── */}
+          <div className="sm:hidden divide-y divide-neutral-100">
+            {filtered.map((product, i) => (
+              <div
+                key={`m-${product.sku}-${i}`}
+                className="flex items-start gap-3 px-5 py-3.5 cursor-pointer hover:bg-neutral-50/60 transition-colors duration-300"
+                onClick={() => toggleCheck(product.sku)}
+              >
+                <div className="pt-0.5 flex-shrink-0">
+                  <Checkbox checked={product.checked} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-neutral-800 font-medium leading-snug">{product.nombre}</p>
+                  <p className="text-xs text-neutral-500 mt-1">
+                    {product.sku} · {product.barcode}
+                  </p>
+                  <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="number"
+                      value={product.qty}
+                      onChange={(e) => updateQty(product.sku, e.target.value)}
+                      className="w-20 px-2.5 py-1.5 bg-neutral-100 rounded-lg text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
+          </div>
 
-            {/* ── Desktop table ── */}
-            <table className="hidden sm:table w-full text-sm">
-              <thead className="sticky top-0 bg-white border-b border-neutral-200">
-                <tr>
-                  <th className="py-3 px-5 w-12"></th>
-                  <th className="text-left py-3 px-5 font-semibold text-neutral-900">Nombre</th>
-                  <th className="text-left py-3 px-5 font-semibold text-neutral-900">SKU</th>
-                  <th className="text-left py-3 px-5 font-semibold text-neutral-900 whitespace-nowrap">C. de barras</th>
-                  <th className="text-left py-3 px-5 font-semibold text-neutral-900">Cantidad</th>
+          {/* ── Desktop table ── */}
+          <table className="hidden sm:table w-full text-sm">
+            <thead className="sticky top-0 bg-white border-b border-neutral-200">
+              <tr>
+                <th className="py-3 px-5 w-12"></th>
+                <th className="text-left py-3 px-5 font-semibold text-neutral-900">Nombre</th>
+                <th className="text-left py-3 px-5 font-semibold text-neutral-900">SKU</th>
+                <th className="text-left py-3 px-5 font-semibold text-neutral-900 whitespace-nowrap">C. de barras</th>
+                <th className="text-left py-3 px-5 font-semibold text-neutral-900">Cantidad</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {filtered.map((product, i) => (
+                <tr
+                  key={`${product.sku}-${i}`}
+                  className="border-b border-neutral-100 last:border-b-0 hover:bg-neutral-50/60 transition-colors duration-300 cursor-pointer"
+                  onClick={() => toggleCheck(product.sku)}
+                >
+                  <td className="py-4 px-5">
+                    <Checkbox checked={product.checked} />
+                  </td>
+                  <td className="py-4 px-5 text-neutral-700">{product.nombre}</td>
+                  <td className="py-4 px-5 text-neutral-700">{product.sku}</td>
+                  <td className="py-4 px-5 text-neutral-700">{product.barcode}</td>
+                  <td className="py-4 px-5" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="number"
+                      value={product.qty}
+                      onChange={(e) => updateQty(product.sku, e.target.value)}
+                      className="w-24 px-3 py-1.5 bg-neutral-100 rounded-lg text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </td>
                 </tr>
-              </thead>
-
-              <tbody>
-                {filtered.map((product, i) => (
-                  <tr
-                    key={`${product.sku}-${i}`}
-                    className="border-b border-neutral-100 last:border-b-0 hover:bg-neutral-50/60 transition-colors duration-300 cursor-pointer"
-                    onClick={() => toggleCheck(product.sku)}
-                  >
-                    <td className="py-4 px-5">
-                      <Checkbox checked={product.checked} />
-                    </td>
-                    <td className="py-4 px-5 text-neutral-700">{product.nombre}</td>
-                    <td className="py-4 px-5 text-neutral-700">{product.sku}</td>
-                    <td className="py-4 px-5 text-neutral-700">{product.barcode}</td>
-                    <td className="py-4 px-5" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="number"
-                        value={product.qty}
-                        onChange={(e) => updateQty(product.sku, e.target.value)}
-                        className="w-24 px-3 py-1.5 bg-neutral-100 rounded-lg text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Selected count — pinned bottom of card */}
-          <div className="border-t border-neutral-100 py-3.5 text-center text-sm text-neutral-500 bg-white">
-            {selected.length > 0
-              ? `${selected.length} Producto${selected.length !== 1 ? "s" : ""} seleccionado${selected.length !== 1 ? "s" : ""}`
-              : "Sin productos seleccionados"}
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
 
-        {/* ── Footer ──────────────────────────────────────────────────────── */}
-        <div className="flex items-center gap-3">
-          <Button variant="secondary" size="lg" onClick={onClose} className="flex-1">
-            Cerrar
-          </Button>
-          <Button variant="primary" size="lg" onClick={handleAdd} disabled={selected.length === 0} className="flex-1">
+        {/* ── Footer CTA (design system pattern) ───────────────────────── */}
+        <div className="border-t border-neutral-100 px-5 pt-3 pb-8 sm:pb-5 flex-shrink-0 space-y-2.5">
+          {/* Status message */}
+          <p className="text-xs font-medium text-center text-neutral-600">
+            {selected.length > 0
+              ? `${selected.length} producto${selected.length !== 1 ? "s" : ""} seleccionado${selected.length !== 1 ? "s" : ""}`
+              : "Sin productos seleccionados"}
+          </p>
+          {/* Primary CTA */}
+          <Button variant="primary" size="md" onClick={handleAdd} disabled={selected.length === 0} className="w-full">
             Agregar
+          </Button>
+          {/* Secondary CTA */}
+          <Button variant="tertiary" size="md" onClick={onClose} className="w-full">
+            Cerrar
           </Button>
         </div>
       </div>

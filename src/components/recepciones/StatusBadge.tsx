@@ -37,6 +37,7 @@ type StatusCfg = {
   icon: StatusIconKey;
   /** bg-{color}-50 text-{color}-600 border-{color}-200 */
   className: string;
+  tooltip: string;
 };
 
 const statusConfig: Record<Status, StatusCfg> = {
@@ -44,36 +45,43 @@ const statusConfig: Record<Status, StatusCfg> = {
     label: "Creado",
     icon: "plus",
     className: "bg-neutral-50 text-neutral-700 border-neutral-200",
+    tooltip: "La OR fue creada pero aún no tiene fecha agendada",
   },
   Programado: {
     label: "Programado",
     icon: "calendar",
     className: "bg-sky-50 text-sky-700 border-sky-200",
+    tooltip: "La OR tiene fecha de recepción agendada",
   },
   "Recepcionado en bodega": {
     label: "Recepción en bodega",
     icon: "warehouse",
     className: "bg-indigo-50 text-indigo-700 border-indigo-200",
+    tooltip: "La carga llegó a bodega y fue confirmada por el operador",
   },
   "En proceso de conteo": {
     label: "En proceso de conteo",
     icon: "clipboard",
     className: "bg-primary-25 text-primary-600 border-primary-200",
+    tooltip: "Existe al menos una sesión de conteo iniciada o finalizada",
   },
   "Pendiente de aprobación": {
     label: "Pendiente de aprobación",
     icon: "clock",
     className: "bg-orange-50 text-orange-600 border-orange-200",
+    tooltip: "El conteo finalizó y está esperando aprobación del supervisor",
   },
   Completada: {
     label: "Completada",
     icon: "check",
     className: "bg-green-50 text-green-700 border-green-200",
+    tooltip: "La OR fue completada y cerrada definitivamente",
   },
   Cancelado: {
     label: "Cancelada",
     icon: "ban",
     className: "bg-neutral-50 text-neutral-700 border-neutral-200",
+    tooltip: "La OR fue cancelada y no se procesará",
   },
 };
 
@@ -85,7 +93,8 @@ export default function StatusBadge({ status }: { status: Status }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-[6px] border pl-1.5 pr-2 py-0.5 text-xs font-medium leading-none ${config.className}`}
+      title={config.tooltip}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-[6px] border pl-1.5 pr-2 py-0.5 text-xs font-medium leading-none cursor-help ${config.className}`}
     >
       {IconComp && <IconComp className="w-3.5 h-3.5 flex-shrink-0" />}
       {config.label}

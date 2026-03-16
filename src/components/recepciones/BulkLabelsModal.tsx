@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { X, Printer, QrCode02, Package } from "@untitled-ui/icons-react";
+import Button from "@/components/ui/Button";
+import FormField from "@/components/ui/FormField";
 
 type LabelFormat = "standard" | "compact" | "full";
 
@@ -33,37 +35,29 @@ export default function BulkLabelsModal({ open, onClose, orId, seller, sucursal,
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40">
+      <div className="relative bg-white w-full sm:max-w-md h-[90vh] sm:h-auto sm:max-h-[90vh] rounded-t-2xl sm:rounded-2xl shadow-xl flex flex-col overflow-hidden">
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
-          <h2 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
-            <Printer className="w-5 h-5 text-primary-500" />
+          <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900">
             Generar etiquetas para bultos
-          </h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-neutral-100 transition-colors">
-            <X className="w-5 h-5 text-neutral-500" />
+          </h1>
+          <button onClick={onClose} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">
+            <X className="w-4 h-4 text-neutral-600" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5 space-y-5">
+        <div className="flex-1 overflow-y-auto min-h-0 px-6 py-5 space-y-5">
 
           {/* Bultos input */}
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-              Cantidad de bultos
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={999}
-              value={bultos}
-              onChange={e => setBultos(Math.max(1, parseInt(e.target.value) || 1))}
-              className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-200 focus:border-primary-400 outline-none text-neutral-700"
-            />
-          </div>
+          <FormField
+            label="Cantidad de bultos"
+            type="number"
+            value={String(bultos)}
+            onChange={v => setBultos(Math.max(1, parseInt(v) || 1))}
+          />
 
           {/* Format selector */}
           <div>
@@ -119,32 +113,26 @@ export default function BulkLabelsModal({ open, onClose, orId, seller, sucursal,
         </div>
 
         {/* Footer */}
-        <div className="flex gap-3 px-6 py-4 border-t border-neutral-200">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2.5 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors"
-          >
+        <div className="flex gap-3 border-t border-neutral-100 px-5 pt-3 pb-8 sm:pb-5">
+          <Button variant="secondary" size="lg" onClick={onClose} className="flex-1">
             Cancelar
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
+            size="lg"
             onClick={handleGenerate}
             disabled={generated}
-            className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 disabled:bg-green-500 transition-colors flex items-center justify-center gap-2"
-          >
-            {generated ? (
-              <>
-                <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
-                  <path d="M3 8l3.5 3.5L13 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                PDF generado
-              </>
+            iconLeft={generated ? (
+              <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
+                <path d="M3 8l3.5 3.5L13 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             ) : (
-              <>
-                <Printer className="w-4 h-4" />
-                Generar {bultos} etiqueta{bultos !== 1 ? "s" : ""}
-              </>
+              <Printer className="w-4 h-4" />
             )}
-          </button>
+            className={`flex-1 ${generated ? "!bg-green-500" : ""}`}
+          >
+            {generated ? "PDF generado" : `Generar ${bultos} etiqueta${bultos !== 1 ? "s" : ""}`}
+          </Button>
         </div>
       </div>
     </div>

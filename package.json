@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "dev:fullfilment": "cd ../fullfilment-ampli && npm run dev -- -p 3010",
+    "dev:admin-saas": "cd ../amplifica-admin-saas && npm run dev -- -p 3020"
   },
   "dependencies": {
     "@babel/runtime": "^7.28.6",

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Check } from "@untitled-ui/icons-react";
+import { ChevronLeft, ChevronRight, Check, RefreshCcw01 } from "@untitled-ui/icons-react";
 import {
   MOVABLE_COLS,
   DEFAULT_ORDER,
@@ -12,6 +12,7 @@ import {
   CHANGE_EVENT,
   type ColumnKey,
 } from "@/hooks/useColumnConfig";
+import Button from "@/components/ui/Button";
 
 // ─── Drag handle SVG ──────────────────────────────────────────────────────────
 function DragHandle() {
@@ -132,18 +133,18 @@ export default function ColumnEditorPage() {
     <>
       {/* ── Breadcrumb ── */}
       <div>
-        <nav className="max-w-5xl mx-auto px-6 py-3 flex items-center gap-1.5 text-sm text-neutral-500">
+        <nav className="max-w-5xl mx-auto px-4 lg:px-6 py-3 flex items-center gap-1.5 text-sm text-neutral-500">
           <Link href="/recepciones" className="hover:text-primary-500 transition-colors duration-300">Órdenes de recepción</Link>
           <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
           <span className="text-neutral-700 font-medium">Editor de columnas</span>
         </nav>
       </div>
 
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 lg:p-6 max-w-5xl mx-auto pb-36 sm:pb-4 lg:pb-6">
 
       {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-7 gap-3 sm:gap-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-5 gap-3 sm:gap-4">
+        <div className="flex items-center gap-3 min-w-0">
           <Link
             href="/recepciones"
             className="flex items-center justify-center w-8 h-8 border border-neutral-200 rounded-lg text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700 transition-colors duration-300 flex-shrink-0"
@@ -151,7 +152,7 @@ export default function ColumnEditorPage() {
             <ChevronLeft className="w-4 h-4" />
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-neutral-900">Editor de columnas</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">Editor de columnas</h1>
             <p className="text-sm text-neutral-500 mt-0.5">
               Personaliza las columnas de la tabla de Órdenes de Recepción
             </p>
@@ -159,19 +160,12 @@ export default function ColumnEditorPage() {
         </div>
         {/* Desktop buttons */}
         <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
-          <button
-            onClick={handleReset}
-            className="px-3 py-2 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 font-medium transition-colors duration-300"
-          >
+          <Button variant="tertiary" size="md" className="h-9" onClick={handleReset} iconLeft={<RefreshCcw01 className="w-4 h-4" />}>
             Restablecer
-          </button>
-          <button
-            onClick={handleSave}
-            className="flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors duration-300"
-          >
-            <Check className="w-4 h-4" />
+          </Button>
+          <Button variant="primary" size="md" className="h-9" onClick={handleSave} iconLeft={<Check className="w-4 h-4" />}>
             Guardar cambios
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -185,17 +179,17 @@ export default function ColumnEditorPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={clearAll}  className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors duration-300">Ninguna</button>
+            <button onClick={clearAll}  className="text-xs text-neutral-600 hover:text-neutral-600 transition-colors duration-300">Ninguna</button>
             <span className="text-neutral-200">|</span>
             <button onClick={selectAll} className="text-xs text-primary-500 hover:text-primary-600 font-medium transition-colors duration-300">Todas</button>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
           {/* Fixed: ID — always visible */}
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-100 bg-neutral-50 text-sm text-neutral-400 select-none">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-100 bg-neutral-50 text-sm text-neutral-600 select-none w-full sm:w-auto">
             <span className="w-4 h-4 rounded border border-neutral-200 bg-neutral-100 flex items-center justify-center flex-shrink-0">
-              <Check className="w-2.5 h-2.5 text-neutral-400" />
+              <Check className="w-2.5 h-2.5 text-neutral-600" />
             </span>
             ID
             <LockIcon />
@@ -208,10 +202,10 @@ export default function ColumnEditorPage() {
               <button
                 key={col.key}
                 onClick={() => toggleVisible(col.key)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all w-full sm:w-auto ${
                   isVis
                     ? "bg-primary-50 border-primary-200 text-primary-600 hover:bg-primary-100"
-                    : "bg-white border-neutral-200 text-neutral-400 hover:border-neutral-300 hover:text-neutral-600"
+                    : "bg-white border-neutral-200 text-neutral-600 hover:border-neutral-300 hover:text-neutral-600"
                 }`}
               >
                 <span
@@ -227,9 +221,9 @@ export default function ColumnEditorPage() {
           })}
 
           {/* Fixed: Acciones — always visible */}
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-100 bg-neutral-50 text-sm text-neutral-400 select-none">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-100 bg-neutral-50 text-sm text-neutral-600 select-none w-full sm:w-auto">
             <span className="w-4 h-4 rounded border border-neutral-200 bg-neutral-100 flex items-center justify-center flex-shrink-0">
-              <Check className="w-2.5 h-2.5 text-neutral-400" />
+              <Check className="w-2.5 h-2.5 text-neutral-600" />
             </span>
             Acciones
             <LockIcon />
@@ -246,10 +240,10 @@ export default function ColumnEditorPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:flex-wrap">
 
           {/* Fixed: ID */}
-          <div className="flex items-center gap-2 px-3 py-2.5 bg-neutral-50 border border-dashed border-neutral-200 rounded-xl text-sm text-neutral-400">
+          <div className="flex items-center gap-2 px-3 py-2.5 bg-neutral-50 border border-dashed border-neutral-200 rounded-xl text-sm text-neutral-600 w-full sm:w-auto">
             <LockIcon />
             <span>ID</span>
           </div>
@@ -271,12 +265,12 @@ export default function ColumnEditorPage() {
                 onDragLeave={() => setDragOverKey(null)}
                 onDrop={e      => handleDrop(e, key)}
                 onDragEnd={handleDragEnd}
-                className={`relative flex items-center gap-2 px-3 py-2.5 border rounded-xl text-sm font-medium transition-all select-none
+                className={`relative flex items-center gap-2 px-3 py-2.5 border rounded-xl text-sm font-medium transition-all select-none w-full sm:w-auto
                   cursor-grab active:cursor-grabbing
                   ${isDragging ? "opacity-30 scale-95 shadow-none" : ""}
                   ${isVis
                     ? "bg-white border-neutral-200 text-neutral-700 shadow-sm hover:border-neutral-300 hover:shadow-md"
-                    : "bg-neutral-50 border-dashed border-neutral-200 text-neutral-400"
+                    : "bg-neutral-50 border-dashed border-neutral-200 text-neutral-600"
                   }
                   ${isOver && dropBefore  ? "border-l-[3px] border-l-primary-500 pl-2.5" : ""}
                   ${isOver && !dropBefore ? "border-r-[3px] border-r-primary-500 pr-2.5" : ""}
@@ -292,49 +286,40 @@ export default function ColumnEditorPage() {
           })}
 
           {/* Fixed: Acciones */}
-          <div className="flex items-center gap-2 px-3 py-2.5 bg-neutral-50 border border-dashed border-neutral-200 rounded-xl text-sm text-neutral-400">
+          <div className="flex items-center gap-2 px-3 py-2.5 bg-neutral-50 border border-dashed border-neutral-200 rounded-xl text-sm text-neutral-600 w-full sm:w-auto">
             <LockIcon />
             <span>Acciones</span>
           </div>
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-4 mt-5 pt-4 border-t border-neutral-100">
-          <div className="flex items-center gap-2 text-xs text-neutral-400">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mt-5 pt-4 border-t border-neutral-100">
+          <div className="flex items-center gap-2 text-xs text-neutral-600">
             <span className="inline-block w-3 h-3 rounded bg-white border border-neutral-200 shadow-sm" />
             Columna visible
           </div>
-          <div className="flex items-center gap-2 text-xs text-neutral-400">
+          <div className="flex items-center gap-2 text-xs text-neutral-600">
             <span className="inline-block w-3 h-3 rounded border border-dashed border-neutral-300 bg-neutral-50" />
             Columna oculta
           </div>
-          <div className="flex items-center gap-2 text-xs text-neutral-400">
+          <div className="flex items-center gap-2 text-xs text-neutral-600">
             <LockIcon />
             Columna fija (no movible)
           </div>
         </div>
       </div>
 
-      {/* Spacer for mobile sticky bar */}
-      <div className="h-20 sm:hidden" />
     </div>
 
     {/* ── Mobile sticky bottom bar ── */}
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 pt-3 pb-6 z-30 sm:hidden">
       <div className="flex items-center gap-2">
-        <button
-          onClick={handleReset}
-          className="flex-1 h-12 px-3 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 font-medium transition-colors duration-300"
-        >
+        <Button variant="secondary" size="lg" className="flex-1" onClick={handleReset}>
           Restablecer
-        </button>
-        <button
-          onClick={handleSave}
-          className="flex-1 h-12 flex items-center justify-center gap-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors duration-300"
-        >
-          <Check className="w-4 h-4" />
+        </Button>
+        <Button variant="primary" size="lg" className="flex-1" onClick={handleSave} iconLeft={<Check className="w-4 h-4" />}>
           Guardar cambios
-        </button>
+        </Button>
       </div>
     </div>
     </>

@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState, useMemo, useRef, useEffect, useCallback, memo } from "react";
+import React, { useState, useMemo, useRef, useEffect, useCallback, memo } from "react";
 import {
   ChevronLeft, ChevronRight, Trash2, Scan, ScanBarcode, ImageOff, Image,
   Clock, User, PlayCircle, StopCircle, Eye,
   ChevronDown, ChevronUp, MoreHorizontal, Package,
   X, Check, Upload, Search, HelpCircle, FileText,
   Bell, PlusCircle, CalendarDays, CheckCircle2, Shield,
-  Download, Camera, MessageSquare,
+  Download, Camera, MessageSquare, Warehouse,
 } from "lucide-react";
 import {
   Plus, ClipboardCheck, LockUnlocked01, AlertTriangle,
@@ -21,9 +21,11 @@ import {
 import FormField from "@/components/ui/FormField";
 import ProductsModal, { type AddProduct } from "@/components/recepciones/ProductsModal";
 import QrDisplaySection from "@/components/recepciones/QrDisplaySection";
+import QrScannerModal from "@/components/recepciones/QrScannerModal";
 import StatusBadge, { type Status } from "@/components/recepciones/StatusBadge";
 import { playScanSuccessSound, playScanErrorSound } from "@/lib/scan-sounds";
 import Button from "@/components/ui/Button";
+import AlertModal from "@/components/ui/AlertModal";
 import { type Role, getRole, can } from "@/lib/roles";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -108,9 +110,9 @@ type AuditEvent = {
 const MOCK_ORDENES: Record<string, OrdenData> = {
   "RO-BARRA-180": {
     id: "RO-BARRA-180",
-    seller: "Extra Life",
-    sucursal: "Quilicura",
-    fechaAgendada: "08/03/2026 16:30",
+    seller: "Le Vice",
+    sucursal: "Santiago Centro",
+    fechaAgendada: "20/02/2026 16:30",
     pallets: 2,
     bultos: 4,
     comentarios: "Mercancía frágil, manipular con cuidado. Entregar en andén 3.",
@@ -153,34 +155,6 @@ const MOCK_ORDENES: Record<string, OrdenData> = {
     ],
   },
   // ─── Completada ─────────────────────────────────────────────────────────────
-  "RO-BARRA-186": {
-    id: "RO-BARRA-186",
-    seller: "Extra Life",
-    sucursal: "Quilicura",
-    fechaAgendada: "15/02/2026 08:00",
-    pallets: 5,
-    bultos: 12,
-    comentarios: "Mercancía frágil, manipular con cuidado. Entregar en andén 3.",
-    products: [
-      { id: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 20 Sachets Tropical Delight", barcode: "8500942860946", imagen: "/products/extra-life-tropical-delight.png", esperadas: 1200, contadasSesion: 0 },
-      { id: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",     barcode: "8500942860625", imagen: "/products/extra-life-variety-pack.png",      esperadas: 800,  contadasSesion: 0 },
-      { id: "p3", sku: "300078", nombre: "Extra Life Boost De Hidratación 10 Sachets Orange Mango Fusion", barcode: "8500942860731", imagen: "/products/extra-life-orange-mango.png", esperadas: 550,  contadasSesion: 0 },
-    ],
-  },
-  "RO-BARRA-201": {
-    id: "RO-BARRA-201",
-    seller: "VitaFit",
-    sucursal: "La Reina",
-    fechaAgendada: "01/03/2026 09:00",
-    pallets: 3,
-    bultos: 8,
-    products: [
-      { id: "p1", sku: "VF-101", nombre: "VitaFit Proteína Vegana 1kg Vainilla",   barcode: "7801234560101", esperadas: 600,  contadasSesion: 0 },
-      { id: "p2", sku: "VF-102", nombre: "VitaFit Omega-3 Cápsulas 120 uds",       barcode: "7801234560102", esperadas: 500,  contadasSesion: 0 },
-      { id: "p3", sku: "VF-103", nombre: "VitaFit Multivitamínico Diario 60 Tabs",  barcode: "7801234560103", esperadas: 440,  contadasSesion: 0 },
-    ],
-  },
-  // ─── Completada (continuación) ──────────────────────────────────────────────
   "RO-BARRA-189": {
     id: "RO-BARRA-189",
     seller: "Le Vice",
@@ -211,6 +185,8 @@ const MOCK_ORDENES: Record<string, OrdenData> = {
     seller: "Gohard",
     sucursal: "Las Condes",
     fechaAgendada: "14/03/2026 09:00",
+    pallets: 3,
+    bultos: 10,
     products: [
       { id: "p1", sku: "GH-001", nombre: "Gohard Proteína Whey 1kg Chocolate",  barcode: "7891234560001", esperadas: 390, contadasSesion: 0 },
       { id: "p2", sku: "GH-002", nombre: "Gohard Creatina Monohidratada 300g",   barcode: "7891234560002", esperadas: 390, contadasSesion: 0 },
@@ -221,6 +197,9 @@ const MOCK_ORDENES: Record<string, OrdenData> = {
     seller: "Le Vice",
     sucursal: "Providencia",
     fechaAgendada: "15/03/2026 08:30",
+    pallets: 5,
+    bultos: 16,
+    comentarios: "Carga incluye productos de temporada, priorizar descarga.",
     products: [
       { id: "p1", sku: "LV-001", nombre: "Le Vice Colágeno Hidrolizado 500g",     barcode: "7891234560201", esperadas: 820, contadasSesion: 0 },
       { id: "p2", sku: "LV-002", nombre: "Le Vice Vitamina C Liposomal 60 caps",  barcode: "7891234560202", esperadas: 820, contadasSesion: 0 },
@@ -231,6 +210,8 @@ const MOCK_ORDENES: Record<string, OrdenData> = {
     seller: "VitaFit",
     sucursal: "Quilicura",
     fechaAgendada: "15/03/2026 14:00",
+    pallets: 8,
+    bultos: 24,
     products: [
       { id: "p1", sku: "VF-101", nombre: "VitaFit Proteína Vegana 1kg Vainilla",   barcode: "7801234560101", esperadas: 1050, contadasSesion: 0 },
       { id: "p2", sku: "VF-102", nombre: "VitaFit Omega-3 Cápsulas 120 uds",       barcode: "7801234560102", esperadas: 1050, contadasSesion: 0 },
@@ -241,6 +222,9 @@ const MOCK_ORDENES: Record<string, OrdenData> = {
     seller: "NutriPro",
     sucursal: "Lo Barnechea",
     fechaAgendada: "16/03/2026 10:00",
+    pallets: 2,
+    bultos: 8,
+    comentarios: "Segundo envío del mes, verificar contra OC anterior.",
     products: [
       { id: "p1", sku: "NP-001", nombre: "NutriPro Whey Protein Isolate 900g",  barcode: "7801234560401", esperadas: 270, contadasSesion: 0 },
       { id: "p2", sku: "NP-002", nombre: "NutriPro BCAA 300g Sandía",           barcode: "7801234560402", esperadas: 270, contadasSesion: 0 },
@@ -251,9 +235,96 @@ const MOCK_ORDENES: Record<string, OrdenData> = {
     seller: "Extra Life",
     sucursal: "La Reina",
     fechaAgendada: "17/03/2026 11:30",
+    pallets: 4,
+    bultos: 14,
     products: [
       { id: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 20 Sachets Tropical Delight", barcode: "8500942860946", imagen: "/products/extra-life-tropical-delight.png", esperadas: 600, contadasSesion: 0 },
       { id: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",     barcode: "8500942860625", imagen: "/products/extra-life-variety-pack.png",      esperadas: 600, contadasSesion: 0 },
+    ],
+  },
+  // ─── Pendiente de aprobación ──────────────────────────────────────────────
+  "RO-BARRA-187": {
+    id: "RO-BARRA-187",
+    seller: "Le Vice",
+    sucursal: "La Reina",
+    fechaAgendada: "14/02/2026 13:00",
+    products: [
+      { id: "p1", sku: "LV-001", nombre: "Le Vice Colágeno Hidrolizado 500g",     barcode: "7891234560201", esperadas: 1200, contadasSesion: 0 },
+      { id: "p2", sku: "LV-002", nombre: "Le Vice Vitamina C Liposomal 60 caps",  barcode: "7891234560202", esperadas: 850,  contadasSesion: 0 },
+      { id: "p3", sku: "LV-003", nombre: "Le Vice Omega-3 120 Cápsulas",          barcode: "7891234560203", esperadas: 500,  contadasSesion: 0 },
+    ],
+  },
+  "RO-BARRA-199": {
+    id: "RO-BARRA-199",
+    seller: "NutriPro",
+    sucursal: "Las Condes",
+    fechaAgendada: "06/03/2026 10:00",
+    products: [
+      { id: "p1", sku: "NP-001", nombre: "NutriPro Whey Protein Isolate 900g", barcode: "7801234560401", esperadas: 380, contadasSesion: 0 },
+      { id: "p2", sku: "NP-002", nombre: "NutriPro BCAA 300g Sandía",          barcode: "7801234560402", esperadas: 400, contadasSesion: 0 },
+    ],
+  },
+  "RO-BARRA-212": {
+    id: "RO-BARRA-212",
+    seller: "Gohard",
+    sucursal: "Providencia",
+    fechaAgendada: "10/03/2026 09:30",
+    products: [
+      { id: "p1", sku: "GH-001", nombre: "Gohard Proteína Whey 1kg Chocolate",  barcode: "7891234560001", esperadas: 640, contadasSesion: 0 },
+      { id: "p2", sku: "GH-002", nombre: "Gohard Creatina Monohidratada 300g",   barcode: "7891234560002", esperadas: 700, contadasSesion: 0 },
+    ],
+  },
+  // ─── En proceso de conteo ─────────────────────────────────────────────────
+  "RO-BARRA-198": {
+    id: "RO-BARRA-198",
+    seller: "VitaFit",
+    sucursal: "Santiago Centro",
+    fechaAgendada: "07/03/2026 08:30",
+    products: [
+      { id: "p1", sku: "VF-101", nombre: "VitaFit Proteína Vegana 1kg Vainilla", barcode: "7801234560101", esperadas: 560, contadasSesion: 0 },
+      { id: "p2", sku: "VF-102", nombre: "VitaFit Omega-3 Cápsulas 120 uds",     barcode: "7801234560102", esperadas: 560, contadasSesion: 0 },
+    ],
+  },
+  "RO-BARRA-219": {
+    id: "RO-BARRA-219",
+    seller: "NutriPro",
+    sucursal: "Quilicura",
+    fechaAgendada: "03/03/2026 10:30",
+    comentarios: "Conteo parcial, faltan 8 SKUs por verificar.",
+    products: [
+      { id: "p1", sku: "NP-001", nombre: "NutriPro Whey Protein Isolate 900g", barcode: "7801234560401", esperadas: 1420, contadasSesion: 0 },
+      { id: "p2", sku: "NP-002", nombre: "NutriPro BCAA 300g Sandía",          barcode: "7801234560402", esperadas: 1420, contadasSesion: 0 },
+    ],
+  },
+  "RO-BARRA-220": {
+    id: "RO-BARRA-220",
+    seller: "BioNature",
+    sucursal: "La Reina",
+    fechaAgendada: "02/03/2026 09:00",
+    products: [
+      { id: "p1", sku: "BN-001", nombre: "BioNature Spirulina Orgánica 300g", barcode: "7891234560301", esperadas: 310, contadasSesion: 0 },
+      { id: "p2", sku: "BN-002", nombre: "BioNature Chlorella 200 Tabs",      barcode: "7891234560302", esperadas: 300, contadasSesion: 0 },
+    ],
+  },
+  // ─── Completada (con conteo finalizado) ───────────────────────────────────
+  "RO-BARRA-223": {
+    id: "RO-BARRA-223",
+    seller: "Extra Life",
+    sucursal: "Las Condes",
+    fechaAgendada: "25/02/2026 16:00",
+    products: [
+      { id: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 20 Sachets Tropical Delight", barcode: "8500942860946", imagen: "/products/extra-life-tropical-delight.png", esperadas: 680, contadasSesion: 0 },
+      { id: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",     barcode: "8500942860625", imagen: "/products/extra-life-variety-pack.png",      esperadas: 680, contadasSesion: 0 },
+    ],
+  },
+  "RO-BARRA-215": {
+    id: "RO-BARRA-215",
+    seller: "Gohard",
+    sucursal: "Las Condes",
+    fechaAgendada: "26/02/2026 08:30",
+    products: [
+      { id: "p1", sku: "GH-001", nombre: "Gohard Proteína Whey 1kg Chocolate",  barcode: "7891234560001", esperadas: 1050, contadasSesion: 0 },
+      { id: "p2", sku: "GH-002", nombre: "Gohard Creatina Monohidratada 300g",   barcode: "7891234560002", esperadas: 1050, contadasSesion: 0 },
     ],
   },
 };
@@ -291,38 +362,6 @@ const SEED_SESIONES: Record<string, Sesion[]> = {
     },
   ],
   // ─── Completada ─────────────────────────────────────────────────────────────
-  "RO-BARRA-186": [
-    {
-      id: "SES-001", operador: "Fernando Roblero",
-      inicio: "2026-02-15T08:10:00", fin: "2026-02-15T09:05:00",
-      items: [
-        { pid: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 4 Sachets Tropical Delight", cantidad: 600 },
-        { pid: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",     cantidad: 400 },
-        { pid: "p3", sku: "300078", nombre: "Extra Life Electrolitos Effervescentes 10 Tabs Limón",        cantidad: 280 },
-      ],
-    },
-    {
-      id: "SES-002", operador: "Catalina Mora",
-      inicio: "2026-02-15T09:30:00", fin: "2026-02-15T10:15:00",
-      items: [
-        { pid: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 4 Sachets Tropical Delight", cantidad: 580 },
-        { pid: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",     cantidad: 380 },
-        { pid: "p3", sku: "300078", nombre: "Extra Life Electrolitos Effervescentes 10 Tabs Limón",        cantidad: 270 },
-      ],
-    },
-  ],
-  "RO-BARRA-201": [
-    {
-      id: "SES-001", operador: "Catalina Mora",
-      inicio: "2026-03-01T09:15:00", fin: "2026-03-01T10:20:00",
-      items: [
-        { pid: "p1", sku: "VF-101", nombre: "VitaFit Proteína Vegana 1kg Vainilla",  cantidad: 564 },
-        { pid: "p2", sku: "VF-102", nombre: "VitaFit Omega-3 Cápsulas 120 uds",      cantidad: 500 },
-        { pid: "p3", sku: "VF-103", nombre: "VitaFit Multivitamínico Diario 60 Tabs", cantidad: 440 },
-      ],
-    },
-  ],
-  // ─── Completada (continuación) ──────────────────────────────────────────────
   "RO-BARRA-189": [
     {
       id: "SES-001", operador: "Fernando Roblero",
@@ -343,51 +382,150 @@ const SEED_SESIONES: Record<string, Sesion[]> = {
       ],
     },
   ],
+  // ─── Pendiente de aprobación ──────────────────────────────────────────────
+  "RO-BARRA-187": [
+    {
+      id: "SES-001", operador: "Fernando Roblero",
+      inicio: "2026-02-14T13:10:00", fin: "2026-02-14T14:45:00",
+      items: [
+        { pid: "p1", sku: "LV-001", nombre: "Le Vice Colágeno Hidrolizado 500g",    cantidad: 1200 },
+        { pid: "p2", sku: "LV-002", nombre: "Le Vice Vitamina C Liposomal 60 caps", cantidad: 850 },
+        { pid: "p3", sku: "LV-003", nombre: "Le Vice Omega-3 120 Cápsulas",         cantidad: 500 },
+      ],
+    },
+  ],
+  "RO-BARRA-199": [
+    {
+      id: "SES-001", operador: "Catalina Mora",
+      inicio: "2026-03-06T10:15:00", fin: "2026-03-06T11:20:00",
+      items: [
+        { pid: "p1", sku: "NP-001", nombre: "NutriPro Whey Protein Isolate 900g", cantidad: 380 },
+        { pid: "p2", sku: "NP-002", nombre: "NutriPro BCAA 300g Sandía",          cantidad: 400 },
+      ],
+    },
+  ],
+  "RO-BARRA-212": [
+    {
+      id: "SES-001", operador: "Fernando Roblero",
+      inicio: "2026-03-10T09:40:00", fin: "2026-03-10T10:50:00",
+      items: [
+        { pid: "p1", sku: "GH-001", nombre: "Gohard Proteína Whey 1kg Chocolate", cantidad: 640 },
+        { pid: "p2", sku: "GH-002", nombre: "Gohard Creatina Monohidratada 300g",  cantidad: 700 },
+      ],
+    },
+  ],
+  // ─── En proceso de conteo ─────────────────────────────────────────────────
+  "RO-BARRA-198": [
+    {
+      id: "SES-001", operador: "Fernando Roblero",
+      inicio: "2026-03-07T08:40:00", fin: "2026-03-07T09:10:00",
+      items: [
+        { pid: "p1", sku: "VF-101", nombre: "VitaFit Proteína Vegana 1kg Vainilla", cantidad: 85 },
+      ],
+    },
+  ],
+  "RO-BARRA-219": [
+    {
+      id: "SES-001", operador: "Catalina Mora",
+      inicio: "2026-03-03T10:40:00", fin: "2026-03-03T11:55:00",
+      items: [
+        { pid: "p1", sku: "NP-001", nombre: "NutriPro Whey Protein Isolate 900g", cantidad: 150 },
+        { pid: "p2", sku: "NP-002", nombre: "NutriPro BCAA 300g Sandía",          cantidad: 150 },
+      ],
+    },
+  ],
+  "RO-BARRA-220": [
+    {
+      id: "SES-001", operador: "Catalina Mora",
+      inicio: "2026-03-02T09:10:00", fin: "2026-03-02T10:05:00",
+      items: [
+        { pid: "p1", sku: "BN-001", nombre: "BioNature Spirulina Orgánica 300g", cantidad: 310 },
+        { pid: "p2", sku: "BN-002", nombre: "BioNature Chlorella 200 Tabs",      cantidad: 300 },
+      ],
+    },
+  ],
+  // ─── Completada (con conteo finalizado) ───────────────────────────────────
+  "RO-BARRA-223": [
+    {
+      id: "SES-001", operador: "Fernando Roblero",
+      inicio: "2026-02-25T16:10:00", fin: "2026-02-25T17:20:00",
+      items: [
+        { pid: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 20 Sachets Tropical Delight", cantidad: 680 },
+        { pid: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",     cantidad: 680 },
+      ],
+    },
+  ],
+  "RO-BARRA-215": [
+    {
+      id: "SES-001", operador: "Fernando Roblero",
+      inicio: "2026-02-26T08:40:00", fin: "2026-02-26T10:00:00",
+      items: [
+        { pid: "p1", sku: "GH-001", nombre: "Gohard Proteína Whey 1kg Chocolate", cantidad: 1050 },
+        { pid: "p2", sku: "GH-002", nombre: "Gohard Creatina Monohidratada 300g",  cantidad: 1050 },
+      ],
+    },
+  ],
 };
 
 // ─── Seed incidencias for pre-closed ORs (with image URLs) ───────────────────
 const SEED_INCIDENCIAS: Record<string, IncidenciaRow[]> = {
-  "RO-BARRA-186": [
+  // RO-BARRA-187 — Le Vice (Pendiente de aprobación): 3 incidencias across 2 products
+  "RO-BARRA-187": [
     {
-      rowId: "seed-inc-186-p1-a", skuId: "p1", tag: "danio-parcial", cantidad: 15,
-      imagenes: [],
-      imageUrls: [
-        "https://images.unsplash.com/photo-1586769852044-692d6e3703f0?w=640&h=480&fit=crop",
-        "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=640&h=480&fit=crop",
-        "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=640&h=480&fit=crop",
-      ],
-      nota: "Sachets con packaging dañado, producto expuesto. Se detectaron 15 unidades con daño parcial en el sellado.",
+      rowId: "inc-187-1", skuId: "p1", tag: "danio-parcial", cantidad: 45,
+      imagenes: [], imageUrls: ["/products/extra-life-tropical-delight.png"],
+      nota: "Cajas aplastadas en la parte inferior del pallet, producto interno intacto",
       descripcion: "",
     },
     {
-      rowId: "seed-inc-186-p1-b", skuId: "p1", tag: "sin-codigo-barra", cantidad: 5,
-      imagenes: [],
-      imageUrls: [
-        "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=640&h=480&fit=crop",
-        "https://images.unsplash.com/photo-1607082349566-187342175e2f?w=640&h=480&fit=crop",
-      ],
-      nota: "Producto sin etiqueta de código de barra, requiere re-etiquetado.",
+      rowId: "inc-187-2", skuId: "p2", tag: "sin-codigo-barra", cantidad: 30,
+      imagenes: [], imageUrls: ["/products/extra-life-variety-pack.png"],
+      nota: "Lote sin etiqueta de código de barras, requiere re-etiquetado",
       descripcion: "",
     },
     {
-      rowId: "seed-inc-186-p2-a", skuId: "p2", tag: "sin-nutricional", cantidad: 8,
-      imagenes: [],
-      imageUrls: [
-        "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=640&h=480&fit=crop",
-        "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=640&h=480&fit=crop",
-      ],
-      nota: "Lote completo sin etiqueta nutricional. Devolución obligatoria al seller.",
+      rowId: "inc-187-3", skuId: "p3", tag: "sin-vencimiento", cantidad: 12,
+      imagenes: [], imageUrls: ["/products/extra-life-tropical-delight.png"],
+      nota: "Unidades sin fecha de vencimiento visible en el envase",
+      descripcion: "",
+    },
+  ],
+  // RO-BARRA-199 — NutriPro (Pendiente de aprobación): 2 incidencias
+  "RO-BARRA-199": [
+    {
+      rowId: "inc-199-1", skuId: "p1", tag: "danio-total", cantidad: 20,
+      imagenes: [], imageUrls: ["/products/extra-life-variety-pack.png"],
+      nota: "Bolsas rotas con producto derramado, no apto para venta",
       descripcion: "",
     },
     {
-      rowId: "seed-inc-186-p2-b", skuId: "p2", tag: "danio-total", cantidad: 12,
-      imagenes: [],
-      imageUrls: [
-        "https://images.unsplash.com/photo-1593642634367-d91a135587b5?w=640&h=480&fit=crop",
-        "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=640&h=480&fit=crop",
-        "https://images.unsplash.com/photo-1586769852044-692d6e3703f0?w=640&h=480&fit=crop",
-      ],
-      nota: "Cajas completamente aplastadas, producto no apto para venta.",
+      rowId: "inc-199-2", skuId: "p2", tag: "codigo-incorrecto", cantidad: 15,
+      imagenes: [], imageUrls: ["/products/extra-life-tropical-delight.png"],
+      nota: "Código de barras no corresponde al SKU declarado",
+      descripcion: "",
+    },
+  ],
+  // RO-BARRA-212 — Gohard (Pendiente de aprobación): 1 incidencia
+  "RO-BARRA-212": [
+    {
+      rowId: "inc-212-1", skuId: "p1", tag: "sin-nutricional", cantidad: 50,
+      imagenes: [], imageUrls: ["/products/extra-life-variety-pack.png"],
+      nota: "Lote sin tabla nutricional impresa, regulación sanitaria exige devolución",
+      descripcion: "",
+    },
+  ],
+  // RO-BARRA-220 — BioNature (Pendiente de aprobación): 2 incidencias
+  "RO-BARRA-220": [
+    {
+      rowId: "inc-220-1", skuId: "p1", tag: "danio-parcial", cantidad: 25,
+      imagenes: [], imageUrls: ["/products/extra-life-tropical-delight.png"],
+      nota: "Envases con abolladuras en la tapa, contenido ok",
+      descripcion: "",
+    },
+    {
+      rowId: "inc-220-2", skuId: "p2", tag: "codigo-ilegible", cantidad: 18,
+      imagenes: [], imageUrls: ["/products/extra-life-variety-pack.png"],
+      nota: "Códigos de barra impresos borrosos, escáner no los lee",
       descripcion: "",
     },
   ],
@@ -476,24 +614,41 @@ function sesionId(n: number) { return `SES-${String(n).padStart(3, "0")}`; }
 
 // ─── Audit log seed data ──────────────────────────────────────────────────────
 const SEED_AUDIT: Record<string, AuditEvent[]> = {
-  "RO-BARRA-186": [
-    { id: "a10", tipo: "OR_CERRADA", titulo: "Recepción cerrada — Completada con diferencias", timestamp: "2026-03-08T14:15:00Z", usuario: "María López", rol: "Supervisor", detalle: "Aprobó cierre. Diferencia validada con seller. Diferencia total: -50 uds. · 4 incidencias categorizadas", estadoAnterior: "Pendiente de aprobación", estadoPosterior: "Completada" },
-    { id: "a9", tipo: "OR_APROBADA", titulo: "Recepción aprobada por supervisor", timestamp: "2026-03-08T14:10:00Z", usuario: "María López", rol: "Supervisor", detalle: "Diferencia dentro de tolerancia configurada para el seller" },
-    { id: "a8", tipo: "SESION_FINALIZADA", titulo: "Sesión de conteo #2 finalizada", timestamp: "2026-03-08T13:45:00Z", usuario: "Fernando Roblero", rol: "Operador", detalle: "Duración: 42 min · 3 SKUs · 550 uds. · 2 incidencias detectadas" },
-    { id: "a7", tipo: "INCIDENCIA_REGISTRADA", titulo: "Incidencia: Daño parcial", timestamp: "2026-03-08T13:40:00Z", usuario: "Fernando Roblero", rol: "Operador", detalle: "SKU 300034 · 15 uds. afectadas · 2 fotos adjuntas" },
-    { id: "a6", tipo: "INCIDENCIA_REGISTRADA", titulo: "Incidencia: Sin etiqueta nutricional", timestamp: "2026-03-08T13:35:00Z", usuario: "Fernando Roblero", rol: "Operador", detalle: "SKU 300052 · 20 uds. afectadas · 1 foto adjunta" },
-    { id: "a5", tipo: "SESION_INICIADA", titulo: "Sesión de conteo #2 iniciada", timestamp: "2026-03-08T13:03:00Z", usuario: "Fernando Roblero", rol: "Operador" },
-    { id: "a4", tipo: "SESION_FINALIZADA", titulo: "Sesión de conteo #1 finalizada", timestamp: "2026-03-08T12:30:00Z", usuario: "Fernando Roblero", rol: "Operador", detalle: "Duración: 90 min · 3 SKUs · 1.450 uds. · 2 incidencias detectadas" },
-    { id: "a3", tipo: "SESION_INICIADA", titulo: "Sesión de conteo #1 iniciada", timestamp: "2026-03-08T11:00:00Z", usuario: "Fernando Roblero", rol: "Operador" },
-    { id: "a2", tipo: "OR_RECEPCIONADA", titulo: "Recepcionado en bodega", timestamp: "2026-03-08T10:47:00Z", usuario: "Fernando Roblero", rol: "Operador", detalle: "QR escaneado. Sucursal: Quilicura", estadoAnterior: "Programado", estadoPosterior: "Recepcionado en bodega" },
-    { id: "a1", tipo: "QR_GENERADO", titulo: "QR generado para la OR", timestamp: "2026-03-07T16:00:00Z", usuario: "Sistema", rol: "Sistema", detalle: "Token QR asignado al agendar" },
-    { id: "a0", tipo: "OR_AGENDADA", titulo: "OR agendada", timestamp: "2026-03-07T15:30:00Z", usuario: "Seller Extra Life", rol: "Seller", detalle: "Slot: 08/03/2026 10:00–12:00 · Sucursal: Quilicura · 2.550 uds. · 3 SKUs", estadoAnterior: "Creado", estadoPosterior: "Programado" },
-    { id: "a00", tipo: "OR_CREADA", titulo: "OR creada", timestamp: "2026-03-07T15:20:00Z", usuario: "Seller Extra Life", rol: "Seller", detalle: "2.550 uds. teóricas · 3 SKUs", estadoPosterior: "Creado" },
-  ],
   "RO-BARRA-183": [
     { id: "b3", tipo: "QR_GENERADO", titulo: "QR generado para la OR", timestamp: "2026-02-16T17:00:00Z", usuario: "Sistema", rol: "Sistema" },
     { id: "b2", tipo: "OR_AGENDADA", titulo: "OR agendada", timestamp: "2026-02-16T16:30:00Z", usuario: "Seller Extra Life", rol: "Seller", detalle: "Slot: 20/02/2026 16:30 · Sucursal: Quilicura · 2.550 uds. · 5 SKUs", estadoAnterior: "Creado", estadoPosterior: "Programado" },
     { id: "b1", tipo: "OR_CREADA", titulo: "OR creada", timestamp: "2026-02-16T14:00:00Z", usuario: "Seller Extra Life", rol: "Seller", detalle: "2.550 uds. teóricas · 5 SKUs", estadoPosterior: "Creado" },
+  ],
+  // Pendiente de aprobación — RO-BARRA-187 (Le Vice)
+  "RO-BARRA-187": [
+    { id: "a7", tipo: "INCIDENCIA_REGISTRADA", titulo: "3 incidencias registradas", timestamp: "2026-02-14T14:40:00Z", usuario: "Fernando Roblero", rol: "Operador", detalle: "Daño parcial (45 uds), Sin código barra (30 uds), Sin fecha vencimiento (12 uds)" },
+    { id: "a6", tipo: "SESION_FINALIZADA", titulo: "Sesión de conteo finalizada", timestamp: "2026-02-14T14:45:00Z", usuario: "Fernando Roblero", rol: "Operador", detalle: "SES-001 · 2.550 uds. contadas", estadoAnterior: "En proceso de conteo", estadoPosterior: "Pendiente de aprobación" },
+    { id: "a5", tipo: "SESION_INICIADA", titulo: "Sesión de conteo iniciada", timestamp: "2026-02-14T13:10:00Z", usuario: "Fernando Roblero", rol: "Operador", detalle: "SES-001", estadoAnterior: "Recepcionado en bodega", estadoPosterior: "En proceso de conteo" },
+    { id: "a4", tipo: "QR_ESCANEADO", titulo: "QR escaneado en andén", timestamp: "2026-02-14T13:05:00Z", usuario: "Fernando Roblero", rol: "Operador" },
+    { id: "a3", tipo: "OR_RECEPCIONADA", titulo: "OR recepcionada en bodega", timestamp: "2026-02-14T13:02:00Z", usuario: "Fernando Roblero", rol: "Operador", estadoAnterior: "Programado", estadoPosterior: "Recepcionado en bodega" },
+    { id: "a2", tipo: "OR_AGENDADA", titulo: "OR agendada", timestamp: "2026-02-12T10:00:00Z", usuario: "Le Vice", rol: "Seller", detalle: "Slot: 14/02/2026 13:00 · Sucursal: La Reina · 2.550 uds. · 3 SKUs", estadoAnterior: "Creado", estadoPosterior: "Programado" },
+    { id: "a1", tipo: "OR_CREADA", titulo: "OR creada", timestamp: "2026-02-12T09:30:00Z", usuario: "Le Vice", rol: "Seller", detalle: "2.550 uds. teóricas · 3 SKUs", estadoPosterior: "Creado" },
+  ],
+  // Pendiente de aprobación — RO-BARRA-199 (NutriPro)
+  "RO-BARRA-199": [
+    { id: "c5", tipo: "INCIDENCIA_REGISTRADA", titulo: "2 incidencias registradas", timestamp: "2026-03-06T11:15:00Z", usuario: "Catalina Mora", rol: "Operador", detalle: "Daño total (20 uds), Código incorrecto (15 uds)" },
+    { id: "c4", tipo: "SESION_FINALIZADA", titulo: "Sesión de conteo finalizada", timestamp: "2026-03-06T11:20:00Z", usuario: "Catalina Mora", rol: "Operador", detalle: "SES-001 · 780 uds. contadas", estadoAnterior: "En proceso de conteo", estadoPosterior: "Pendiente de aprobación" },
+    { id: "c3", tipo: "SESION_INICIADA", titulo: "Sesión de conteo iniciada", timestamp: "2026-03-06T10:15:00Z", usuario: "Catalina Mora", rol: "Operador", estadoAnterior: "Recepcionado en bodega", estadoPosterior: "En proceso de conteo" },
+    { id: "c2", tipo: "OR_AGENDADA", titulo: "OR agendada", timestamp: "2026-03-04T14:00:00Z", usuario: "NutriPro", rol: "Seller", detalle: "Slot: 06/03/2026 10:00 · Sucursal: Las Condes", estadoAnterior: "Creado", estadoPosterior: "Programado" },
+    { id: "c1", tipo: "OR_CREADA", titulo: "OR creada", timestamp: "2026-03-04T13:45:00Z", usuario: "NutriPro", rol: "Seller", detalle: "780 uds. teóricas · 2 SKUs", estadoPosterior: "Creado" },
+  ],
+  // En proceso de conteo — RO-BARRA-198 (VitaFit)
+  "RO-BARRA-198": [
+    { id: "d3", tipo: "SESION_INICIADA", titulo: "Sesión de conteo iniciada", timestamp: "2026-03-07T08:40:00Z", usuario: "Fernando Roblero", rol: "Operador", estadoAnterior: "Recepcionado en bodega", estadoPosterior: "En proceso de conteo" },
+    { id: "d2", tipo: "OR_AGENDADA", titulo: "OR agendada", timestamp: "2026-03-05T09:00:00Z", usuario: "VitaFit", rol: "Seller", detalle: "Slot: 07/03/2026 08:30 · Sucursal: Santiago Centro", estadoAnterior: "Creado", estadoPosterior: "Programado" },
+    { id: "d1", tipo: "OR_CREADA", titulo: "OR creada", timestamp: "2026-03-05T08:30:00Z", usuario: "VitaFit", rol: "Seller", detalle: "1.120 uds. teóricas · 2 SKUs", estadoPosterior: "Creado" },
+  ],
+  // Completada — RO-BARRA-223 (Extra Life)
+  "RO-BARRA-223": [
+    { id: "e4", tipo: "OR_CERRADA", titulo: "OR completada", timestamp: "2026-02-25T17:25:00Z", usuario: "Fernando Roblero", rol: "Supervisor", detalle: "1.360 uds. recibidas de 1.360 esperadas · Sin incidencias", estadoAnterior: "En proceso de conteo", estadoPosterior: "Completada" },
+    { id: "e3", tipo: "SESION_FINALIZADA", titulo: "Sesión de conteo finalizada", timestamp: "2026-02-25T17:20:00Z", usuario: "Fernando Roblero", rol: "Operador", detalle: "SES-001 · 1.360 uds. contadas" },
+    { id: "e2", tipo: "OR_AGENDADA", titulo: "OR agendada", timestamp: "2026-02-23T10:00:00Z", usuario: "Extra Life", rol: "Seller", detalle: "Slot: 25/02/2026 16:00 · Sucursal: Las Condes", estadoAnterior: "Creado", estadoPosterior: "Programado" },
+    { id: "e1", tipo: "OR_CREADA", titulo: "OR creada", timestamp: "2026-02-23T09:30:00Z", usuario: "Extra Life", rol: "Seller", detalle: "1.360 uds. teóricas · 2 SKUs", estadoPosterior: "Creado" },
   ],
 };
 
@@ -534,15 +689,16 @@ const INCIDENCIA_TAGS: {
   label: string;
   color: "amber" | "red" | "orange" | "purple";
   resuelve: string;
+  tooltip: string;
 }[] = [
-  { key: "sin-codigo-barra",  label: "Sin código de barra",        color: "amber",  resuelve: "Amplifica — re-etiquetado" },
-  { key: "codigo-incorrecto", label: "Código de barra incorrecto", color: "amber",  resuelve: "Amplifica — re-etiquetado" },
-  { key: "codigo-ilegible",   label: "Código de barra ilegible",   color: "amber",  resuelve: "Amplifica — re-etiquetado" },
-  { key: "sin-nutricional",   label: "Sin etiqueta nutricional",   color: "red",    resuelve: "Seller — devolución obligatoria" },
-  { key: "sin-vencimiento",   label: "Sin fecha de vencimiento",   color: "red",    resuelve: "Seller — devolución obligatoria" },
-  { key: "danio-parcial",     label: "Daño parcial",               color: "orange", resuelve: "Seller decide (KAM consulta)" },
-  { key: "danio-total",       label: "Daño total",                 color: "red",    resuelve: "Seller decide (KAM consulta)" },
-  { key: "no-en-sistema",     label: "No creado en sistema",       color: "purple", resuelve: "Amplifica — creación de SKU" },
+  { key: "sin-codigo-barra",  label: "Sin código de barra",        color: "amber",  resuelve: "Amplifica — re-etiquetado", tooltip: "El producto no tiene código de barra impreso. Resolución: re-etiquetado por Amplifica." },
+  { key: "codigo-incorrecto", label: "Código de barra incorrecto", color: "amber",  resuelve: "Amplifica — re-etiquetado", tooltip: "El código de barra no coincide con el registrado. Resolución: re-etiquetado por Amplifica." },
+  { key: "codigo-ilegible",   label: "Código de barra ilegible",   color: "amber",  resuelve: "Amplifica — re-etiquetado", tooltip: "El código de barra está dañado o no se puede escanear. Resolución: re-etiquetado por Amplifica." },
+  { key: "sin-nutricional",   label: "Sin etiqueta nutricional",   color: "red",    resuelve: "Seller — devolución obligatoria", tooltip: "El producto no tiene tabla nutricional. Resolución: devolución obligatoria al seller." },
+  { key: "sin-vencimiento",   label: "Sin fecha de vencimiento",   color: "red",    resuelve: "Seller — devolución obligatoria", tooltip: "El producto no tiene fecha de vencimiento visible. Resolución: devolución obligatoria al seller." },
+  { key: "danio-parcial",     label: "Daño parcial",               color: "orange", resuelve: "Seller decide (KAM consulta)", tooltip: "Parte del producto presenta daño. Resolución: el seller decide vía KAM." },
+  { key: "danio-total",       label: "Daño total",                 color: "red",    resuelve: "Seller decide (KAM consulta)", tooltip: "El producto está completamente dañado. Resolución: el seller decide vía KAM." },
+  { key: "no-en-sistema",     label: "No creado en sistema",       color: "purple", resuelve: "Amplifica — creación de SKU", tooltip: "El producto no existe en el sistema. Resolución: Amplifica crea el SKU." },
 ];
 
 /** Tag color by resolution category: blue=interna, red=devolución, amber=decisión seller */
@@ -569,10 +725,10 @@ function CategorizarBtn({ incidencias, onOpen, disabled }: {
       onClick={disabled ? undefined : onOpen}
       disabled={disabled}
       title={disabled ? "Inicia una sesión de conteo para registrar incidencias" : undefined}
-      iconLeft={!count ? <Plus className="w-3.5 h-3.5" /> : undefined}
+      iconLeft={!count ? <Plus className="w-4 h-4" /> : undefined}
       iconRight={
         count > 0 && !disabled ? (
-          <span className="w-5 h-5 rounded-full bg-white text-amber-600 flex items-center justify-center text-[10px] font-bold leading-none border border-amber-200">{count}</span>
+          <span className="w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-bold leading-none">{count}</span>
         ) : undefined
       }
     >
@@ -586,93 +742,61 @@ function ConfirmRemoveModal({ nombre, onCancel, onConfirm }: {
   nombre: string; onCancel: () => void; onConfirm: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-      <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
-            <Trash2 className="w-5 h-5 text-red-500" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-neutral-900">Eliminar producto</p>
-            <p className="text-xs text-neutral-500">Esta acción no puede deshacerse.</p>
-          </div>
-        </div>
-        <p className="text-sm text-neutral-600 leading-relaxed">
-          ¿Confirmas que deseas eliminar{" "}
-          <span className="font-semibold text-neutral-800">{nombre}</span>{" "}
-          de esta orden?
-        </p>
-        <div className="flex gap-3 pt-1">
-          <Button variant="secondary" size="lg" onClick={onCancel} className="flex-1">
-            Cancelar
-          </Button>
-          <button onClick={onConfirm}
-            className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors duration-300">
-            Sí, eliminar
-          </button>
-        </div>
-      </div>
-    </div>
+    <AlertModal
+      open
+      onClose={onCancel}
+      icon={Trash2}
+      variant="danger"
+      title="Eliminar producto"
+      subtitle="Esta acción no puede deshacerse"
+      confirm={{ label: "Sí, eliminar", onClick: onConfirm }}
+    >
+      <p>
+        ¿Confirmas que deseas eliminar{" "}
+        <span className="font-bold text-neutral-900">{nombre}</span>{" "}
+        de esta orden?
+      </p>
+    </AlertModal>
   );
 }
 
 // ─── Confirm Close Modal ──────────────────────────────────────────────────────
-type OrOutcome = "Completada";
+type OrOutcome = "Completada" | "Pendiente de aprobación";
 
-function ConfirmCloseModal({ id, sesiones, totalContadas, totalEsperadas, onCancel, onConfirm }: {
-  id: string; sesiones: Sesion[]; totalContadas: number; totalEsperadas: number;
+function ConfirmCloseModal({ id, sesiones, totalContadas, totalEsperadas, hasIncidencias, onCancel, onConfirm }: {
+  id: string; sesiones: Sesion[]; totalContadas: number; totalEsperadas: number; hasIncidencias: boolean;
   onCancel: () => void; onConfirm: (outcome: OrOutcome) => void;
 }) {
-  const diff    = totalEsperadas - totalContadas;
-  const outcome: OrOutcome = "Completada";
+  const outcome: OrOutcome = hasIncidencias ? "Pendiente de aprobación" : "Completada";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
-
-        {/* Close button */}
-        <div className="flex justify-end mb-2">
-          <button onClick={onCancel} className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Icon */}
-        <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mb-4">
-          <ClipboardCheck className="w-7 h-7 text-green-600" />
-        </div>
-
-        {/* Title + subtitle */}
-        <h3 className="text-lg font-bold text-neutral-900 mb-1">Completar OR</h3>
-        <p className="text-sm text-neutral-500 mb-5">Esta acción es definitiva y no puede deshacerse</p>
-
-        {/* Body */}
-        <p className="text-sm text-neutral-700 mb-7 leading-relaxed">
-          ¿Confirmas completar la orden{" "}
-          <span className="font-bold text-neutral-900">{id}</span>?{" "}
-          Se registrarán{" "}
-          <span className="font-bold text-neutral-900">
-            {totalContadas.toLocaleString("es-CL")} Unidades
-          </span>{" "}
-          en{" "}
-          <span className="font-bold text-neutral-900">
-            {sesiones.length} Sesión{sesiones.length !== 1 ? "es" : ""}
-          </span>
+    <AlertModal
+      open
+      onClose={onCancel}
+      icon={ClipboardCheck}
+      variant={hasIncidencias ? "warning" : "primary"}
+      title={hasIncidencias ? "Enviar a aprobación" : "Completar OR"}
+      subtitle="Esta acción es definitiva y no puede deshacerse"
+      confirm={{ label: hasIncidencias ? "Sí, enviar a aprobación" : "Sí, completar", icon: <Check className="w-4 h-4" />, onClick: () => onConfirm(outcome) }}
+    >
+      <p>
+        ¿Confirmas {hasIncidencias ? "enviar a aprobación" : "completar"} la orden{" "}
+        <span className="font-bold text-neutral-900">{id}</span>?{" "}
+        Se registrarán{" "}
+        <span className="font-bold text-neutral-900">
+          {totalContadas.toLocaleString("es-CL")} Unidades
+        </span>{" "}
+        en{" "}
+        <span className="font-bold text-neutral-900">
+          {sesiones.length} Sesión{sesiones.length !== 1 ? "es" : ""}
+        </span>
+      </p>
+      {hasIncidencias && (
+        <p className="mt-2 text-amber-700 text-sm">
+          Se detectaron incidencias. La OR quedará pendiente de revisión y aprobación por el Super Admin, KAM o Seller antes de cerrarse definitivamente.
         </p>
-
-        {/* Buttons */}
-        <div className="flex gap-3">
-          <Button variant="secondary" size="lg" onClick={onCancel} className="flex-1">
-            Cancelar
-          </Button>
-          <button onClick={() => onConfirm(outcome)}
-            className="flex-1 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300 flex items-center justify-center gap-2">
-            <Check className="w-4 h-4" />
-            Sí, completar
-          </button>
-        </div>
-      </div>
-    </div>
+      )}
+    </AlertModal>
   );
 }
 
@@ -746,7 +870,7 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
   };
 
   const handleManualSubmit = () => {
-    const parsed = Math.max(0, parseInt(manualVal) || 0);
+    const parsed = Math.max(0, Math.min(10000, parseInt(manualVal) || 0));
     onChange(product.id, parsed);
     setShowManualModal(false);
     if (manualFotoPreview) URL.revokeObjectURL(manualFotoPreview);
@@ -755,17 +879,30 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
   const canSubmitManual = manualFoto !== null && manualVal.trim() !== "";
 
   return (
-    <div id={`pcard-${product.id}`} className={`m-1 p-3 sm:p-4 rounded-xl transition-all duration-700 ${isJustScanned ? "bg-neutral-50 animate-[scanPulse_0.6s_ease-out]" : ""}`}>
+    <div id={`pcard-${product.id}`} className={`relative m-1 p-3 sm:p-4 rounded-xl transition-all duration-700 ${isJustScanned ? "bg-neutral-50 animate-[scanPulse_0.6s_ease-out]" : ""}`}>
       <div className="flex items-start gap-3 sm:gap-4">
 
-        {/* Image */}
-        <div
-          className={`flex-shrink-0 bg-neutral-50 rounded-lg border border-neutral-100 flex items-center justify-center overflow-hidden w-16 h-16 sm:w-[120px] sm:h-[120px] ${hasValidImage ? "cursor-pointer group/img" : ""} ${isJustScanned ? "animate-[imgBounceIn_0.5s_ease-out]" : ""}`}
-          onClick={() => { if (hasValidImage) setShowLightbox(true); }}
-        >
+        {/* Image wrapper — overflow-visible so +1 can float out */}
+        <div className={`relative flex-shrink-0 w-16 h-16 sm:w-[120px] sm:h-[120px] ${isJustScanned ? "animate-[imgBounceIn_0.5s_ease-out]" : ""}`}>
+          {/* Floating +1 animation — plays once on mount, forwards keeps it invisible at end */}
+          {isJustScanned && (
+            <span className="absolute left-1/2 -translate-x-1/2 top-0 text-[24px] font-bold text-green-500 pointer-events-none animate-[floatPlusOne_0.8s_ease-out_forwards] z-20">
+              +1
+            </span>
+          )}
+          <div
+            className="w-full h-full bg-neutral-50 rounded-lg border border-neutral-100 flex items-center justify-center overflow-hidden cursor-pointer group/img"
+            onClick={() => setShowLightbox(true)}
+          >
           {hasValidImage
-            ? <img src={product.imagen!} alt={product.nombre} loading="lazy" onError={() => setImgError(true)} className="w-full h-full object-cover transition-transform duration-200 group-hover/img:scale-105" />
+            ? <>
+                <img src={product.imagen!} alt={product.nombre} loading="lazy" onError={() => setImgError(true)} className="w-full h-full object-cover transition-transform duration-200 group-hover/img:scale-105" />
+                <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/20 transition-colors duration-200 flex items-center justify-center">
+                  <Eye className="w-5 h-5 text-white opacity-0 group-hover/img:opacity-100 transition-opacity duration-200 drop-shadow" />
+                </div>
+              </>
             : <NoImagePlaceholder />}
+          </div>
         </div>
 
         {/* Info header */}
@@ -773,7 +910,7 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
 
           {/* Name + trash */}
           <div className="flex items-start justify-between gap-2">
-            <p className="text-sm font-semibold text-neutral-900 leading-tight">{product.nombre}</p>
+            <p className="text-[13px] font-semibold text-neutral-900 leading-tight">{product.nombre}</p>
             <button
               onClick={() => { if (window.confirm(`¿Eliminar "${product.nombre}" de esta OR?`)) onRemove(product.id); }}
               title="Eliminar producto de esta OR"
@@ -784,7 +921,7 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
           </div>
 
           {/* SKU + barcode */}
-          <div className="flex items-center gap-2 mt-1 text-xs text-neutral-400 truncate">
+          <div className="flex items-center gap-2 mt-1 text-xs text-neutral-600 truncate">
             <span><span className="font-semibold text-neutral-500">SKU:</span> <span className="font-sans">{product.sku}</span></span>
             <span className="hidden sm:inline text-neutral-200">|</span>
             <span className="hidden sm:inline"><span className="font-semibold text-neutral-500">C. DE BARRA:</span> <span className="font-sans">{product.barcode}</span></span>
@@ -802,11 +939,11 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
             </button>
 
             <span className="flex items-center gap-1.5 text-sm text-neutral-500">
-              <Package className="w-4 h-4 text-neutral-400" />
+              <Package className="w-4 h-4 text-neutral-600" />
               <span className="tabular-nums font-medium text-neutral-700">
                 {total.toLocaleString("es-CL")}/{product.esperadas.toLocaleString("es-CL")}
               </span>
-              <span className="text-neutral-400">esperadas</span>
+              <span className="text-neutral-600">esperadas</span>
             </span>
 
             <div className="ml-auto">
@@ -829,11 +966,11 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
         {/* Progress bar + counts */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs text-neutral-500">
-              <span className="tabular-nums font-semibold text-neutral-700">{total.toLocaleString("es-CL")}</span>/{product.esperadas.toLocaleString("es-CL")} esperadas
+            <span className="text-[13px] text-neutral-500">
+              <span className="tabular-nums font-semibold text-neutral-700 font-sans">{total.toLocaleString("es-CL")}</span>/{product.esperadas.toLocaleString("es-CL")} esperadas
             </span>
             {product.esperadas > 0 && (
-              <span className="text-[11px] font-medium tabular-nums text-neutral-400">{Math.round(pct)}%</span>
+              <span className="text-[13px] font-medium tabular-nums text-neutral-600 font-sans">{Math.round(pct)}%</span>
             )}
           </div>
           {product.esperadas > 0 && (
@@ -844,24 +981,24 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
           )}
         </div>
 
-        {/* Counter input + Reportar incidencia — stacked full width */}
-        <div className="space-y-2">
-          <div className="relative">
+        {/* Counter input + Reportar incidencia — row 1/3 + 2/3 */}
+        <div className="flex gap-2 items-start">
+          <div className="w-1/3 relative">
             <div className={`${!sesionActiva ? "opacity-30 pointer-events-none" : ""}`}>
               <button
                 onClick={openManualModal}
                 disabled={!sesionActiva}
-                className={`w-full border border-neutral-200 rounded-lg text-center text-base font-bold py-2 tabular-nums transition-colors duration-300
+                className={`w-full h-9 border border-neutral-200 rounded-lg text-center text-sm font-bold tabular-nums font-sans transition-colors duration-300
                   ${sesionActiva ? "text-neutral-800 bg-white hover:border-primary-300 cursor-pointer" : "text-neutral-600 bg-neutral-50 cursor-default"}`}
               >
                 {displayVal}
               </button>
             </div>
             {!sesionActiva && (
-              <p className="text-center text-[11px] text-neutral-400 mt-1">Inicia sesión para contar</p>
+              <p className="text-center text-[11px] text-neutral-600 mt-1">Inicia sesión para contar</p>
             )}
           </div>
-          <div className="w-full">
+          <div className="w-2/3 [&>button]:h-9">
             <CategorizarBtn incidencias={incidencias} onOpen={onCategorizar} disabled={!sesionActiva} />
           </div>
         </div>
@@ -869,7 +1006,7 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
 
       {/* ── Modal: Justificación de conteo manual ── */}
       {/* ── Lightbox de imagen ── */}
-      {showLightbox && hasValidImage && (
+      {showLightbox && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-6" onClick={() => setShowLightbox(false)}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="relative max-w-md w-full animate-[fadeIn_0.2s_ease-out]" onClick={e => e.stopPropagation()}>
@@ -879,11 +1016,17 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
             >
               <X className="w-4 h-4" />
             </button>
-            <img
-              src={product.imagen}
-              alt={product.nombre}
-              className="w-full rounded-2xl shadow-2xl object-contain max-h-[70vh] bg-white"
-            />
+            {hasValidImage ? (
+              <img
+                src={product.imagen}
+                alt={product.nombre}
+                className="w-full rounded-2xl shadow-2xl object-contain max-h-[70vh] bg-white"
+              />
+            ) : (
+              <div className="w-full aspect-square max-h-[70vh] rounded-2xl shadow-2xl bg-white flex items-center justify-center">
+                <NoImagePlaceholder />
+              </div>
+            )}
             <p className="text-center text-sm text-white/80 mt-3 line-clamp-2">{product.nombre}</p>
           </div>
         </div>
@@ -896,14 +1039,9 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-lg bg-primary-50 flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-primary-500" />
-                </div>
-                <h3 className="text-base font-bold text-neutral-900">Conteo manual</h3>
-              </div>
-              <button onClick={() => setShowManualModal(false)} className="p-1 text-neutral-400 hover:text-neutral-600 transition-colors">
-                <X className="w-5 h-5" />
+              <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900">Conteo manual</h1>
+              <button onClick={() => setShowManualModal(false)} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">
+                <X className="w-4 h-4 text-neutral-600" />
               </button>
             </div>
 
@@ -919,8 +1057,15 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
               label="Cantidad *"
               type="number"
               value={manualVal}
-              onChange={setManualVal}
+              onChange={v => {
+                const n = parseInt(v);
+                if (v === "" || v === "-") { setManualVal(""); return; }
+                if (isNaN(n) || n < 0) { setManualVal("0"); return; }
+                if (n > 10000) { setManualVal("10000"); return; }
+                setManualVal(String(n));
+              }}
               placeholder="Ingresa la cantidad"
+              helperText="Mín. 0, máx. 10.000 unidades"
             />
 
             {/* Foto obligatoria */}
@@ -947,7 +1092,7 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
               ) : (
                 <button
                   onClick={() => manualFileRef.current?.click()}
-                  className="w-full border-2 border-dashed border-neutral-200 rounded-lg py-6 flex flex-col items-center gap-1.5 text-neutral-400 hover:border-primary-300 hover:text-primary-500 transition-colors"
+                  className="w-full border-2 border-dashed border-neutral-200 rounded-lg py-6 flex flex-col items-center gap-1.5 text-neutral-600 hover:border-primary-300 hover:text-primary-500 transition-colors"
                 >
                   <Camera className="w-6 h-6" />
                   <span className="text-xs font-medium">Tomar o subir foto</span>
@@ -1010,17 +1155,17 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="text-[13px] font-bold text-primary-500 flex-shrink-0">{sesion.id}</span>
-            <User className="w-3 h-3 text-neutral-400 flex-shrink-0" />
+            <User className="w-3 h-3 text-neutral-600 flex-shrink-0" />
             <span className="text-[13px] text-neutral-600 truncate">{sesion.operador}</span>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <span className="text-[13px] font-bold text-neutral-800 tabular-nums">{totalUds.toLocaleString("es-CL")} uds.</span>
-            {open ? <ChevronUp className="w-4 h-4 text-neutral-400" />
-                   : <ChevronDown className="w-4 h-4 text-neutral-400" />}
+            {open ? <ChevronUp className="w-4 h-4 text-neutral-600" />
+                   : <ChevronDown className="w-4 h-4 text-neutral-600" />}
           </div>
         </div>
         {/* Line 2: 🕐 inicio → fin · N SKUs */}
-        <div className="flex items-center justify-between mt-1 text-[11px] text-neutral-400">
+        <div className="flex items-center justify-between mt-1 text-[11px] text-neutral-600">
           <div className="flex items-center gap-1.5">
             <Clock className="w-3 h-3 flex-shrink-0" />
             <span className="tabular-nums">{fmtDT(sesion.inicio)} → {fmtDT(sesion.fin)}</span>
@@ -1034,10 +1179,10 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
         className="w-full hidden sm:flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-colors duration-300 text-left">
         <span className="text-sm font-bold text-primary-500 w-20 flex-shrink-0">{sesion.id}</span>
         <span className="flex items-center gap-1.5 text-sm text-neutral-600 flex-shrink-0">
-          <User className="w-3.5 h-3.5 text-neutral-400" />
+          <User className="w-3.5 h-3.5 text-neutral-600" />
           {sesion.operador}
         </span>
-        <span className="flex items-center gap-1.5 text-sm text-neutral-400 flex-1 min-w-0 truncate">
+        <span className="flex items-center gap-1.5 text-sm text-neutral-600 flex-1 min-w-0 truncate">
           <Clock className="w-3.5 h-3.5 flex-shrink-0" />
           {fmtDT(sesion.inicio)}
           <span className="text-neutral-300 mx-0.5">→</span>
@@ -1049,8 +1194,8 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
         <span className="text-sm font-bold text-neutral-800 tabular-nums w-20 text-right flex-shrink-0 whitespace-nowrap">
           {totalUds.toLocaleString("es-CL")} uds
         </span>
-        {open ? <ChevronUp className="w-4 h-4 text-neutral-400 flex-shrink-0" />
-               : <ChevronDown className="w-4 h-4 text-neutral-400 flex-shrink-0" />}
+        {open ? <ChevronUp className="w-4 h-4 text-neutral-600 flex-shrink-0" />
+               : <ChevronDown className="w-4 h-4 text-neutral-600 flex-shrink-0" />}
       </button>
 
       {open && sesion.items.length > 0 && (
@@ -1069,7 +1214,7 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
                   <div className="flex items-start justify-between gap-2 mb-1.5">
                     <div className="min-w-0">
                       <p className="text-[13px] font-medium text-neutral-800 leading-snug">{item.nombre}</p>
-                      <p className="font-mono text-[11px] text-neutral-400 mt-0.5">{item.sku}</p>
+                      <p className="font-mono text-[11px] text-neutral-600 mt-0.5">{item.sku}</p>
                     </div>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-[6px] text-xs font-medium border whitespace-nowrap flex-shrink-0 ${
                       status === "completo"   ? "bg-green-50  text-green-700  border-green-200"  :
@@ -1083,7 +1228,7 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
                   {/* Row 2: Numbers */}
                   <div className="flex items-center gap-3 text-xs mt-1">
                     <span className="text-neutral-500">Contadas: <span className="font-bold text-neutral-800 tabular-nums">{(item.cantidad + incTotal).toLocaleString("es-CL")}</span></span>
-                    <span className="text-neutral-400">·</span>
+                    <span className="text-neutral-600">·</span>
                     <span className="text-neutral-500 tabular-nums">{overallTotal}/{esperadas}</span>
                   </div>
                   {/* Row 3: Incidencias */}
@@ -1093,7 +1238,7 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
                         const tag = INCIDENCIA_TAGS.find(t => t.key === r.tag);
                         if (!tag) return null;
                         return (
-                          <span key={r.rowId} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] text-xs sm:text-[10px] font-medium leading-none border ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
+                          <span key={r.rowId} title={tag.tooltip} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] text-xs sm:text-[10px] font-medium leading-none border cursor-help ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
                             {tag.label}
                             <span className="opacity-60 font-normal">· {r.cantidad}</span>
                           </span>
@@ -1128,7 +1273,7 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
                     <tr key={item.pid} className="hover:bg-neutral-50/60 transition-colors duration-300">
                       <td className="py-3 px-4 align-top max-w-[240px]">
                         <p className="text-[13px] text-neutral-800 leading-snug font-medium">{item.nombre}</p>
-                        <p className="text-[11px] text-neutral-400 mt-0.5 font-mono">{item.sku}</p>
+                        <p className="text-[11px] text-neutral-600 mt-0.5 font-mono">{item.sku}</p>
                       </td>
                       <td className="py-3 px-4 align-top">
                         {rows.length === 0 ? (
@@ -1139,7 +1284,7 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
                               const tag = INCIDENCIA_TAGS.find(t => t.key === r.tag);
                               if (!tag) return null;
                               return (
-                                <span key={r.rowId} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] text-[12px] font-medium leading-none border ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
+                                <span key={r.rowId} title={tag.tooltip} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] text-[12px] font-medium leading-none border cursor-help ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
                                   {tag.label}
                                   <span className="opacity-60 font-normal">· {r.cantidad} uds.</span>
                                 </span>
@@ -1179,7 +1324,7 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
 }
 
 // ─── IncidenciaRowCard ────────────────────────────────────────────────────────
-function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImages, onRemoveImage }: {
+function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImages, onRemoveImage, defaultCollapsed = false }: {
   row: IncidenciaRow;
   index: number;
   product: ProductConteo;
@@ -1187,10 +1332,12 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
   onRemove: (rowId: string) => void;
   onAddImages: (rowId: string, files: FileList) => void;
   onRemoveImage: (rowId: string, idx: number) => void;
+  defaultCollapsed?: boolean;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const tag = INCIDENCIA_TAGS.find(t => t.key === row.tag);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
   const summary = tag ? tag.label : "Sin tipo";
 
@@ -1205,9 +1352,9 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
         className="w-full flex items-center justify-between px-4 py-3 hover:bg-neutral-100/50 transition-colors duration-200 cursor-pointer"
       >
         <div className="flex items-center gap-2">
-          {collapsed ? <ChevronRight className="w-3.5 h-3.5 text-neutral-400" /> : <ChevronDown className="w-3.5 h-3.5 text-neutral-400" />}
+          {collapsed ? <ChevronRight className="w-3.5 h-3.5 text-neutral-600" /> : <ChevronDown className="w-3.5 h-3.5 text-neutral-600" />}
           <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Incidencia #{index + 1}</span>
-          {collapsed && <span className="text-xs text-neutral-400">· {summary} · {row.cantidad} uds. · {row.imagenes.length} img</span>}
+          {collapsed && <span className="text-xs text-neutral-600">· {summary} · {row.cantidad} uds. · {row.imagenes.length} img</span>}
         </div>
         <button
           onClick={e => { e.stopPropagation(); onRemove(row.rowId); }}
@@ -1221,7 +1368,7 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
       {!collapsed && (
         <div className="px-4 pb-4 space-y-3">
           {/* Tag + Cantidad */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField
               as="select"
               label="Tipo de incidencia *"
@@ -1235,7 +1382,8 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
               label="Cantidad afectada *"
               type="number"
               value={String(row.cantidad)}
-              onChange={v => onUpdate(row.rowId, { cantidad: Math.max(1, parseInt(v) || 1) })}
+              onChange={v => onUpdate(row.rowId, { cantidad: Math.max(1, Math.min(10000, parseInt(v) || 1)) })}
+              helperText="Mín. 1, máx. 10.000"
             />
           </div>
 
@@ -1253,14 +1401,21 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
 
           {/* Image upload */}
           <div>
-            <label className="block text-xs text-neutral-600 font-semibold mb-1.5">
-              Imágenes * <span className="text-neutral-400 font-normal">({row.imagenes.length}/5 · JPG o PNG · 5 MB máx)</span>
-            </label>
+            <label className="block text-xs text-neutral-600 font-semibold mb-1.5">Imágenes *</label>
+
+            {/* Hidden file inputs */}
             <input
               ref={fileRef} type="file" className="hidden"
               accept="image/jpeg,image/png" multiple
-              onChange={e => e.target.files && onAddImages(row.rowId, e.target.files)}
+              onChange={e => { e.target.files && onAddImages(row.rowId, e.target.files); e.target.value = ""; }}
             />
+            <input
+              ref={cameraRef} type="file" className="hidden"
+              accept="image/jpeg,image/png" capture="environment"
+              onChange={e => { e.target.files && onAddImages(row.rowId, e.target.files); e.target.value = ""; }}
+            />
+
+            {/* Image previews */}
             {row.imagenes.length > 0 && (
               <div className="flex gap-2 flex-wrap mb-2">
                 {row.imagenes.map((img, i) => (
@@ -1276,21 +1431,46 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
                 ))}
               </div>
             )}
+
+            {/* Dropzone — tomar foto como acción principal */}
             {row.imagenes.length < 5 && (
-              row.imagenes.length === 0 ? (
+              <button
+                type="button"
+                onClick={() => cameraRef.current?.click()}
+                className="w-full flex flex-col items-center gap-3 px-4 py-6 bg-neutral-50 border border-dashed border-neutral-300 rounded-xl cursor-pointer hover:border-neutral-400 hover:bg-neutral-100/60 transition-colors duration-200"
+              >
+                <span className="w-10 h-10 flex items-center justify-center bg-white rounded-lg border border-neutral-200 shadow-sm">
+                  <Camera className="w-5 h-5 text-neutral-600" />
+                </span>
+                <div className="text-center">
+                  <p className="text-sm text-neutral-500">
+                    <span className="font-semibold text-primary-500">Tomar foto</span> o capturar evidencia
+                  </p>
+                  <p className="text-xs text-neutral-400 mt-0.5">
+                    JPG o PNG · 5 MB máx
+                  </p>
+                </div>
+              </button>
+            )}
+
+            {/* Subir imagen link */}
+            {row.imagenes.length < 5 && (
+              <div className="flex items-center justify-between mt-2">
                 <button
+                  type="button"
                   onClick={() => fileRef.current?.click()}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors duration-300"
+                  className="flex items-center gap-1 text-xs text-primary-500 hover:text-primary-600 font-medium transition-colors duration-200"
                 >
                   <Upload className="w-3.5 h-3.5" />
                   Subir imagen
                 </button>
-              ) : (
-                <Button variant="secondary" size="sm" iconLeft={<Upload className="w-3.5 h-3.5" />} onClick={() => fileRef.current?.click()}>
-                  Agregar más
-                </Button>
-              )
+                <p className="text-xs text-neutral-500">
+                  {row.imagenes.length}/5 imágenes
+                </p>
+              </div>
             )}
+
+            {/* Validation message */}
             {row.imagenes.length === 0 && (
               <p className="text-xs text-red-400 mt-1 flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3" /> Requerida al menos 1 imagen
@@ -1330,6 +1510,7 @@ function IncidenciasSKUModal({ product, initialRows, onClose, onSave, onLiveUpda
   onLiveUpdate?: (rows: IncidenciaRow[]) => void;
 }) {
   const [rows, setRows] = useState<IncidenciaRow[]>(initialRows);
+  const initialRowIds = useRef(new Set(initialRows.map(r => r.rowId)));
 
   // Propagate live changes to parent so progress bars update in real-time
   useEffect(() => {
@@ -1371,27 +1552,27 @@ function IncidenciasSKUModal({ product, initialRows, onClose, onSave, onLiveUpda
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[85vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60">
+      <div className="bg-white w-full sm:max-w-xl rounded-t-2xl sm:rounded-2xl shadow-xl h-[90vh] sm:h-auto sm:max-h-[90vh] flex flex-col overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-neutral-100 flex-shrink-0">
+        <div className="flex items-center gap-3 px-5 pt-5 pb-3 border-b border-neutral-100 flex-shrink-0">
           <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center flex-shrink-0">
             {product.imagen
               ? <img src={product.imagen} alt="" className="w-full h-full object-cover rounded-lg" />
               : <ImageOff className="w-5 h-5 text-neutral-300" />}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-neutral-900 truncate">{product.nombre}</p>
-            <p className="text-xs text-neutral-400 mt-0.5">SKU: {product.sku} · {product.esperadas} uds. declaradas</p>
+            <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900 truncate">{product.nombre}</h1>
+            <p className="text-xs text-neutral-600 mt-0.5">SKU: {product.sku} · {product.esperadas} uds. declaradas</p>
           </div>
-          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300 flex-shrink-0">
-            <X className="w-4 h-4" />
+          <button onClick={onClose} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300 flex-shrink-0">
+            <X className="w-4 h-4 text-neutral-600" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           {rows.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-10 px-6 text-center">
               <div className="w-12 h-12 bg-neutral-100 rounded-xl flex items-center justify-center">
@@ -1399,7 +1580,7 @@ function IncidenciasSKUModal({ product, initialRows, onClose, onSave, onLiveUpda
               </div>
               <div>
                 <p className="text-sm font-semibold text-neutral-700">Sin incidencias registradas</p>
-                <p className="text-xs text-neutral-400 mt-0.5">Agrega una incidencia si este SKU presenta algún problema.</p>
+                <p className="text-xs text-neutral-600 mt-0.5">Agrega una incidencia si este SKU presenta algún problema.</p>
               </div>
               <button
                 onClick={addRow}
@@ -1417,6 +1598,7 @@ function IncidenciasSKUModal({ product, initialRows, onClose, onSave, onLiveUpda
                   row={row} index={idx} product={product}
                   onUpdate={updateRow} onRemove={removeRow}
                   onAddImages={addImages} onRemoveImage={removeImage}
+                  defaultCollapsed={initialRowIds.current.has(row.rowId)}
                 />
               ))}
               <div className="px-4 py-3 border-t border-dashed border-neutral-200">
@@ -1428,21 +1610,21 @@ function IncidenciasSKUModal({ product, initialRows, onClose, onSave, onLiveUpda
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between px-5 py-4 border-t border-neutral-100 flex-shrink-0">
-          <Button variant="secondary" size="lg" onClick={onClose}>
-            Cancelar
-          </Button>
-          <button
+        {/* Footer CTA (design system pattern) */}
+        <div className="border-t border-neutral-100 px-5 pt-3 pb-8 sm:pb-5 flex-shrink-0 space-y-2.5">
+          <Button
+            variant="primary"
+            size="md"
             onClick={() => saveEnabled && onSave(rows)}
             disabled={!saveEnabled}
-            className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors duration-300 flex items-center gap-2 ${
-              saveEnabled ? "bg-primary-500 hover:bg-primary-600 text-white" : "bg-neutral-100 text-neutral-400 cursor-not-allowed"
-            }`}
+            className="w-full"
+            iconLeft={<Check className="w-4 h-4" />}
           >
-            <Check className="w-4 h-4" />
             Guardar
-          </button>
+          </Button>
+          <Button variant="tertiary" size="md" onClick={onClose} className="w-full">
+            Cancelar
+          </Button>
         </div>
 
       </div>
@@ -1480,14 +1662,14 @@ function AddProductModal({ onCancel, onConfirm, defaultCategoria }: {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-0 sm:px-4">
+      <div className="bg-white w-full sm:max-w-lg h-[90vh] sm:h-auto sm:max-h-[90vh] rounded-t-2xl sm:rounded-2xl shadow-xl flex flex-col overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-neutral-100 flex-shrink-0">
-          <h3 className="text-xl font-bold text-neutral-900">Añadir producto</h3>
-          <button onClick={onCancel} className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300 ml-4">
-            <X className="w-4 h-4" />
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-neutral-100 flex-shrink-0">
+          <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900">Añadir producto</h1>
+          <button onClick={onCancel} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">
+            <X className="w-4 h-4 text-neutral-600" />
           </button>
         </div>
 
@@ -1526,7 +1708,14 @@ function AddProductModal({ onCancel, onConfirm, defaultCategoria }: {
               type="number"
               label="Cantidad"
               value={form.cantidad}
-              onChange={v => setForm(f => ({ ...f, cantidad: v }))}
+              onChange={v => {
+                const n = parseInt(v);
+                if (v === "") { setForm(f => ({ ...f, cantidad: "" })); return; }
+                if (isNaN(n) || n < 0) { setForm(f => ({ ...f, cantidad: "0" })); return; }
+                if (n > 10000) { setForm(f => ({ ...f, cantidad: "10000" })); return; }
+                setForm(f => ({ ...f, cantidad: String(n) }));
+              }}
+              helperText="Máx. 10.000"
             />
             <FormField
               as="select"
@@ -1553,16 +1742,16 @@ function AddProductModal({ onCancel, onConfirm, defaultCategoria }: {
                 <img src={URL.createObjectURL(form.imagen)} alt="" className="w-12 h-12 object-cover rounded-lg flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-neutral-800 truncate">{form.imagen.name}</p>
-                  <p className="text-xs text-neutral-400">{(form.imagen.size / 1024).toFixed(0)} KB</p>
+                  <p className="text-xs text-neutral-600">{(form.imagen.size / 1024).toFixed(0)} KB</p>
                 </div>
-                <button onClick={() => setForm(f => ({ ...f, imagen: null }))} className="text-neutral-400 hover:text-red-400 p-1">
+                <button onClick={() => setForm(f => ({ ...f, imagen: null }))} className="text-neutral-600 hover:text-red-400 p-1">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             ) : (
               <button
                 onClick={() => fileRef.current?.click()}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-red-200 rounded-xl text-sm text-neutral-400 hover:border-primary-300 hover:text-primary-500 hover:bg-primary-50/40 transition-colors duration-300"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-red-200 rounded-xl text-sm text-neutral-600 hover:border-primary-300 hover:text-primary-500 hover:bg-primary-50/40 transition-colors duration-300"
               >
                 <Upload className="w-4 h-4" />
                 Subir o tomar foto
@@ -1583,7 +1772,7 @@ function AddProductModal({ onCancel, onConfirm, defaultCategoria }: {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-neutral-100 flex-shrink-0">
+        <div className="flex items-center justify-between px-6 pt-3 pb-8 sm:pb-5 border-t border-neutral-100 flex-shrink-0">
           <Button variant="secondary" size="lg" onClick={onCancel}>
             Cancelar
           </Button>
@@ -1608,9 +1797,9 @@ function AddProductChoiceModal({ onRecognized, onUnrecognized, onCancel }: {
       <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full space-y-5">
         {/* Header */}
         <div className="flex items-start justify-between">
-          <h3 className="text-lg font-bold text-neutral-900">Añadir producto</h3>
-          <button onClick={onCancel} className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300">
-            <X className="w-4 h-4" />
+          <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900">Añadir producto</h1>
+          <button onClick={onCancel} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">
+            <X className="w-4 h-4 text-neutral-600" />
           </button>
         </div>
 
@@ -1628,7 +1817,7 @@ function AddProductChoiceModal({ onRecognized, onUnrecognized, onCancel }: {
             </div>
             <div>
               <p className="text-sm font-semibold text-neutral-900">Sí, lo reconozco</p>
-              <p className="text-xs text-neutral-400 mt-0.5">Buscar en el catálogo de productos</p>
+              <p className="text-xs text-neutral-600 mt-0.5">Buscar en el catálogo de productos</p>
             </div>
           </button>
 
@@ -1641,7 +1830,7 @@ function AddProductChoiceModal({ onRecognized, onUnrecognized, onCancel }: {
             </div>
             <div>
               <p className="text-sm font-semibold text-neutral-900">No, no lo reconozco</p>
-              <p className="text-xs text-neutral-400 mt-0.5">Ingresar datos manualmente</p>
+              <p className="text-xs text-neutral-600 mt-0.5">Ingresar datos manualmente</p>
             </div>
           </button>
         </div>
@@ -1716,8 +1905,16 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
     <>
       {/* ── Cat C decision modal ── */}
       {catCModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-0 sm:px-4">
+          <div className="bg-white w-full sm:max-w-3xl h-[90vh] sm:h-auto sm:max-h-[90vh] rounded-t-2xl sm:rounded-2xl shadow-xl flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-neutral-100 flex-shrink-0">
+              <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900">Registrar decisión del seller</h1>
+              <button onClick={() => setCatCModal(null)} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">
+                <X className="w-4 h-4 text-neutral-600" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6">
             {/* Two-column grid: gallery left, form right */}
             {(() => {
               const matchingInc = (incidencias[catCModal.skuId] ?? []).find(r => r.tag === catCModal.tag);
@@ -1828,13 +2025,12 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
 
                   {/* ── Right column: info + form ── */}
                   <div className="flex flex-col gap-4">
-                    {/* Title + product */}
+                    {/* Product info */}
                     <div>
-                      <p className="text-base font-bold text-neutral-900">Registrar decisión del seller</p>
-                      <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">
+                      <p className="text-xs text-neutral-500 leading-relaxed">
                         {catCModal.productName}
-                        <span className="font-sans ml-1 text-neutral-400">· {catCModal.sku}</span>
-                        <span className="ml-1 text-neutral-400">· {catCModal.cantidad} uds.</span>
+                        <span className="font-sans ml-1 text-neutral-600">· {catCModal.sku}</span>
+                        <span className="ml-1 text-neutral-600">· {catCModal.cantidad} uds.</span>
                       </p>
                     </div>
 
@@ -1933,18 +2129,21 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
                       <Button variant="secondary" size="lg" onClick={() => setCatCModal(null)} className="flex-1">
                         Cancelar
                       </Button>
-                      <button
+                      <Button
+                        variant="primary"
+                        size="lg"
                         onClick={confirmCatC}
                         disabled={decisionMode === "mixto" && stockQty + mermaQty !== catCModal.cantidad}
-                        className="flex-1 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:bg-neutral-100 disabled:text-neutral-400 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
+                        className="flex-1"
                       >
                         Confirmar
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
               );
             })()}
+            </div>
           </div>
         </div>
       )}
@@ -1954,7 +2153,7 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
         <div className="px-5 py-4 border-b border-neutral-100 flex items-center justify-between">
           <div>
             <p className="text-base font-semibold text-neutral-900">Gestión de cuarentena</p>
-            <p className="text-xs text-neutral-400 mt-0.5">
+            <p className="text-xs text-neutral-600 mt-0.5">
               {pendientes} registro{pendientes !== 1 ? "s" : ""} pendiente{pendientes !== 1 ? "s" : ""} de resolución
             </p>
           </div>
@@ -2000,18 +2199,18 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
                 {/* Row 3: Cantidad + Resolución */}
                 <div className="flex items-center gap-4 mt-2.5 text-xs">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-neutral-400">Cant.</span>
+                    <span className="text-neutral-600">Cant.</span>
                     <span className="text-neutral-800 font-semibold tabular-nums">{rec.cantidad}</span>
                   </div>
                   {rec.resolucion && (
                     <div className="flex items-center gap-1.5">
-                      <span className="text-neutral-400">Resolución</span>
+                      <span className="text-neutral-600">Resolución</span>
                       <span className="text-neutral-700 font-medium">{resolucionLabel(rec.resolucion, rec)}</span>
                     </div>
                   )}
                 </div>
                 {rec.decisionSeller && (
-                  <p className="text-[10px] text-neutral-400 italic mt-1">&quot;{rec.decisionSeller}&quot;</p>
+                  <p className="text-[10px] text-neutral-600 italic mt-1">&quot;{rec.decisionSeller}&quot;</p>
                 )}
                 {/* Actions */}
                 <div className="mt-3">
@@ -2048,7 +2247,7 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
                     </button>
                   )}
                   {rec.estado === "resuelto" && (
-                    <span className="text-[10px] text-neutral-400 flex items-center gap-1">
+                    <span className="text-[10px] text-neutral-600 flex items-center gap-1">
                       <Check className="w-3 h-3 text-green-500" /> Resuelto
                     </span>
                   )}
@@ -2103,7 +2302,7 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
                         ? <span className="font-medium">{resolucionLabel(rec.resolucion, rec)}</span>
                         : <span className="text-neutral-300">—</span>}
                       {rec.decisionSeller && (
-                        <p className="text-[10px] text-neutral-400 italic mt-0.5">&quot;{rec.decisionSeller}&quot;</p>
+                        <p className="text-[10px] text-neutral-600 italic mt-0.5">&quot;{rec.decisionSeller}&quot;</p>
                       )}
                     </td>
                     <td className="px-4 py-3 align-top">
@@ -2140,7 +2339,7 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
                         </button>
                       )}
                       {rec.estado === "resuelto" && (
-                        <span className="text-[10px] text-neutral-400 flex items-center gap-1">
+                        <span className="text-[10px] text-neutral-600 flex items-center gap-1">
                           <Check className="w-3 h-3 text-green-500" /> Resuelto
                         </span>
                       )}
@@ -2374,8 +2573,8 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                     <p className="text-base font-bold text-neutral-900">Registrar decisión del seller</p>
                     <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">
                       {catCModal.productName}
-                      <span className="font-sans ml-1 text-neutral-400">· {catCModal.sku}</span>
-                      <span className="ml-1 text-neutral-400">· {catCModal.cantidad} uds.</span>
+                      <span className="font-sans ml-1 text-neutral-600">· {catCModal.sku}</span>
+                      <span className="ml-1 text-neutral-600">· {catCModal.cantidad} uds.</span>
                     </p>
                   </div>
                   {tagInfo && (
@@ -2423,7 +2622,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                   <FormField as="textarea" label="Nota / decisión del seller (opcional)" value={decisionNota} onChange={setDecisionNota} rows={2} placeholder="Ej: Seller acepta daño cosmético, autoriza venta con descuento" />
                   <div className="flex gap-3 mt-auto">
                     <Button variant="secondary" size="lg" onClick={() => setCatCModal(null)} className="flex-1">Cancelar</Button>
-                    <button onClick={confirmCatC} disabled={decisionMode === "mixto" && stockQty + mermaQty !== catCModal.cantidad} className="flex-1 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:bg-neutral-100 disabled:text-neutral-400 text-white text-sm font-semibold rounded-lg transition-colors duration-300">Confirmar</button>
+                    <button onClick={confirmCatC} disabled={decisionMode === "mixto" && stockQty + mermaQty !== catCModal.cantidad} className="flex-1 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:bg-neutral-100 disabled:text-neutral-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300">Confirmar</button>
                   </div>
                 </div>
               </div>
@@ -2478,7 +2677,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
               <div className="px-5 py-4 space-y-2.5">
                 <div className="flex items-baseline gap-2">
                   <span className="text-sm font-semibold text-neutral-800">{current.nombre}</span>
-                  <span className="font-sans text-xs text-neutral-400">{current.sku}</span>
+                  <span className="font-sans text-xs text-neutral-600">{current.sku}</span>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
                   <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-[6px] bg-amber-50 text-amber-700 border border-amber-200 font-medium leading-none">
@@ -2490,7 +2689,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                 </div>
                 {current.nota && (
                   <div className="bg-neutral-50 rounded-lg px-3 py-2">
-                    <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-0.5">Comentario del operador</p>
+                    <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider mb-0.5">Comentario del operador</p>
                     <p className="text-sm text-neutral-700 italic">"{current.nota}"</p>
                   </div>
                 )}
@@ -2535,7 +2734,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
         <div className="border-b border-neutral-100">
           <div className="px-5 pt-4 pb-3">
             <p className="text-base font-semibold text-neutral-900">Resumen de recepción</p>
-            <p className="text-xs text-neutral-400 mt-0.5">
+            <p className="text-xs text-neutral-600 mt-0.5">
               {sesiones.length} sesión{sesiones.length !== 1 ? "es" : ""} · detalle por SKU
             </p>
           </div>
@@ -2571,7 +2770,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-neutral-800 leading-snug">{p.nombre}</p>
-                      <p className="font-mono text-[11px] text-neutral-400 mt-0.5">{p.sku}{p.barcode ? ` · ${p.barcode}` : ""}</p>
+                      <p className="font-mono text-[11px] text-neutral-600 mt-0.5">{p.sku}{p.barcode ? ` · ${p.barcode}` : ""}</p>
                     </div>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-[6px] text-xs font-medium leading-none border whitespace-nowrap flex-shrink-0 ${
                       status === "Correcto"       ? "bg-green-50 text-green-700 border-green-200" :
@@ -2584,11 +2783,11 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                   {/* Row 2: Numbers */}
                   <div className="flex items-center gap-4 text-xs mt-3">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-neutral-400">Recibida</span>
+                      <span className="text-neutral-600">Recibida</span>
                       <span className="text-neutral-800 font-bold font-sans tabular-nums">{received.toLocaleString("es-CL")}<span className="text-neutral-300 font-normal">/{p.esperadas.toLocaleString("es-CL")}</span></span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-neutral-400">Dif.</span>
+                      <span className="text-neutral-600">Dif.</span>
                       <span className={`font-bold font-sans tabular-nums ${
                         diff === 0 ? "text-green-600" : diff > 0 ? "text-blue-600" : "text-red-600"
                       }`}>
@@ -2604,7 +2803,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                         const tag = INCIDENCIA_TAGS.find(t => t.key === r.tag);
                         if (!tag) return null;
                         return (
-                          <span key={r.rowId} className={`inline-flex px-1.5 py-0.5 rounded-[6px] text-xs font-medium leading-none border ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
+                          <span key={r.rowId} title={tag.tooltip} className={`inline-flex px-1.5 py-0.5 rounded-[6px] text-xs font-medium leading-none border cursor-help ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
                             {tag.label}
                           </span>
                         );
@@ -2652,11 +2851,11 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                     <tr key={p.id} className="hover:bg-neutral-50/60 transition-colors duration-300">
                       <td className="py-3 px-4 align-top max-w-[240px]">
                         <p className="text-[13px] text-neutral-800 leading-snug font-medium">{p.nombre}</p>
-                        <p className="text-[11px] text-neutral-400 mt-0.5 font-mono">{p.sku}{p.barcode ? ` · ${p.barcode}` : ""}</p>
+                        <p className="text-[11px] text-neutral-600 mt-0.5 font-mono">{p.sku}{p.barcode ? ` · ${p.barcode}` : ""}</p>
                       </td>
                       <td className="py-3 px-4 text-right tabular-nums align-top whitespace-nowrap">
                         <span className="text-[13px] font-semibold text-neutral-800">{received.toLocaleString("es-CL")}</span>
-                        <span className="text-[11px] text-neutral-400">/{p.esperadas.toLocaleString("es-CL")}</span>
+                        <span className="text-[11px] text-neutral-600">/{p.esperadas.toLocaleString("es-CL")}</span>
                       </td>
                       <td className={`py-3 px-4 text-right tabular-nums text-[13px] font-bold align-top ${
                         diff === 0 ? "text-green-600" : diff > 0 ? "text-blue-600" : "text-red-600"
@@ -2679,7 +2878,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                                 const tag = INCIDENCIA_TAGS.find(t => t.key === r.tag);
                                 if (!tag) return null;
                                 return (
-                                  <span key={r.rowId} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] text-[12px] font-medium leading-none border whitespace-nowrap ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
+                                  <span key={r.rowId} title={tag.tooltip} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] text-[12px] font-medium leading-none border whitespace-nowrap cursor-help ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
                                     {tag.label}
                                     <span className="opacity-60 font-normal">· {r.cantidad} uds.</span>
                                   </span>
@@ -2727,7 +2926,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                   <span className="flex items-center gap-1 text-xs text-neutral-500">
                     <User className="w-3 h-3" />{ses.operador}
                   </span>
-                  <span className="flex items-center gap-1.5 text-xs text-neutral-400">
+                  <span className="flex items-center gap-1.5 text-xs text-neutral-600">
                     <Clock className="w-3 h-3" />
                     {fmtDT(ses.inicio)} <span className="text-neutral-300">→</span> {fmtDT(ses.fin)}
                   </span>
@@ -2738,8 +2937,8 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                 <table className="w-full text-sm font-sans">
                   <thead>
                     <tr className="bg-neutral-50/60 border-b border-neutral-100">
-                      <th className="px-4 py-2 text-left text-xs font-semibold text-neutral-400">Producto</th>
-                      <th className="px-4 py-2 text-right text-xs font-semibold text-neutral-400">Contadas</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-neutral-600">Producto</th>
+                      <th className="px-4 py-2 text-right text-xs font-semibold text-neutral-600">Contadas</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-50">
@@ -2747,7 +2946,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                       <tr key={item.pid}>
                         <td className="px-4 py-2.5">
                           <p className="text-[13px] text-neutral-800 leading-snug font-medium">{item.nombre}</p>
-                          <p className="text-[11px] text-neutral-400 mt-0.5 font-mono">{item.sku}</p>
+                          <p className="text-[11px] text-neutral-600 mt-0.5 font-mono">{item.sku}</p>
                         </td>
                         <td className="px-4 py-2.5 font-sans text-right text-[13px] font-semibold tabular-nums text-neutral-800">{item.cantidad.toLocaleString("es-CL")}</td>
                       </tr>
@@ -2779,7 +2978,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
             <div className="px-5 pt-4 pb-3 flex items-start justify-between">
               <div>
                 <p className="text-base font-semibold text-neutral-900">Resolución de incidencias</p>
-                <p className="text-xs text-neutral-400 mt-0.5">{flatInc.length} incidencia{flatInc.length !== 1 ? "s" : ""} registrada{flatInc.length !== 1 ? "s" : ""}</p>
+                <p className="text-xs text-neutral-600 mt-0.5">{flatInc.length} incidencia{flatInc.length !== 1 ? "s" : ""} registrada{flatInc.length !== 1 ? "s" : ""}</p>
               </div>
               {hasQuarantine && (
                 <span className={`whitespace-nowrap text-xs font-semibold px-2.5 py-1 rounded-[6px] border leading-none ${
@@ -2879,30 +3078,30 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                               <div className="px-4 py-3 space-y-2.5">
                                 <div>
                                   <p className="text-sm font-semibold text-neutral-800">{product.nombre}</p>
-                                  <p className="text-xs text-neutral-400 mt-0.5 font-sans">SKU: {product.sku}</p>
+                                  <p className="text-xs text-neutral-600 mt-0.5 font-sans">SKU: {product.sku}</p>
                                 </div>
 
                                 {row.nota && (
                                   <div className="flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2">
-                                    <MessageSquare className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0 mt-0.5" />
+                                    <MessageSquare className="w-3.5 h-3.5 text-neutral-600 flex-shrink-0 mt-0.5" />
                                     <p className="text-xs text-neutral-600">{row.nota}</p>
                                   </div>
                                 )}
                                 {row.tag === "no-en-sistema" && row.descripcion && (
                                   <div className="flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2">
-                                    <MessageSquare className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0 mt-0.5" />
+                                    <MessageSquare className="w-3.5 h-3.5 text-neutral-600 flex-shrink-0 mt-0.5" />
                                     <p className="text-xs text-neutral-600">{row.descripcion}</p>
                                   </div>
                                 )}
                                 {isResuelto && qr.resolucion && (
                                   <div className="flex items-center gap-1.5 text-xs">
-                                    <span className="text-neutral-400">Resolución:</span>
+                                    <span className="text-neutral-600">Resolución:</span>
                                     <span className="text-neutral-700 font-medium">{qResolucionLabel(qr.resolucion, qr)}</span>
                                   </div>
                                 )}
                                 {isResuelto && qr.decisionSeller && (
                                   <div className="flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2">
-                                    <MessageSquare className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0 mt-0.5" />
+                                    <MessageSquare className="w-3.5 h-3.5 text-neutral-600 flex-shrink-0 mt-0.5" />
                                     <p className="text-xs text-neutral-600">{qr.decisionSeller}</p>
                                   </div>
                                 )}
@@ -3020,10 +3219,13 @@ export default function ConteoORPage() {
   const [addProductFlow, setAddProductFlow] = useState<"closed" | "choice" | "catalog" | "manual">("closed");
   const [quarantineRecs,   setQuarantineRecs]   = useState<QuarantineRecord[]>([]);
   const [guiaModal,        setGuiaModal]        = useState(false);
+  const [qrScannerOpen,    setQrScannerOpen]    = useState(false);
   const [lastScannedId,    setLastScannedId]    = useState<string | null>(null);
   const [scanError,        setScanError]        = useState(false);
-  const scanFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const scanErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [scanSuccess,      setScanSuccess]      = useState(false);
+  const scanFlashTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scanErrorTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scanSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Role (initialise with SSR-safe default, sync from localStorage on mount) ──
   const [currentRole, setCurrentRole] = useState<Role>("Super Admin");
@@ -3048,24 +3250,24 @@ export default function ConteoORPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incidenciaTarget]); // intentionally only re-run when target changes, not incidencias
 
-  // Restore closed state from localStorage OR from seed data (completed ORs)
+  // Restore closed state from localStorage OR from seed data (completed/pendiente ORs)
   useEffect(() => {
     let isClosed = false;
     try {
       const stored = localStorage.getItem(`amplifica_or_${id}`);
       if (stored) {
         const { estado } = JSON.parse(stored) as { estado: OrOutcome };
-        if (estado === "Completada") {
+        if (estado === "Completada" || estado === "Pendiente de aprobación") {
           setOrEstado(estado);
           isClosed = true;
         }
       }
     } catch { /* ignore */ }
     if (!isClosed) {
-      // Fallback: check seed data for ORs that are already completed
+      // Fallback: check seed data for ORs that are already completed or pending approval
       const seedEntry = ORDENES_SEED.find(o => o.id === id);
       if (seedEntry) {
-        if (seedEntry.estado === "Completada") {
+        if (seedEntry.estado === "Completada" || seedEntry.estado === "Pendiente de aprobación") {
           setOrEstado(seedEntry.estado as OrOutcome);
           isClosed = true;
         }
@@ -3186,6 +3388,29 @@ export default function ConteoORPage() {
     return map;
   }, [incidencias]);
 
+  // ── QR Scanner helpers ──────────────────────────────────────────────────
+  const getOrInfo = useCallback((orId: string) => {
+    if (orId !== id) return undefined;
+    return {
+      id,
+      seller: baseData.seller,
+      sucursal: baseData.sucursal,
+      fechaAgendada: baseData.fechaAgendada,
+      estado: originalEstado,
+      skus: products.length,
+      uTotales: products.reduce((s, p) => s + p.esperadas, 0).toLocaleString("es-CL"),
+      pallets: baseData.pallets,
+      bultos: baseData.bultos,
+    };
+  }, [id, baseData, originalEstado, products]);
+
+  const handleQrConfirm = useCallback((orId: string, _labelCount: number, _labelType: "pallets" | "bultos") => {
+    try {
+      localStorage.setItem(`amplifica_or_${orId}`, JSON.stringify({ estado: "Recepcionado en bodega" }));
+    } catch { /* ignore */ }
+    window.location.reload();
+  }, []);
+
   // ── Session actions ──────────────────────────────────────────────────────
   const iniciarSesion = () => {
     setProducts(ps => ps.map(p => ({ ...p, contadasSesion: 0 })));
@@ -3265,6 +3490,10 @@ export default function ConteoORPage() {
     if (scanFlashTimerRef.current) clearTimeout(scanFlashTimerRef.current);
     setLastScannedId(matchId);
     scanFlashTimerRef.current = setTimeout(() => setLastScannedId(null), 1200);
+    // Success border flash on input
+    if (scanSuccessTimerRef.current) clearTimeout(scanSuccessTimerRef.current);
+    setScanSuccess(true);
+    scanSuccessTimerRef.current = setTimeout(() => setScanSuccess(false), 1000);
     // Auto-scroll to the scanned card so animation is visible
     requestAnimationFrame(() => {
       const el = document.getElementById(`pcard-${matchId}`);
@@ -3278,12 +3507,10 @@ export default function ConteoORPage() {
   const totalAcumUds     = sesiones.reduce((s, ses) => s + ses.items.reduce((a, i) => a + i.cantidad, 0), 0);
   const pendingProduct   = products.find(p => p.id === pendingRemove);
 
-  // Completar OR button styles
+  // Completar OR button
   const orCerrada        = orEstado !== null;
   const terminarDisabled = sesionActiva || orCerrada || sesiones.length === 0;
-  const terminarClass = terminarDisabled
-    ? "bg-neutral-50 border-neutral-200 text-neutral-300 cursor-not-allowed"
-    : "bg-red-50 border-red-200 text-red-600 hover:bg-red-100";
+  const terminarVariant  = sesiones.length > 0 ? "secondary" as const : "primary" as const;
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -3343,6 +3570,7 @@ export default function ConteoORPage() {
           id={id} sesiones={sesiones}
           totalContadas={stats.totalContadas}
           totalEsperadas={stats.totalEsperadas}
+          hasIncidencias={Object.values(incidencias).some(rows => rows.some(r => r.tag !== ""))}
           onCancel={() => setConfirmClose(false)}
           onConfirm={(outcome) => {
             setOrEstado(outcome);
@@ -3356,11 +3584,12 @@ export default function ConteoORPage() {
               saveAllQuarantine([...filtered, ...qrRecords]);
               setQuarantineRecs(qrRecords);
             }
+            const isPendiente = outcome === "Pendiente de aprobación";
             try {
               localStorage.setItem(`amplifica_or_${id}`, JSON.stringify({ estado: outcome }));
               localStorage.setItem("amplifica_pending_toast", JSON.stringify({
-                title: "Recepción completada",
-                subtitle: `${id} fue cerrada correctamente`,
+                title: isPendiente ? "OR enviada a aprobación" : "Recepción completada",
+                subtitle: isPendiente ? `${id} requiere revisión de incidencias` : `${id} fue cerrada correctamente`,
               }));
             } catch { /* ignore */ }
             setConfirmClose(false);
@@ -3370,63 +3599,46 @@ export default function ConteoORPage() {
       )}
 
       {/* ── Confirm Liberar modal ── */}
-      {confirmLiberar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" onClick={() => setConfirmLiberar(false)}>
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-end mb-2">
-              <button onClick={() => setConfirmLiberar(false)} className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-4">
-              <AlertTriangle className="w-7 h-7 text-red-600" />
-            </div>
-            <h3 className="text-lg font-bold text-neutral-900 mb-1">¿Liberar sesión activa?</h3>
-            <p className="text-sm text-neutral-500 mb-6">
-              Se descartarán todas las unidades escaneadas en esta sesión ({stats.totalSesionAct} uds.). Esta acción no se puede deshacer.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button onClick={() => { liberarSesion(); setConfirmLiberar(false); }}
-                className="w-full sm:flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors duration-300 flex items-center justify-center gap-2">
-                <AlertTriangle className="w-4 h-4" />
-                Liberar y descartar
-              </button>
-              <Button variant="secondary" size="lg" onClick={() => setConfirmLiberar(false)} className="w-full sm:flex-1">
-                Cancelar
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AlertModal
+        open={confirmLiberar}
+        onClose={() => setConfirmLiberar(false)}
+        icon={LockUnlocked01}
+        variant="danger"
+        title="¿Liberar sesión activa?"
+        subtitle="Esta acción no se puede deshacer"
+        confirm={{
+          label: "Liberar y descartar",
+          icon: <LockUnlocked01 className="w-4 h-4" />,
+          onClick: () => { liberarSesion(); setConfirmLiberar(false); },
+        }}
+      >
+        <p>
+          Se descartarán todas las unidades escaneadas en esta sesión{" "}
+          (<span className="font-bold text-neutral-900">{stats.totalSesionAct} uds.</span>).
+        </p>
+      </AlertModal>
 
       {/* ── Confirmar finalización de sesión ── */}
-      {confirmFinalizar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" onClick={() => setConfirmFinalizar(false)}>
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
-            <div className="flex items-start gap-3 mb-5">
-              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                <StopCircle className="w-5 h-5 text-amber-600" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-neutral-900">Finalizar sesión</h3>
-                <p className="text-sm text-neutral-500 mt-1 leading-relaxed">
-                  ¿Estás seguro de finalizar la sesión de conteo con{" "}
-                  <span className="font-semibold text-neutral-700">{stats.totalSesionAct} unidades escaneadas</span>{" "}
-                  de <span className="font-semibold text-neutral-700">{stats.totalEsperadas.toLocaleString("es-CL")} esperadas</span>?
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="secondary" size="md" onClick={() => setConfirmFinalizar(false)} className="flex-1">
-                Cancelar
-              </Button>
-              <Button variant="primary" size="md" onClick={() => { setConfirmFinalizar(false); finalizarSesion(); }} className="flex-1">
-                Finalizar
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AlertModal
+        open={confirmFinalizar}
+        onClose={() => setConfirmFinalizar(false)}
+        icon={StopCircle}
+        variant="warning"
+        title="Finalizar sesión"
+        subtitle="Esta acción finalizará la sesión activa"
+        confirm={{
+          label: "Sí, finalizar",
+          icon: <StopCircle className="w-4 h-4" />,
+          onClick: () => { setConfirmFinalizar(false); finalizarSesion(); },
+        }}
+      >
+        <p>
+          ¿Confirmas finalizar la sesión de conteo con{" "}
+          <span className="font-bold text-neutral-900">{stats.totalSesionAct} unidades escaneadas</span>{" "}
+          de{" "}
+          <span className="font-bold text-neutral-900">{stats.totalEsperadas.toLocaleString("es-CL")} esperadas</span>?
+        </p>
+      </AlertModal>
 
       {pendingProduct && (
         <ConfirmRemoveModal
@@ -3439,14 +3651,14 @@ export default function ConteoORPage() {
       {/* ── Guía de Despacho modal ── */}
       {guiaModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm px-0 sm:px-4" onClick={() => setGuiaModal(false)}>
-          <div className="relative bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
-              <p className="text-base font-semibold text-neutral-900">Guía de despacho</p>
-              <button onClick={() => setGuiaModal(false)} className="p-1 rounded-lg hover:bg-neutral-100 transition-colors">
-                <X className="w-4 h-4 text-neutral-500" />
+          <div className="relative bg-white w-full sm:max-w-md h-[90vh] sm:h-auto sm:max-h-[90vh] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-neutral-100 flex-shrink-0">
+              <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900">Guía de despacho</h1>
+              <button onClick={() => setGuiaModal(false)} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">
+                <X className="w-4 h-4 text-neutral-600" />
               </button>
             </div>
-            <div className="p-5 flex flex-col items-center gap-4">
+            <div className="flex-1 overflow-y-auto min-h-0 p-5 flex flex-col items-center gap-4">
               <div className="w-20 h-20 bg-neutral-100 rounded-2xl flex items-center justify-center">
                 <FileText className="w-10 h-10 text-neutral-300" />
               </div>
@@ -3458,16 +3670,26 @@ export default function ConteoORPage() {
               </div>
               <div className="w-full bg-neutral-50 border border-neutral-200 rounded-xl p-6 flex flex-col items-center gap-2">
                 <FileText className="w-8 h-8 text-neutral-300" />
-                <p className="text-xs text-neutral-400 text-center">Vista previa no disponible en esta versión</p>
+                <p className="text-xs text-neutral-600 text-center">Vista previa no disponible en esta versión</p>
               </div>
-              <button className="w-full h-11 flex items-center justify-center gap-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300">
-                <Download className="w-4 h-4" />
+            </div>
+            <div className="flex-shrink-0 border-t border-neutral-100 px-5 pt-3 pb-8 sm:pb-5">
+              <Button variant="primary" size="lg" iconLeft={<Download className="w-4 h-4" />} className="w-full">
                 Descargar guía
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       )}
+
+      {/* ── QR Scanner Modal (Recibir en bodega) ── */}
+      <QrScannerModal
+        open={qrScannerOpen}
+        onClose={() => setQrScannerOpen(false)}
+        onConfirm={handleQrConfirm}
+        onStartConteo={() => {/* already on detail page */}}
+        getOrInfo={getOrInfo}
+      />
 
       {/* ── Breadcrumb ── */}
       <nav className="max-w-4xl mx-auto px-4 lg:px-6 pt-4 pb-1 flex items-center justify-center sm:justify-start gap-1.5 text-sm text-neutral-500">
@@ -3484,15 +3706,15 @@ export default function ConteoORPage() {
             <h1 className={`font-bold text-neutral-900 ${sesionActiva ? "text-sm sm:text-2xl" : "text-xl sm:text-2xl"}`}>
               {sesionActiva ? (
                 <>
-                  <span className="sm:hidden font-sans">#{id}</span>
-                  <span className="hidden sm:inline">Orden de Recepción <span className="font-sans">#{id}</span></span>
+                  <span className="sm:hidden font-sans">{id}</span>
+                  <span className="hidden sm:inline">Orden de Recepción</span>
                 </>
               ) : (
-                <>Orden de Recepción{" "}<span className="font-sans text-neutral-900">#{id}</span></>
+                <>Orden de Recepción</>
               )}
             </h1>
             {!sesionActiva && (
-              <p className="text-sm text-neutral-400 mt-0.5">
+              <p className="text-sm text-neutral-600 mt-0.5">
                 {baseData.sucursal}{baseData.fechaAgendada && baseData.fechaAgendada !== "—" ? ` - ${baseData.fechaAgendada}` : ""}
               </p>
             )}
@@ -3500,7 +3722,36 @@ export default function ConteoORPage() {
 
           {/* Desktop-only session buttons / closed OR actions */}
           <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
-            {orCerrada ? (
+            {orCerrada && orEstado === "Pendiente de aprobación" ? (
+              <>
+                {(currentRole === "Super Admin" || currentRole === "KAM" || currentRole === "Seller") && (
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    onClick={() => {
+                      setOrEstado("Completada");
+                      try {
+                        localStorage.setItem(`amplifica_or_${id}`, JSON.stringify({ estado: "Completada" }));
+                        // Also update ORDENES_SEED estado in localStorage
+                        localStorage.setItem(`amplifica_or_${id}_approved`, "true");
+                      } catch { /* ignore */ }
+                    }}
+                    iconLeft={<CheckCircle2 className="w-4 h-4" />}
+                  >
+                    Aprobar OR
+                  </Button>
+                )}
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  onClick={() => setGuiaModal(true)}
+                  iconLeft={<FileText className="w-4 h-4" />}
+                  className="whitespace-nowrap"
+                >
+                  Ver Guía de despacho
+                </Button>
+              </>
+            ) : orCerrada ? (
               <Button
                 variant="secondary"
                 size="lg"
@@ -3511,30 +3762,40 @@ export default function ConteoORPage() {
                 Ver Guía de despacho
               </Button>
             ) : originalEstado === "Creado" && canComplete ? (
-              <Link
+              <Button
+                variant="primary"
+                size="lg"
                 href={`/recepciones/crear?startStep=2&mode=completar&sucursal=${encodeURIComponent(baseData.sucursal)}&seller=${encodeURIComponent(baseData.seller)}&orId=${id}`}
-                className="flex items-center gap-2.5 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300 whitespace-nowrap"
+                iconLeft={<CheckCircle2 className="w-4 h-4" />}
               >
-                <CheckCircle2 className="w-4 h-4" />
                 Completar
-              </Link>
-            ) : canStartSesion && originalEstado !== "Creado" ? (
+              </Button>
+            ) : originalEstado === "Programado" && currentRole === "Super Admin" ? (
+              <>
+                <Button variant="secondary" size="lg" iconLeft={<CalendarDays className="w-4 h-4" />}>
+                  Reagendar
+                </Button>
+                <Button variant="primary" size="lg" onClick={() => setQrScannerOpen(true)} iconLeft={<Warehouse className="w-4 h-4" />}>
+                  Recibir en bodega
+                </Button>
+              </>
+            ) : originalEstado === "Programado" && currentRole === "Operador" ? (
+              <Button variant="primary" size="lg" onClick={() => setQrScannerOpen(true)} iconLeft={<Warehouse className="w-4 h-4" />}>
+                Recibir en bodega
+              </Button>
+            ) : originalEstado === "Programado" && (currentRole === "Seller" || currentRole === "KAM") ? (
+              <Button variant="primary" size="lg" iconLeft={<CalendarDays className="w-4 h-4" />}>
+                Reagendar
+              </Button>
+            ) : canStartSesion && (originalEstado === "En proceso de conteo" || originalEstado === "Recepcionado en bodega") ? (
               sesionActiva ? (
-                <button
-                  onClick={() => setConfirmFinalizar(true)}
-                  className="flex items-center gap-2 px-4 py-2 border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700 text-sm font-medium rounded-lg transition-colors duration-300 whitespace-nowrap active:scale-[0.97]"
-                >
-                  <StopCircle className="w-4 h-4 text-neutral-500" />
+                <Button variant="secondary" size="lg" onClick={() => setConfirmFinalizar(true)} iconLeft={<StopCircle className="w-4 h-4" />}>
                   Finalizar sesión
-                </button>
+                </Button>
               ) : (
-                <button
-                  onClick={iniciarSesion}
-                  className="flex items-center gap-2.5 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300 whitespace-nowrap"
-                >
-                  <PlayCircle className="w-4 h-4" />
+                <Button variant="primary" size="lg" onClick={iniciarSesion} iconLeft={<PlayCircle className="w-4 h-4" />}>
                   Iniciar sesión de conteo
-                </button>
+                </Button>
               )
             ) : null}
           </div>
@@ -3566,7 +3827,7 @@ export default function ConteoORPage() {
             <div className={`bg-white border border-neutral-200 rounded-xl overflow-hidden ${sesionActiva ? "hidden sm:block" : ""}`}>
               <div className="flex flex-col lg:flex-row">
                 {/* Left: info summary */}
-                <div className="flex-1 min-w-0 px-4 py-3">
+                <div className="flex-1 min-w-0 px-4 py-3 flex flex-col">
                   {/* Estado badge */}
                   <div className="mb-3">
                     <StatusBadge status={displayEstado} />
@@ -3575,36 +3836,36 @@ export default function ConteoORPage() {
                   {/* Data grid */}
                   <div className="flex items-start gap-x-5 gap-y-2.5 flex-wrap">
                     <div>
-                      <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Orden</p>
+                      <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Orden</p>
                       <p className="text-sm font-semibold text-neutral-800 mt-0.5 font-sans">{id}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Tienda</p>
+                      <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Tienda</p>
                       <p className="text-sm font-medium text-neutral-700 mt-0.5">{baseData.seller}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Sucursal</p>
+                      <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Sucursal</p>
                       <p className="text-sm font-medium text-neutral-700 mt-0.5">{baseData.sucursal}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Productos</p>
+                      <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Productos</p>
                       <p className="text-sm font-medium text-neutral-700 mt-0.5">{products.length} SKUs · {stats.totalEsperadas.toLocaleString("es-CL")} Uds.</p>
                     </div>
                     {baseData.pallets != null && (
                       <div>
-                        <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Pallets</p>
+                        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Pallets</p>
                         <p className="text-sm font-medium text-neutral-700 mt-0.5">{baseData.pallets}</p>
                       </div>
                     )}
                     {baseData.bultos != null && (
                       <div>
-                        <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Bultos</p>
+                        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Bultos</p>
                         <p className="text-sm font-medium text-neutral-700 mt-0.5">{baseData.bultos}</p>
                       </div>
                     )}
                     {sesiones.length > 0 && (
                       <div>
-                        <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Sesiones</p>
+                        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Sesiones</p>
                         <p className="text-sm font-medium text-neutral-700 mt-0.5">{sesiones.length + (sesionActiva ? 1 : 0)}</p>
                       </div>
                     )}
@@ -3617,10 +3878,10 @@ export default function ConteoORPage() {
                     const label = isRecepcionado ? "Comentarios del operador" : "Comentarios del seller";
                     if (!comentario) return null;
                     return (
-                      <div className="mt-2.5 pt-2.5 border-t border-neutral-100">
-                        <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">{label}</p>
-                        <div className="mt-1.5 flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2.5">
-                          <MessageSquare className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0 mt-0.5" />
+                      <div className="mt-2.5 pt-2.5 border-t border-neutral-100 flex-1 flex flex-col">
+                        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">{label}</p>
+                        <div className="mt-1.5 flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2.5 flex-1">
+                          <MessageSquare className="w-3.5 h-3.5 text-neutral-600 flex-shrink-0 mt-0.5" />
                           <p className="text-sm text-neutral-600 leading-relaxed">{comentario}</p>
                         </div>
                       </div>
@@ -3688,7 +3949,7 @@ export default function ConteoORPage() {
               </div>
               {/* Input inside dark block */}
               <div className="relative">
-                <ScanBarcode className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${scanError ? "text-red-400" : "text-white/40"}`} />
+                <ScanBarcode className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${scanError ? "text-red-400" : scanSuccess ? "text-green-400" : "text-white/40"}`} />
                 <input
                   ref={scannerInputRef}
                   type="text"
@@ -3699,7 +3960,9 @@ export default function ConteoORPage() {
                   className={`w-full pl-9 pr-3 py-2.5 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 transition-colors ${
                     scanError
                       ? "bg-red-100 text-red-700 placeholder-red-400 focus:ring-red-300"
-                      : "bg-white/10 text-white placeholder-white/40 focus:ring-primary-400"
+                      : scanSuccess
+                        ? "bg-green-500/15 text-white placeholder-white/40 ring-2 ring-green-500 focus:ring-green-500"
+                        : "bg-white/10 text-white placeholder-white/40 focus:ring-primary-400"
                   }`}
                 />
               </div>
@@ -3723,7 +3986,7 @@ export default function ConteoORPage() {
             <div className="px-4 py-3 border-b border-neutral-100">
               <div className="flex flex-row gap-2">
                 <div className="relative flex-1">
-                  <Scan className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                  <Scan className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${scanError ? "text-red-400" : scanSuccess ? "text-green-500" : "text-neutral-600"}`} />
                   <input
                     type="text"
                     value={scanner}
@@ -3733,7 +3996,9 @@ export default function ConteoORPage() {
                     className={`w-full pl-9 pr-4 py-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors ${
                       scanError
                         ? "border border-red-300 bg-red-50 text-red-700 focus:ring-red-200 placeholder-red-400"
-                        : "border border-neutral-200 text-neutral-600 focus:ring-primary-200 placeholder-neutral-500"
+                        : scanSuccess
+                          ? "border border-green-500 bg-green-50 text-neutral-600 ring-2 ring-green-500 focus:ring-green-500 placeholder-neutral-500"
+                          : "border border-neutral-200 text-neutral-600 focus:ring-primary-200 placeholder-neutral-500"
                     }`}
                     autoFocus
                   />
@@ -3761,7 +4026,7 @@ export default function ConteoORPage() {
                     />
                   </div>
                 </div>
-                <span className="text-xs text-neutral-400 tabular-nums flex-shrink-0">
+                <span className="text-xs text-neutral-600 tabular-nums flex-shrink-0">
                   {stats.totalContadas.toLocaleString("es-CL")}/{stats.totalEsperadas.toLocaleString("es-CL")}
                 </span>
                 {stats.totalSesionAct > 0 && (
@@ -3793,7 +4058,7 @@ export default function ConteoORPage() {
                   const tag = INCIDENCIA_TAGS.find(t => t.key === tagKey);
                   if (!tag || total === 0) return null;
                   return (
-                    <span key={tagKey} className={`inline-flex items-center gap-1 text-[11px] font-medium leading-none px-2 py-0.5 rounded-[6px] border ${tagColorCls(tagKey)}`}>
+                    <span key={tagKey} title={tag.tooltip} className={`inline-flex items-center gap-1 text-[11px] font-medium leading-none px-2 py-0.5 rounded-[6px] border cursor-help ${tagColorCls(tagKey)}`}>
                       {tag.label}
                       <span className="opacity-60 font-normal tabular-nums ml-0.5">· {total}</span>
                     </span>
@@ -3804,8 +4069,8 @@ export default function ConteoORPage() {
           </div>
         )}
 
-        {/* ── Progreso de conteo (visible cuando NO hay sesión activa y OR abierta) ── */}
-        {!orCerrada && !sesionActiva && (
+        {/* ── Progreso de conteo (visible solo después de al menos una sesión finalizada) ── */}
+        {!orCerrada && !sesionActiva && sesiones.length > 0 && (
         <div className="bg-white border border-neutral-200 rounded-xl px-4 py-3">
           {/* Row: porcentaje + barra + conteo */}
           <div className="flex items-center gap-3">
@@ -3813,7 +4078,7 @@ export default function ConteoORPage() {
               {stats.pct}%
             </span>
             {stats.pct === 0 && sesiones.length === 0 && (
-              <span className="text-xs text-neutral-400 italic">Sin conteo iniciado</span>
+              <span className="text-xs text-neutral-600 italic">Sin conteo iniciado</span>
             )}
             <div className="flex-1">
               <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
@@ -3827,7 +4092,7 @@ export default function ConteoORPage() {
                 />
               </div>
             </div>
-            <span className="text-xs text-neutral-400 tabular-nums flex-shrink-0">
+            <span className="text-xs text-neutral-600 tabular-nums flex-shrink-0">
               {stats.totalContadas.toLocaleString("es-CL")}/{stats.totalEsperadas.toLocaleString("es-CL")}
             </span>
           </div>
@@ -3855,7 +4120,7 @@ export default function ConteoORPage() {
               const tag = INCIDENCIA_TAGS.find(t => t.key === tagKey);
               if (!tag || total === 0) return null;
               return (
-                <span key={tagKey} className={`inline-flex items-center gap-1 text-[11px] font-medium leading-none px-2 py-0.5 rounded-[6px] border ${tagColorCls(tagKey)}`}>
+                <span key={tagKey} title={tag.tooltip} className={`inline-flex items-center gap-1 text-[11px] font-medium leading-none px-2 py-0.5 rounded-[6px] border cursor-help ${tagColorCls(tagKey)}`}>
                   {tag.label}
                   <span className="opacity-60 font-normal tabular-nums ml-0.5">· {total}</span>
                 </span>
@@ -3886,7 +4151,7 @@ export default function ConteoORPage() {
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-neutral-800 leading-snug">{p.nombre}</p>
-                              <p className="text-xs text-neutral-400 font-sans mt-0.5">{p.sku}</p>
+                              <p className="text-xs text-neutral-600 font-sans mt-0.5">{p.sku}</p>
                             </div>
                             <span className={`inline-flex px-2 py-0.5 rounded-[6px] text-xs font-medium flex-shrink-0 ${statusConf.cls}`}>
                               {statusConf.label}
@@ -3894,22 +4159,22 @@ export default function ConteoORPage() {
                           </div>
                           <div className="grid grid-cols-4 gap-2 mt-2.5 bg-neutral-50 rounded-lg px-3 py-2">
                             <div>
-                              <p className="text-[10px] text-neutral-400 uppercase">Esperado</p>
+                              <p className="text-[10px] text-neutral-600 uppercase">Esperado</p>
                               <p className="text-xs font-semibold text-neutral-600 tabular-nums">{p.esperadas}</p>
                             </div>
                             <div>
-                              <p className="text-[10px] text-neutral-400 uppercase">Contado</p>
+                              <p className="text-[10px] text-neutral-600 uppercase">Contado</p>
                               <p className="text-xs font-bold text-neutral-800 tabular-nums">{total}</p>
                             </div>
                             <div>
-                              <p className="text-[10px] text-neutral-400 uppercase">Diferencia</p>
+                              <p className="text-[10px] text-neutral-600 uppercase">Diferencia</p>
                               <p className={`text-xs font-bold tabular-nums ${diff === 0 ? "text-green-600" : diff > 0 ? "text-orange-600" : "text-red-600"}`}>
                                 {diff === 0 ? "—" : (diff > 0 ? "+" : "") + diff}
                               </p>
                             </div>
                             <div>
-                              <p className="text-[10px] text-neutral-400 uppercase">Incid.</p>
-                              <p className={`text-xs tabular-nums ${incCount > 0 ? "text-red-600 font-bold" : "text-neutral-400"}`}>
+                              <p className="text-[10px] text-neutral-600 uppercase">Incid.</p>
+                              <p className={`text-xs tabular-nums ${incCount > 0 ? "text-red-600 font-bold" : "text-neutral-600"}`}>
                                 {incCount > 0 ? incCount : "—"}
                               </p>
                             </div>
@@ -3956,7 +4221,7 @@ export default function ConteoORPage() {
                               }`}>
                                 {diff === 0 ? "—" : (diff > 0 ? "+" : "") + diff}
                               </td>
-                              <td className={`px-3 py-2 text-right tabular-nums ${incCount > 0 ? "text-red-600 font-semibold" : "text-neutral-400"}`}>
+                              <td className={`px-3 py-2 text-right tabular-nums ${incCount > 0 ? "text-red-600 font-semibold" : "text-neutral-600"}`}>
                                 {incCount > 0 ? incCount : "—"}
                               </td>
                               <td className="px-3 py-2 text-center">
@@ -3974,7 +4239,7 @@ export default function ConteoORPage() {
               )}
               <button
                 onClick={() => setShowProductTable(v => !v)}
-                className="w-full flex items-center justify-center gap-1 py-1.5 text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
+                className="w-full flex items-center justify-center gap-1 py-1.5 text-xs text-neutral-600 hover:text-neutral-600 transition-colors"
               >
                 {showProductTable ? "Ocultar detalle" : "Ver detalle de productos"}
                 {showProductTable ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
@@ -3994,8 +4259,10 @@ export default function ConteoORPage() {
           }, 0);
           const diffNeta = totalRecibidas - totalEsperadas;
           const totalInc = products.reduce((s, p) => (incidencias[p.id] ?? []).filter(r => r.tag !== "").length + s, 0);
-          const summaryItems: { label: string; value: string; cls?: string; badge?: boolean }[] = [
-            { label: "Estado", value: "Completada", badge: true },
+          const isPendiente = orEstado === "Pendiente de aprobación";
+          const summaryItems: { label: string; value: string; cls?: string; badge?: boolean; badgeCls?: string }[] = [
+            { label: "Estado", value: isPendiente ? "Pendiente" : "Completada", badge: true,
+              badgeCls: isPendiente ? "bg-orange-500/20 text-orange-400" : "bg-green-500/20 text-green-400" },
             { label: "SKUs", value: products.length.toString() },
             { label: "Uds. esperadas", value: totalEsperadas.toLocaleString("es-CL") },
             { label: "Uds. recibidas", value: totalRecibidas.toLocaleString("es-CL") },
@@ -4011,9 +4278,9 @@ export default function ConteoORPage() {
                 <div className="grid grid-cols-3 gap-2">
                   {summaryItems.slice(0, 3).map(s => (
                     <div key={s.label} className="text-center">
-                      <p className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider">{s.label}</p>
+                      <p className="text-[9px] font-semibold text-neutral-300 uppercase tracking-wider">{s.label}</p>
                       {s.badge ? (
-                        <span className="inline-flex mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">{s.value}</span>
+                        <span className={`inline-flex mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${s.badgeCls ?? "bg-green-500/20 text-green-400"}`}>{s.value}</span>
                       ) : (
                         <p className={`text-base font-bold mt-0.5 tabular-nums ${s.cls ?? "text-white"}`}>{s.value}</p>
                       )}
@@ -4023,7 +4290,7 @@ export default function ConteoORPage() {
                 <div className="grid grid-cols-3 gap-2">
                   {summaryItems.slice(3).map(s => (
                     <div key={s.label} className="text-center">
-                      <p className="text-[9px] font-semibold text-neutral-400 uppercase tracking-wider">{s.label}</p>
+                      <p className="text-[9px] font-semibold text-neutral-300 uppercase tracking-wider">{s.label}</p>
                       <p className={`text-base font-bold mt-0.5 tabular-nums ${s.cls ?? "text-white"}`}>{s.value}</p>
                     </div>
                   ))}
@@ -4033,9 +4300,9 @@ export default function ConteoORPage() {
               <div className="hidden sm:grid grid-cols-6 gap-3 px-5 py-4">
                 {summaryItems.map(s => (
                   <div key={s.label} className="text-left">
-                    <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">{s.label}</p>
+                    <p className="text-[10px] font-semibold text-neutral-300 uppercase tracking-wider">{s.label}</p>
                     {s.badge ? (
-                      <span className="inline-flex mt-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-green-500/20 text-green-400">{s.value}</span>
+                      <span className={`inline-flex mt-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full ${s.badgeCls ?? "bg-green-500/20 text-green-400"}`}>{s.value}</span>
                     ) : (
                       <p className={`text-sm font-bold mt-1 tabular-nums ${s.cls ?? "text-white"}`}>{s.value}</p>
                     )}
@@ -4052,39 +4319,39 @@ export default function ConteoORPage() {
             <div className="px-4 py-3.5 border-b border-neutral-100">
               <div className="flex items-center gap-2.5">
                 <span className="text-base font-semibold text-neutral-800">Información de la OR</span>
-                <StatusBadge status="Completada" />
+                <StatusBadge status={(orEstado ?? "Completada") as Status} />
               </div>
-              <p className="text-xs text-neutral-400 mt-0.5">Datos ingresados por el seller al crear la orden</p>
+              <p className="text-xs text-neutral-600 mt-0.5">Datos ingresados por el seller al crear la orden</p>
             </div>
             <div className="p-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
                 <div>
-                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">ID de OR</p>
+                  <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">ID de OR</p>
                   <p className="text-sm font-semibold text-neutral-800 mt-0.5 font-sans">{id}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Seller</p>
+                  <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Seller</p>
                   <p className="text-sm font-semibold text-neutral-800 mt-0.5">{baseData.seller}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Sucursal</p>
+                  <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Sucursal</p>
                   <p className="text-sm font-semibold text-neutral-800 mt-0.5">{baseData.sucursal}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Fecha agendada</p>
+                  <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Fecha agendada</p>
                   <p className="text-sm font-semibold text-neutral-800 mt-0.5">{baseData.fechaAgendada}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">SKUs declarados</p>
+                  <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">SKUs declarados</p>
                   <p className="text-sm font-semibold text-neutral-800 mt-0.5">{products.length}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Unidades declaradas</p>
+                  <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Unidades declaradas</p>
                   <p className="text-sm font-semibold text-neutral-800 mt-0.5">{stats.totalEsperadas.toLocaleString("es-CL")}</p>
                 </div>
                 {(baseData.pallets != null || baseData.bultos != null) && (
                   <div>
-                    <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Formato de carga</p>
+                    <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Formato de carga</p>
                     <p className="text-sm font-semibold text-neutral-800 mt-0.5">
                       {[baseData.pallets != null && `${baseData.pallets} Pallets`, baseData.bultos != null && `${baseData.bultos} Bultos`].filter(Boolean).join(" · ")}
                     </p>
@@ -4092,18 +4359,18 @@ export default function ConteoORPage() {
                 )}
                 {baseData.comentarios && (
                   <div className="col-span-2">
-                    <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Comentarios del seller</p>
+                    <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Comentarios del seller</p>
                     <div className="mt-1.5 flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2.5">
-                      <MessageSquare className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0 mt-0.5" />
+                      <MessageSquare className="w-3.5 h-3.5 text-neutral-600 flex-shrink-0 mt-0.5" />
                       <p className="text-sm text-neutral-600 leading-relaxed">{baseData.comentarios}</p>
                     </div>
                   </div>
                 )}
                 {baseData.comentarioRecepcion && (
                   <div className="col-span-2">
-                    <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Comentarios del operador</p>
+                    <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Comentarios del operador</p>
                     <div className="mt-1.5 flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2.5">
-                      <MessageSquare className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0 mt-0.5" />
+                      <MessageSquare className="w-3.5 h-3.5 text-neutral-600 flex-shrink-0 mt-0.5" />
                       <p className="text-sm text-neutral-600 leading-relaxed">{baseData.comentarioRecepcion}</p>
                     </div>
                   </div>
@@ -4135,23 +4402,25 @@ export default function ConteoORPage() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-neutral-700">Sin productos</p>
-                  <p className="text-xs text-neutral-400 mt-0.5">Agrega los productos que llegaron en esta OR.</p>
+                  <p className="text-xs text-neutral-600 mt-0.5">Agrega los productos que llegaron en esta OR.</p>
                 </div>
               </div>
             ) : (
-              <div className="divide-y divide-neutral-100">
-                {products.map(p => (
-                  <ProductCard
-                    key={p.id}
-                    product={p}
-                    acumulado={acumulado[p.id] ?? 0}
-                    sesionActiva={sesionActiva}
-                    onChange={updateContadas}
-                    onRemove={pid => setPendingRemove(pid)}
-                    incidencias={incidencias[p.id] ?? []}
-                    onCategorizar={() => setIncidenciaTarget(p.id)}
-                    isJustScanned={lastScannedId === p.id}
-                  />
+              <div>
+                {products.map((p, i) => (
+                  <React.Fragment key={p.id}>
+                    {i > 0 && <hr className="border-neutral-200" />}
+                    <ProductCard
+                      product={p}
+                      acumulado={acumulado[p.id] ?? 0}
+                      sesionActiva={sesionActiva}
+                      onChange={updateContadas}
+                      onRemove={pid => setPendingRemove(pid)}
+                      incidencias={incidencias[p.id] ?? []}
+                      onCategorizar={() => setIncidenciaTarget(p.id)}
+                      isJustScanned={lastScannedId === p.id}
+                    />
+                  </React.Fragment>
                 ))}
               </div>
             )}
@@ -4159,7 +4428,7 @@ export default function ConteoORPage() {
             {/* Añadir producto — solo visible con sesión activa */}
             {sesionActiva && (
               <div className="border-t border-dashed border-neutral-200">
-                <button onClick={() => setAddProductFlow("choice")} className="w-full flex items-center justify-center gap-2 py-3.5 text-sm text-neutral-400 hover:text-primary-500 hover:bg-primary-50/50 transition-colors duration-300 font-medium">
+                <button onClick={() => setAddProductFlow("choice")} className="w-full flex items-center justify-center gap-2 py-3.5 text-sm text-neutral-600 hover:text-primary-500 hover:bg-primary-50/50 transition-colors duration-300 font-medium">
                   <span className="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center flex-shrink-0">
                     <Plus className="w-3 h-3" />
                   </span>
@@ -4175,7 +4444,7 @@ export default function ConteoORPage() {
           <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
             <div className="px-4 py-3.5 border-b border-neutral-100 flex items-center justify-between">
               <span className="text-base font-semibold text-neutral-800">Historial de sesiones</span>
-              <span className="text-sm text-neutral-400 tabular-nums">
+              <span className="text-sm text-neutral-600 tabular-nums">
                 {totalAcumUds.toLocaleString("es-CL")} uds. acumuladas
               </span>
             </div>
@@ -4261,9 +4530,9 @@ export default function ConteoORPage() {
               <div className="px-4 py-3.5 border-b border-neutral-100 flex items-center justify-between">
                 <div>
                   <span className="text-base font-semibold text-neutral-800">Notificaciones enviadas</span>
-                  <p className="text-xs text-neutral-400 mt-0.5">Comunicaciones automáticas del sistema</p>
+                  <p className="text-xs text-neutral-600 mt-0.5">Comunicaciones automáticas del sistema</p>
                 </div>
-                <div className="flex items-center gap-1.5 text-sm text-neutral-400 tabular-nums flex-shrink-0">
+                <div className="flex items-center gap-1.5 text-sm text-neutral-600 tabular-nums flex-shrink-0">
                   <Bell className="w-4 h-4" />
                   {notifs.length} enviadas
                 </div>
@@ -4294,7 +4563,7 @@ export default function ConteoORPage() {
                           <span className="text-neutral-300">·</span>
                           <span>{n.canal}</span>
                         </div>
-                        <p className="text-[11px] text-neutral-400 mt-0.5 tabular-nums">{n.fecha}</p>
+                        <p className="text-[11px] text-neutral-600 mt-0.5 tabular-nums">{n.fecha}</p>
                       </div>
                     </div>
                   );
@@ -4312,10 +4581,10 @@ export default function ConteoORPage() {
             <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
               <div className="px-5 pt-4 pb-3 border-b border-neutral-100">
                 <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-neutral-400" />
+                  <FileText className="w-4 h-4 text-neutral-600" />
                   <p className="text-base font-semibold text-neutral-900">Registros de auditoría</p>
                 </div>
-                <p className="text-xs text-neutral-400 mt-0.5">{auditEvents.length} evento{auditEvents.length !== 1 ? "s" : ""} registrado{auditEvents.length !== 1 ? "s" : ""} · Solo visible para Super Admin</p>
+                <p className="text-xs text-neutral-600 mt-0.5">{auditEvents.length} evento{auditEvents.length !== 1 ? "s" : ""} registrado{auditEvents.length !== 1 ? "s" : ""} · Solo visible para Super Admin</p>
               </div>
               <div className="px-5 py-4">
                 <div className="relative">
@@ -4333,7 +4602,7 @@ export default function ConteoORPage() {
                         {/* Content */}
                         <div className="flex-1 min-w-0 pt-0.5">
                           <p className="text-sm font-medium text-neutral-800 leading-snug">{evt.titulo}</p>
-                          <div className="flex items-center gap-1.5 mt-1 text-xs text-neutral-400 flex-wrap">
+                          <div className="flex items-center gap-1.5 mt-1 text-xs text-neutral-600 flex-wrap">
                             <span className="tabular-nums">{fmtDT(evt.timestamp)}</span>
                             <span className="text-neutral-300">·</span>
                             <span>{evt.usuario}</span>
@@ -4351,7 +4620,7 @@ export default function ConteoORPage() {
                           )}
                           {(evt.estadoAnterior || evt.estadoPosterior) && (
                             <div className="flex items-center gap-1.5 mt-1.5 text-[11px]">
-                              {evt.estadoAnterior && <span className="text-neutral-400">{evt.estadoAnterior}</span>}
+                              {evt.estadoAnterior && <span className="text-neutral-600">{evt.estadoAnterior}</span>}
                               {evt.estadoAnterior && evt.estadoPosterior && <span className="text-neutral-300">→</span>}
                               {evt.estadoPosterior && <span className="font-medium text-neutral-600">{evt.estadoPosterior}</span>}
                             </div>
@@ -4367,27 +4636,17 @@ export default function ConteoORPage() {
         })()}
 
         {/* ── Footer: Liberar + Completar OR (always visible when OR open, hidden for Creado) ── */}
-        {!orCerrada && originalEstado !== "Creado" && (<>
+        {!orCerrada && (originalEstado === "En proceso de conteo" || originalEstado === "Recepcionado en bodega") && (<>
           {/* No-units alert modal */}
-          {noUnitsAlert && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" onClick={() => setNoUnitsAlert(false)}>
-              <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
-                <div className="flex justify-end mb-2">
-                  <button onClick={() => setNoUnitsAlert(false)} className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center mb-4">
-                  <AlertTriangle className="w-7 h-7 text-amber-600" />
-                </div>
-                <h3 className="text-lg font-bold text-neutral-900 mb-1">No se puede terminar la recepción</h3>
-                <p className="text-sm text-neutral-500 mb-6">Debes ingresar al menos una unidad en las sesiones de conteo antes de terminar la recepción.</p>
-                <Button variant="primary" size="lg" onClick={() => setNoUnitsAlert(false)} className="w-full">
-                  Entendido
-                </Button>
-              </div>
-            </div>
-          )}
+          <AlertModal
+            open={noUnitsAlert}
+            onClose={() => setNoUnitsAlert(false)}
+            icon={AlertTriangle}
+            variant="warning"
+            title="No se puede completar la OR"
+          >
+            <p>Debes ingresar al menos una unidad en las sesiones de conteo antes de completar la recepción.</p>
+          </AlertModal>
 
           {/* Desktop footer actions */}
           <div className="hidden lg:flex items-center justify-between pt-2 pb-8">
@@ -4395,7 +4654,9 @@ export default function ConteoORPage() {
               Liberar
             </Button>
 
-            <button
+            <Button
+              variant={terminarVariant}
+              size="lg"
               onClick={() => {
                 if (terminarDisabled) return;
                 if (stats.totalContadas === 0) { setNoUnitsAlert(true); return; }
@@ -4407,11 +4668,10 @@ export default function ConteoORPage() {
                 sesiones.length === 0 ? "Registra al menos una sesión antes de completar" :
                 sesionActiva ? "Finaliza la sesión activa antes de completar" : undefined
               }
-              className={`flex items-center gap-2 px-5 py-2.5 border text-sm font-medium rounded-lg transition-colors duration-300 ${terminarClass}`}
+              iconLeft={<ClipboardCheck className="w-4 h-4" />}
             >
-              <ClipboardCheck className="w-4 h-4" />
               Completar OR
-            </button>
+            </Button>
           </div>
         </>)}
 
@@ -4421,60 +4681,91 @@ export default function ConteoORPage() {
       {!orCerrada && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 pt-3 pb-6 z-30 lg:hidden">
           {originalEstado === "Creado" && canComplete ? (
-            <Link
+            <Button
+              variant="primary"
+              size="lg"
               href={`/recepciones/crear?startStep=2&mode=completar&sucursal=${encodeURIComponent(baseData.sucursal)}&seller=${encodeURIComponent(baseData.seller)}&orId=${id}`}
-              className="w-full h-12 flex items-center justify-center gap-2.5 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
+              iconLeft={<CheckCircle2 className="w-4 h-4" />}
+              className="w-full"
             >
-              <CheckCircle2 className="w-4 h-4" />
               Completar
-            </Link>
-          ) : canStartSesion && originalEstado !== "Creado" ? (
+            </Button>
+          ) : originalEstado === "Programado" && currentRole === "Super Admin" ? (
+            <div className="flex flex-col gap-2">
+              <Button variant="primary" size="lg" onClick={() => setQrScannerOpen(true)} iconLeft={<Warehouse className="w-4 h-4" />} className="w-full">
+                Recibir en bodega
+              </Button>
+              <Button variant="secondary" size="lg" iconLeft={<CalendarDays className="w-4 h-4" />} className="w-full">
+                Reagendar
+              </Button>
+            </div>
+          ) : originalEstado === "Programado" && currentRole === "Operador" ? (
+            <Button variant="primary" size="lg" onClick={() => setQrScannerOpen(true)} iconLeft={<Warehouse className="w-4 h-4" />} className="w-full">
+              Recibir en bodega
+            </Button>
+          ) : originalEstado === "Programado" && (currentRole === "Seller" || currentRole === "KAM") ? (
+            <Button variant="primary" size="lg" iconLeft={<CalendarDays className="w-4 h-4" />} className="w-full">
+              Reagendar
+            </Button>
+          ) : canStartSesion && (originalEstado === "En proceso de conteo" || originalEstado === "Recepcionado en bodega") ? (
             sesionActiva ? (
               <div className="flex flex-col gap-1">
                 {canFinSesion && (
-                  <button
-                    onClick={() => setConfirmFinalizar(true)}
-                    className="w-full h-12 flex items-center justify-center gap-2 bg-primary-500 hover:bg-primary-600 active:bg-primary-700 text-white text-sm font-semibold rounded-lg active:scale-[0.97] transition-all duration-300"
-                  >
-                    <StopCircle className="w-4 h-4" />
+                  <Button variant="primary" size="lg" onClick={() => setConfirmFinalizar(true)} iconLeft={<StopCircle className="w-4 h-4" />} className="w-full">
                     Finalizar sesión
-                  </button>
+                  </Button>
                 )}
                 {canRelSesion && (
-                  <button
-                    onClick={() => setConfirmLiberar(true)}
-                    className="w-full h-10 flex items-center justify-center gap-2 text-red-500 text-sm font-medium hover:text-red-600 active:scale-[0.97] transition-all duration-300"
-                  >
-                    <LockUnlocked01 className="w-4 h-4" />
+                  <Button variant="tertiary" size="lg" onClick={() => setConfirmLiberar(true)} iconLeft={<LockUnlocked01 className="w-4 h-4" />} className="w-full !text-red-500 hover:!text-red-600">
                     Liberar sesión
-                  </button>
+                  </Button>
                 )}
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                <button
-                  onClick={iniciarSesion}
-                  className="w-full h-12 flex items-center justify-center gap-2.5 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
-                >
-                  <PlayCircle className="w-4 h-4" />
+                <Button variant="primary" size="lg" onClick={iniciarSesion} iconLeft={<PlayCircle className="w-4 h-4" />} className="w-full">
                   Iniciar sesión de conteo
-                </button>
+                </Button>
                 {sesiones.length > 0 && (
-                  <button
+                  <Button
+                    variant={terminarVariant}
+                    size="lg"
                     onClick={() => {
                       if (stats.totalContadas === 0) { setNoUnitsAlert(true); return; }
                       setNoUnitsAlert(false);
                       setConfirmClose(true);
                     }}
-                    className="w-full h-12 flex items-center justify-center gap-2 px-4 py-2.5 text-red-600 text-sm font-medium rounded-lg hover:bg-red-50 active:bg-red-100 transition-colors duration-300"
+                    disabled={terminarDisabled}
+                    iconLeft={<ClipboardCheck className="w-4 h-4" />}
+                    className="w-full"
                   >
-                    <ClipboardCheck className="w-4 h-4" />
                     Completar OR
-                  </button>
+                  </Button>
                 )}
               </div>
             )
           ) : null}
+        </div>
+      )}
+
+      {/* ── Mobile sticky bar for Pendiente de aprobación ── */}
+      {orEstado === "Pendiente de aprobación" && (currentRole === "Super Admin" || currentRole === "KAM" || currentRole === "Seller") && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 pt-3 pb-6 z-30 lg:hidden">
+          <Button
+            variant="primary"
+            size="lg"
+            onClick={() => {
+              setOrEstado("Completada");
+              try {
+                localStorage.setItem(`amplifica_or_${id}`, JSON.stringify({ estado: "Completada" }));
+                localStorage.setItem(`amplifica_or_${id}_approved`, "true");
+              } catch { /* ignore */ }
+            }}
+            iconLeft={<CheckCircle2 className="w-4 h-4" />}
+            className="w-full"
+          >
+            Aprobar OR
+          </Button>
         </div>
       )}
     </div>

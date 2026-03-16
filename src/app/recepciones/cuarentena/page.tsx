@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useEffect, useMemo } from "react";
 import { ChevronRight, ChevronDown, ChevronUp, Check, X, Search, SlidersHorizontal } from "lucide-react";
 import { AlertTriangle, Clock } from "@untitled-ui/icons-react";
+import Button from "@/components/ui/Button";
 import {
   QuarantineRecord, QuarantineStatus, QuarantineResolution, QuarantineCategory,
   QR_STORAGE_KEY, SEED_QUARANTINE,
@@ -148,79 +149,94 @@ export default function CuarentenaPage() {
 
       {/* ── Cat C Modal ── */}
       {catCModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md space-y-4">
-            <div>
-              <p className="text-base font-bold text-neutral-900">Registrar decisión del seller</p>
-              <p className="text-xs text-neutral-500 mt-0.5">
-                {catCModal.productName}
-                <span className="font-sans ml-1 text-neutral-400">· {catCModal.sku}</span>
-                <span className="ml-1 text-neutral-400">· {catCModal.cantidad} uds.</span>
-              </p>
-            </div>
-            <div className="space-y-2">
-              {(["stock", "merma", "mixto"] as const).map(mode => (
-                <button
-                  key={mode}
-                  onClick={() => {
-                    setDecisionMode(mode);
-                    if (mode === "stock") { setStockQty(catCModal.cantidad); setMermaQty(0); }
-                    if (mode === "merma") { setStockQty(0); setMermaQty(catCModal.cantidad); }
-                    if (mode === "mixto") {
-                      const half = Math.floor(catCModal.cantidad / 2);
-                      setStockQty(half); setMermaQty(catCModal.cantidad - half);
-                    }
-                  }}
-                  className={`w-full text-left px-4 py-3 rounded-xl border text-sm transition-colors duration-300 ${
-                    decisionMode === mode
-                      ? "border-primary-300 bg-primary-50 text-primary-600 font-medium"
-                      : "border-neutral-200 text-neutral-600 hover:bg-neutral-50"
-                  }`}
-                >
-                  {mode === "stock" ? "Ingresar a stock (tal como está)" :
-                   mode === "merma" ? "Mermar (dar de baja)" :
-                                     "Dividir lote — parcial stock + parcial merma"}
-                </button>
-              ))}
-            </div>
-            {decisionMode === "mixto" && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-neutral-400 mb-1">Uds. a stock</label>
-                  <input type="number" min={0} max={catCModal.cantidad} value={stockQty}
-                    onChange={e => { const v = Math.max(0, Math.min(catCModal.cantidad, parseInt(e.target.value) || 0)); setStockQty(v); setMermaQty(catCModal.cantidad - v); }}
-                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 tabular-nums"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-neutral-400 mb-1">Uds. a mermar</label>
-                  <input type="number" min={0} max={catCModal.cantidad} value={mermaQty}
-                    onChange={e => { const v = Math.max(0, Math.min(catCModal.cantidad, parseInt(e.target.value) || 0)); setMermaQty(v); setStockQty(catCModal.cantidad - v); }}
-                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 tabular-nums"
-                  />
-                </div>
-                <p className={`col-span-2 text-xs font-medium ${stockQty + mermaQty === catCModal.cantidad ? "text-green-600" : "text-red-500"}`}>
-                  Total: {stockQty + mermaQty} / {catCModal.cantidad} uds
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-0 sm:px-4">
+          <div className="bg-white w-full sm:max-w-md h-[90vh] sm:h-auto sm:max-h-[90vh] rounded-t-2xl sm:rounded-2xl shadow-xl flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="flex items-start justify-between px-5 pt-5 pb-3">
+              <div>
+                <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900">Registrar decisión del seller</h1>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  {catCModal.productName}
+                  <span className="font-sans ml-1 text-neutral-600">· {catCModal.sku}</span>
+                  <span className="ml-1 text-neutral-600">· {catCModal.cantidad} uds.</span>
                 </p>
               </div>
-            )}
-            <div>
-              <label className="block text-xs text-neutral-400 mb-1">Nota del seller <span className="font-normal">(opcional)</span></label>
-              <textarea value={decisionNota} onChange={e => setDecisionNota(e.target.value)} rows={2}
-                placeholder="Ej: Seller acepta daño cosmético, autoriza venta con descuento"
-                className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 resize-none placeholder-neutral-300"
-              />
+              <button onClick={() => setCatCModal(null)} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300 flex-shrink-0">
+                <X className="w-4 h-4 text-neutral-600" />
+              </button>
             </div>
-            <div className="flex gap-3">
-              <button onClick={() => setCatCModal(null)}
-                className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 font-medium">
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto min-h-0 px-5 pb-4 space-y-4">
+              <div className="space-y-2">
+                {(["stock", "merma", "mixto"] as const).map(mode => (
+                  <button
+                    key={mode}
+                    onClick={() => {
+                      setDecisionMode(mode);
+                      if (mode === "stock") { setStockQty(catCModal.cantidad); setMermaQty(0); }
+                      if (mode === "merma") { setStockQty(0); setMermaQty(catCModal.cantidad); }
+                      if (mode === "mixto") {
+                        const half = Math.floor(catCModal.cantidad / 2);
+                        setStockQty(half); setMermaQty(catCModal.cantidad - half);
+                      }
+                    }}
+                    className={`w-full text-left px-4 py-3 rounded-xl border text-sm transition-colors duration-300 ${
+                      decisionMode === mode
+                        ? "border-primary-300 bg-primary-50 text-primary-600 font-medium"
+                        : "border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+                    }`}
+                  >
+                    {mode === "stock" ? "Ingresar a stock (tal como está)" :
+                     mode === "merma" ? "Mermar (dar de baja)" :
+                                       "Dividir lote — parcial stock + parcial merma"}
+                  </button>
+                ))}
+              </div>
+              {decisionMode === "mixto" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-neutral-600 mb-1">Uds. a stock</label>
+                    <input type="number" min={0} max={catCModal.cantidad} value={stockQty}
+                      onChange={e => { const v = Math.max(0, Math.min(catCModal.cantidad, parseInt(e.target.value) || 0)); setStockQty(v); setMermaQty(catCModal.cantidad - v); }}
+                      className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 tabular-nums"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-neutral-600 mb-1">Uds. a mermar</label>
+                    <input type="number" min={0} max={catCModal.cantidad} value={mermaQty}
+                      onChange={e => { const v = Math.max(0, Math.min(catCModal.cantidad, parseInt(e.target.value) || 0)); setMermaQty(v); setStockQty(catCModal.cantidad - v); }}
+                      className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 tabular-nums"
+                    />
+                  </div>
+                  <p className={`col-span-2 text-xs font-medium ${stockQty + mermaQty === catCModal.cantidad ? "text-green-600" : "text-red-500"}`}>
+                    Total: {stockQty + mermaQty} / {catCModal.cantidad} uds
+                  </p>
+                </div>
+              )}
+              <div>
+                <label className="block text-xs text-neutral-600 mb-1">Nota del seller <span className="font-normal">(opcional)</span></label>
+                <textarea value={decisionNota} onChange={e => setDecisionNota(e.target.value)} rows={2}
+                  placeholder="Ej: Seller acepta daño cosmético, autoriza venta con descuento"
+                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 resize-none placeholder-neutral-300"
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-3 border-t border-neutral-100 px-5 pt-3 pb-8 sm:pb-5 flex-shrink-0">
+              <Button variant="secondary" size="lg" onClick={() => setCatCModal(null)} className="flex-1">
                 Cancelar
-              </button>
-              <button onClick={confirmCatC}
+              </Button>
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={confirmCatC}
                 disabled={decisionMode === "mixto" && stockQty + mermaQty !== catCModal.cantidad}
-                className="flex-1 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:bg-neutral-100 disabled:text-neutral-400 text-white text-sm font-semibold rounded-lg transition-colors duration-300">
+                className="flex-1"
+              >
                 Confirmar
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -240,7 +256,7 @@ export default function CuarentenaPage() {
         {/* ── Title ── */}
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">Stock en cuarentena</h1>
-          <p className="text-sm text-neutral-400 mt-0.5">
+          <p className="text-sm text-neutral-600 mt-0.5">
             Gestión transversal de unidades con incidencia pendientes de resolución
           </p>
         </div>
@@ -256,7 +272,7 @@ export default function CuarentenaPage() {
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-xs font-medium border border-green-200">
             {totalResueltos} resuelto{totalResueltos !== 1 ? "s" : ""}
           </span>
-          <span className="text-xs text-neutral-400 ml-auto tabular-nums">
+          <span className="text-xs text-neutral-600 ml-auto tabular-nums">
             {records.length} registros totales
           </span>
         </div>
@@ -290,7 +306,7 @@ export default function CuarentenaPage() {
           {/* Search + mobile filter toggle */}
           <div className="flex items-center gap-2">
             <div className="relative flex-1 min-w-0">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
               <input
                 type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
                 placeholder="Buscar SKU, producto u OR..."
@@ -321,7 +337,7 @@ export default function CuarentenaPage() {
                 <option value="devolucion_seller">Devolución obligatoria a seller</option>
                 <option value="decision_seller">Decisión del seller</option>
               </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
             </div>
 
             {/* Estado */}
@@ -333,7 +349,7 @@ export default function CuarentenaPage() {
                 <option value="en_gestion">En gestión</option>
                 <option value="resuelto">Resuelto</option>
               </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
             </div>
 
             {/* Seller */}
@@ -343,7 +359,7 @@ export default function CuarentenaPage() {
                 <option value="">Todos los sellers</option>
                 {sellers.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
             </div>
 
             {/* Sucursal */}
@@ -353,7 +369,7 @@ export default function CuarentenaPage() {
                 <option value="">Todas las sucursales</option>
                 {sucursales.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
             </div>
           </div>
         </div>
@@ -372,7 +388,7 @@ export default function CuarentenaPage() {
               <tbody className="divide-y divide-neutral-50">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="px-4 py-10 text-center text-sm text-neutral-400">
+                    <td colSpan={11} className="px-4 py-10 text-center text-sm text-neutral-600">
                       No se encontraron registros con los filtros seleccionados
                     </td>
                   </tr>
@@ -461,7 +477,7 @@ export default function CuarentenaPage() {
                             </button>
                           )}
                           {rec.estado === "resuelto" && (
-                            <span className="text-[10px] text-neutral-400 flex items-center gap-1">
+                            <span className="text-[10px] text-neutral-600 flex items-center gap-1">
                               <Check className="w-3 h-3 text-green-500" /> Resuelto
                             </span>
                           )}

@@ -7,7 +7,7 @@ import { createPortal } from "react-dom";
 import {
   AlertCircle, ChevronDown, Upload, Trash2, MoreVertical,
   Package, ArrowRight, ChevronLeft, ChevronRight, Check,
-  PlusCircle, FileSpreadsheet, Plus,
+  PlusCircle, FileSpreadsheet, Plus, X,
 } from "lucide-react";
 import StepIndicator from "@/components/recepciones/StepIndicator";
 import ProductsModal, { AddProduct } from "@/components/recepciones/ProductsModal";
@@ -168,7 +168,7 @@ function Step1({ form, setForm, lockedSucursal, lockedSeller }: { form: FormData
               <p className="text-xs text-neutral-500">{(form.guiaDespacho.size / 1024).toFixed(0)} KB</p>
             </div>
             <button onClick={() => setForm(f => ({ ...f, guiaDespacho: null }))}
-              className="text-neutral-400 hover:text-red-500 p-1">
+              className="text-neutral-600 hover:text-red-500 p-1">
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
@@ -182,13 +182,13 @@ function Step1({ form, setForm, lockedSucursal, lockedSeller }: { form: FormData
               ${dragging ? "border-primary-400 bg-primary-50" : "border-neutral-200 hover:border-primary-300 hover:bg-neutral-50"}`}
           >
             <div className="w-12 h-12 bg-neutral-100 rounded-xl flex items-center justify-center">
-              <Upload className="w-6 h-6 text-neutral-400" />
+              <Upload className="w-6 h-6 text-neutral-600" />
             </div>
             <p className="text-sm text-neutral-600 text-center">
               <span className="text-primary-500 font-medium">Haz clic para subir guía de despacho</span>
               {" "}o arrastra y suelta
             </p>
-            <p className="text-xs text-neutral-400">XML, PDF, JPG o PNG (5MB máximo)</p>
+            <p className="text-xs text-neutral-600">XML, PDF, JPG o PNG (5MB máximo)</p>
           </div>
         )}
       </div>
@@ -249,7 +249,7 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
       {form.products.length === 0 ? (
         <div className="border border-neutral-200 rounded-xl p-4 sm:p-6 lg:p-12 flex flex-col items-center gap-4">
           <div className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center">
-            <Package className="w-8 h-8 text-neutral-400" />
+            <Package className="w-8 h-8 text-neutral-600" />
           </div>
           <div className="text-center">
             <p className="font-semibold text-neutral-800 text-[15px]">La recepción está vacía</p>
@@ -300,7 +300,7 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
                     <p className="text-xs text-neutral-500 mt-1 font-sans">{product.sku} · {product.barcode}</p>
                   </div>
                   <button onClick={() => removeProduct(product.sku)}
-                    className="p-1.5 hover:bg-red-50 rounded text-neutral-400 hover:text-red-500 flex-shrink-0">
+                    className="p-1.5 hover:bg-red-50 rounded text-neutral-600 hover:text-red-500 flex-shrink-0">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -353,7 +353,7 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
                   </td>
                   <td className="py-3 px-4">
                     <button onClick={() => removeProduct(product.sku)}
-                      className="p-1.5 hover:bg-red-50 rounded text-neutral-400 hover:text-red-500">
+                      className="p-1.5 hover:bg-red-50 rounded text-neutral-600 hover:text-red-500">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </td>
@@ -370,7 +370,7 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
           </div>
           <div className="border-t border-dashed border-neutral-200">
             <button onClick={() => setShowModal(true)}
-              className="w-full flex items-center justify-center gap-2 py-3.5 text-[14px] text-neutral-400 hover:text-primary-500 hover:bg-primary-50/50 transition-colors duration-300 font-medium">
+              className="w-full flex items-center justify-center gap-2 py-3.5 text-[14px] text-neutral-600 hover:text-primary-500 hover:bg-primary-50/50 transition-colors duration-300 font-medium">
               <span className="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center flex-shrink-0">
                 <Plus className="w-3 h-3" />
               </span>
@@ -532,7 +532,7 @@ function Step3({ form, setForm, isReagendar }: { form: FormData; setForm: React.
             <option value="Las Condes">Las Condes</option>
           </FormField>
           {SUCURSAL_ADDRESS[form.sucursal] && (
-            <p className="text-neutral-400 leading-snug">{SUCURSAL_ADDRESS[form.sucursal]}</p>
+            <p className="text-neutral-600 leading-snug">{SUCURSAL_ADDRESS[form.sucursal]}</p>
           )}
           <div className="space-y-0.5">
             {!form.desconoceFormato && form.pallets && <p className="text-neutral-500">Pallets: {form.pallets}</p>}
@@ -548,7 +548,7 @@ function Step3({ form, setForm, isReagendar }: { form: FormData; setForm: React.
             <p className="font-semibold text-neutral-700">Guía de despacho</p>
             {form.guiaDespacho
               ? <p className="text-green-600">✓ Cargada correctamente</p>
-              : <p className="text-neutral-400">No adjuntada</p>
+              : <p className="text-neutral-600">No adjuntada</p>
             }
           </div>
 
@@ -592,7 +592,7 @@ function Step3({ form, setForm, isReagendar }: { form: FormData; setForm: React.
           {/* Day header row */}
           <div className="grid grid-cols-7 mb-1">
             {DAY_HEADERS.map(d => (
-              <span key={d} className="text-center text-xs text-neutral-400 font-medium py-1">{d}</span>
+              <span key={d} className="text-center text-xs text-neutral-600 font-medium py-1">{d}</span>
             ))}
           </div>
 
@@ -688,12 +688,12 @@ function Step3({ form, setForm, isReagendar }: { form: FormData; setForm: React.
           ) : (
             <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-center">
               <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center mb-3">
-                <svg className="w-5 h-5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="w-5 h-5 text-neutral-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                 </svg>
               </div>
               <p className="text-sm font-medium text-neutral-500">Bloques horarios</p>
-              <p className="text-xs text-neutral-400 mt-1 max-w-[180px]">Selecciona una fecha en el calendario para ver los bloques disponibles</p>
+              <p className="text-xs text-neutral-600 mt-1 max-w-[180px]">Selecciona una fecha en el calendario para ver los bloques disponibles</p>
             </div>
           )}
         </div>
@@ -900,7 +900,7 @@ function CrearORPageInner() {
         {/* Title */}
         <div className="flex items-center justify-center sm:justify-start gap-2 mb-6">
           <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">{pageTitle}</h1>
-          <button onClick={() => setShowInfo(true)} className="text-neutral-400 hover:text-neutral-600 text-base">ⓘ</button>
+          <button onClick={() => setShowInfo(true)} className="text-neutral-600 hover:text-neutral-600 text-base">ⓘ</button>
         </div>
 
         {/* Info modal — portal to body to escape overflow-hidden */}
@@ -908,9 +908,9 @@ function CrearORPageInner() {
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50" onClick={() => setShowInfo(false)}>
             <div className="bg-white rounded-2xl mx-4 max-w-md w-full p-6 shadow-xl" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-neutral-900">Orden de Recepción</h3>
-                <button onClick={() => setShowInfo(false)} className="p-1.5 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-500 transition-colors">
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4l8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+                <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900">Orden de Recepción</h1>
+                <button onClick={() => setShowInfo(false)} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">
+                  <X className="w-4 h-4 text-neutral-600" />
                 </button>
               </div>
               <div className="space-y-3 text-sm text-neutral-600 leading-relaxed">
@@ -921,7 +921,7 @@ function CrearORPageInner() {
                   <li><span className="font-medium text-neutral-700">Detalle de artículos</span> — SKUs y cantidades que se recibirán.</li>
                   <li><span className="font-medium text-neutral-700">Reserva de andén</span> — Fecha y bloque horario para la descarga.</li>
                 </ol>
-                <p className="text-xs text-neutral-400 pt-1">Completa todos los pasos para generar la OR y coordinar la descarga.</p>
+                <p className="text-xs text-neutral-600 pt-1">Completa todos los pasos para generar la OR y coordinar la descarga.</p>
               </div>
               <Button variant="primary" size="lg" onClick={() => setShowInfo(false)} className="mt-5 w-full">
                 Entendido

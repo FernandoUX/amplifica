@@ -12,6 +12,7 @@ import {
   Settings01, Calendar, AlertTriangle, CheckCircle,
   Clock, Building01, SlashCircle01, CalendarDate,
 } from "@untitled-ui/icons-react";
+import Button from "@/components/ui/Button";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 type Sucursal = { id: string; label: string; address: string; timezone: string; active: boolean };
@@ -188,7 +189,7 @@ function FieldRow({ label, hint, children }: {
     <div className="flex items-start justify-between gap-8">
       <div className="flex-1 min-w-0 pt-0.5">
         <p className="text-sm text-neutral-700 font-medium">{label}</p>
-        {hint && <p className="text-xs text-neutral-400 mt-0.5 leading-relaxed">{hint}</p>}
+        {hint && <p className="text-xs text-neutral-600 mt-0.5 leading-relaxed">{hint}</p>}
       </div>
       <div className="flex-shrink-0">{children}</div>
     </div>
@@ -235,13 +236,13 @@ function TimePicker({ value, onChange, className = "" }: {
           <div className="flex items-center justify-around w-full">
             <button
               onClick={() => emit((hours + 1) % 24, minutes)}
-              className="p-1.5 text-neutral-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors duration-300"
+              className="p-1.5 text-neutral-600 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors duration-300"
             >
               <ChevronUp className="w-4 h-4" />
             </button>
             <button
               onClick={() => emit(hours, (minutes + 1) % 60)}
-              className="p-1.5 text-neutral-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors duration-300"
+              className="p-1.5 text-neutral-600 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors duration-300"
             >
               <ChevronUp className="w-4 h-4" />
             </button>
@@ -250,7 +251,7 @@ function TimePicker({ value, onChange, className = "" }: {
           {/* Time display */}
           <div className="flex items-center gap-1 text-xl font-semibold text-neutral-800 tabular-nums py-1 select-none">
             <span>{fmt(hours)}</span>
-            <span className="text-neutral-400 leading-none">:</span>
+            <span className="text-neutral-600 leading-none">:</span>
             <span>{fmt(minutes)}</span>
           </div>
 
@@ -258,13 +259,13 @@ function TimePicker({ value, onChange, className = "" }: {
           <div className="flex items-center justify-around w-full">
             <button
               onClick={() => emit((hours - 1 + 24) % 24, minutes)}
-              className="p-1.5 text-neutral-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors duration-300"
+              className="p-1.5 text-neutral-600 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors duration-300"
             >
               <ChevronDown className="w-4 h-4" />
             </button>
             <button
               onClick={() => emit(hours, (minutes - 1 + 60) % 60)}
-              className="p-1.5 text-neutral-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors duration-300"
+              className="p-1.5 text-neutral-600 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors duration-300"
             >
               <ChevronDown className="w-4 h-4" />
             </button>
@@ -308,6 +309,7 @@ export default function ConfiguracionPage() {
   const [calViewDate,    setCalViewDate]    = useState(new Date());
   const [calSucursal,    setCalSucursal]    = useState("quilicura");
   const [selectedSlot,   setSelectedSlot]   = useState<{ date: string; hora: string } | null>(null);
+  const [selectedDay,    setSelectedDay]    = useState<string | null>(null); // ISO date for mobile month tap
 
   // ── Load from localStorage ────────────────────────────────────────────────
   useEffect(() => {
@@ -488,10 +490,10 @@ export default function ConfiguracionPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-neutral-900 flex items-center gap-2.5">
-              <Settings01 className="w-6 h-6 text-neutral-400" />
+              <Settings01 className="w-6 h-6 text-neutral-600" />
               Configuración
             </h1>
-            <p className="text-sm text-neutral-400 mt-0.5">Panel de administración del calendario de recepciones</p>
+            <p className="text-sm text-neutral-600 mt-0.5">Panel de administración del calendario de recepciones</p>
           </div>
         </div>
 
@@ -514,7 +516,7 @@ export default function ConfiguracionPage() {
                     : "border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300"
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? "text-primary-500" : "text-neutral-400"}`} />
+                <Icon className={`w-4 h-4 ${isActive ? "text-primary-500" : "text-neutral-600"}`} />
                 <span className="hidden sm:inline">{tab.label}</span>
                 <span className="sm:hidden">{tab.shortLabel}</span>
               </button>
@@ -548,7 +550,7 @@ export default function ConfiguracionPage() {
                     <button
                       onClick={() => setDeactivateTarget(s.id)}
                       title="Desactivar sucursal"
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white border border-neutral-200 rounded-full flex items-center justify-center text-neutral-400 hover:text-red-500 hover:border-red-300 opacity-0 group-hover:opacity-100 transition-all shadow-sm z-10"
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white border border-neutral-200 rounded-full flex items-center justify-center text-neutral-600 hover:text-red-500 hover:border-red-300 opacity-0 group-hover:opacity-100 transition-all shadow-sm z-10"
                     >
                       <X className="w-2.5 h-2.5" />
                     </button>
@@ -557,7 +559,7 @@ export default function ConfiguracionPage() {
                 {/* Add new sucursal */}
                 <button
                   onClick={() => setShowAddSucursal(v => !v)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-dashed border-neutral-300 text-neutral-400 hover:border-primary-400 hover:text-primary-500 transition-colors duration-300"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-dashed border-neutral-300 text-neutral-600 hover:border-primary-400 hover:text-primary-500 transition-colors duration-300"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Nueva sucursal
@@ -567,13 +569,13 @@ export default function ConfiguracionPage() {
               {/* Inactive sucursales — click to reactivate */}
               {sucursales.some(s => !s.active) && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs text-neutral-400 font-medium">Inactivas:</span>
+                  <span className="text-xs text-neutral-600 font-medium">Inactivas:</span>
                   {sucursales.filter(s => !s.active).map(s => (
                     <button
                       key={s.id}
                       onClick={() => reactivateSucursal(s.id)}
                       title="Reactivar sucursal"
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border border-dashed border-neutral-200 text-neutral-400 hover:border-green-300 hover:text-green-600 transition-colors duration-300"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border border-dashed border-neutral-200 text-neutral-600 hover:border-green-300 hover:text-green-600 transition-colors duration-300"
                     >
                       <Check className="w-3 h-3" />
                       {s.label}
@@ -612,7 +614,7 @@ export default function ConfiguracionPage() {
                         >
                           {TIMEZONES.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
                         </select>
-                        <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                        <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
                       </div>
                     </div>
                   </div>
@@ -636,7 +638,7 @@ export default function ConfiguracionPage() {
                     <button
                       onClick={addSucursal}
                       disabled={!newSucursalForm.label.trim()}
-                      className="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-neutral-100 disabled:text-neutral-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors duration-300"
+                      className="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-neutral-100 disabled:text-neutral-600 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors duration-300"
                     >
                       <Check className="w-4 h-4" />
                       Agregar
@@ -673,7 +675,7 @@ export default function ConfiguracionPage() {
                           >
                             {TIMEZONES.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
                           </select>
-                          <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                          <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
                         </div>
                       </div>
                     </div>
@@ -725,7 +727,7 @@ export default function ConfiguracionPage() {
                 <FieldRow label="Hora de operación" hint="Rango horario en que se abren slots de recepción">
                   <div className="flex items-center gap-2">
                     <TimePicker value={cfg.horaInicio} onChange={v => updateCfg({ horaInicio: v })} />
-                    <span className="text-neutral-400 text-sm">—</span>
+                    <span className="text-neutral-600 text-sm">—</span>
                     <TimePicker value={cfg.horaFin} onChange={v => updateCfg({ horaFin: v })} />
                   </div>
                 </FieldRow>
@@ -743,7 +745,7 @@ export default function ConfiguracionPage() {
                         <option key={m} value={m}>{m} minutos</option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
                   </div>
                 </FieldRow>
               </div>
@@ -821,7 +823,7 @@ export default function ConfiguracionPage() {
                       <option key={h} value={h}>{h} horas antes</option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
                 </div>
               </FieldRow>
               <div className="border-t border-neutral-100 pt-4">
@@ -906,7 +908,7 @@ export default function ConfiguracionPage() {
                     <CalendarDate className="w-10 h-10 text-neutral-300" />
                     <div>
                       <p className="text-sm font-semibold text-neutral-600">Sin feriados cargados</p>
-                      <p className="text-xs text-neutral-400 mt-0.5">Haz clic en "Cargar feriados 2026" para precargar el calendario nacional</p>
+                      <p className="text-xs text-neutral-600 mt-0.5">Haz clic en "Cargar feriados 2026" para precargar el calendario nacional</p>
                     </div>
                   </div>
                 ) : (
@@ -937,7 +939,7 @@ export default function ConfiguracionPage() {
                                       className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors duration-300 ${
                                         opera
                                           ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
-                                          : "bg-neutral-100 text-neutral-400 border-neutral-200 hover:bg-neutral-200"
+                                          : "bg-neutral-100 text-neutral-600 border-neutral-200 hover:bg-neutral-200"
                                       }`}
                                     >
                                       {opera ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
@@ -954,7 +956,7 @@ export default function ConfiguracionPage() {
                   </div>
                 )}
 
-                <p className="text-xs text-neutral-400 flex items-center gap-1.5">
+                <p className="text-xs text-neutral-600 flex items-center gap-1.5">
                   <AlertTriangle className="w-3.5 h-3.5" />
                   Por defecto los feriados aplican a todas las sucursales. Activa una sucursal para indicar que sí opera ese día.
                 </p>
@@ -1000,7 +1002,7 @@ export default function ConfiguracionPage() {
                           >
                             {sucursales.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                           </select>
-                          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
                         </div>
                       </div>
 
@@ -1017,7 +1019,7 @@ export default function ConfiguracionPage() {
                             <option value="rango">Rango de fechas</option>
                             <option value="horario">Rango horario</option>
                           </select>
-                          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
                         </div>
                       </div>
 
@@ -1058,7 +1060,7 @@ export default function ConfiguracionPage() {
                               onChange={v => setBloqueoForm(f => ({ ...f, horaInicio: v }))}
                               className="flex-1"
                             />
-                            <span className="text-neutral-400">—</span>
+                            <span className="text-neutral-600">—</span>
                             <TimePicker
                               value={bloqueoForm.horaFin ?? "18:00"}
                               onChange={v => setBloqueoForm(f => ({ ...f, horaFin: v }))}
@@ -1091,7 +1093,7 @@ export default function ConfiguracionPage() {
                       <button
                         onClick={addBloqueo}
                         disabled={!bloqueoForm.fechaInicio || !bloqueoForm.motivo}
-                        className="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-neutral-100 disabled:text-neutral-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors duration-300"
+                        className="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-neutral-100 disabled:text-neutral-600 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors duration-300"
                       >
                         <Check className="w-4 h-4" />
                         Guardar bloqueo
@@ -1106,7 +1108,7 @@ export default function ConfiguracionPage() {
                     <SlashCircle01 className="w-10 h-10 text-neutral-300" />
                     <div>
                       <p className="text-sm font-semibold text-neutral-600">Sin bloqueos activos</p>
-                      <p className="text-xs text-neutral-400 mt-0.5">Agrega un bloqueo para deshabilitar una sucursal en una fecha específica</p>
+                      <p className="text-xs text-neutral-600 mt-0.5">Agrega un bloqueo para deshabilitar una sucursal en una fecha específica</p>
                     </div>
                   </div>
                 ) : bloqueos.length > 0 && (
@@ -1187,35 +1189,50 @@ export default function ConfiguracionPage() {
             TAB 3: VISTA DE CALENDARIO
         ═══════════════════════════════════════════════════════════════════════ */}
         {activeTab === "calendario" && (
-          <div className="space-y-4">
+          <div className="space-y-4 pb-20 sm:pb-4">
 
-            {/* Controls bar */}
-            <div className="bg-white border border-neutral-200 rounded-xl px-5 py-3.5 flex items-center gap-4 flex-wrap">
+            {/* Controls bar — compact on mobile */}
+            <div className="bg-white border border-neutral-200 rounded-xl px-3 sm:px-5 py-3 sm:py-3.5 flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-4">
 
-              {/* Sucursal */}
-              <div className="flex items-center gap-2">
-                <Building01 className="w-4 h-4 text-neutral-400" />
-                <div className="relative">
+              {/* Row 1 mobile: Sucursal full-width | Desktop: inline */}
+              <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+                <Building01 className="w-4 h-4 text-neutral-600 shrink-0 sm:block hidden" />
+                <div className="relative w-full sm:w-auto">
                   <select
                     value={calSucursal}
-                    onChange={e => { setCalSucursal(e.target.value); setSelectedSlot(null); }}
-                    className="appearance-none pl-3 pr-8 py-1.5 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 bg-white font-medium text-neutral-700"
+                    onChange={e => { setCalSucursal(e.target.value); setSelectedSlot(null); setSelectedDay(null); }}
+                    className="appearance-none w-full sm:w-auto pl-3 pr-7 py-2 sm:py-1.5 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 bg-white font-medium text-neutral-700"
                   >
                     {sucursales.filter(s => s.active).map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                   </select>
-                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
+                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-600 pointer-events-none" />
+                </div>
+
+                <div className="h-5 w-px bg-neutral-200 hidden sm:block" />
+
+                {/* Week/Month toggle — hidden on mobile, shown inline on desktop */}
+                <div className="hidden sm:flex gap-1 bg-neutral-100 p-0.5 rounded-lg">
+                  {(["week", "month"] as const).map(m => (
+                    <button
+                      key={m}
+                      onClick={() => { setCalViewMode(m); setSelectedDay(null); }}
+                      className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors duration-300 ${
+                        calViewMode === m ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-700"
+                      }`}
+                    >
+                      {m === "week" ? "Semana" : "Mes"}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              <div className="h-5 w-px bg-neutral-200" />
-
-              {/* Week/Month toggle */}
-              <div className="flex gap-1 bg-neutral-100 p-0.5 rounded-lg">
+              {/* Row 2 mobile: Week/Month toggle full-width */}
+              <div className="flex sm:hidden gap-1 bg-neutral-100 p-0.5 rounded-lg w-full">
                 {(["week", "month"] as const).map(m => (
                   <button
                     key={m}
-                    onClick={() => setCalViewMode(m)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors duration-300 ${
+                    onClick={() => { setCalViewMode(m); setSelectedDay(null); }}
+                    className={`flex-1 px-3 py-2 rounded-md text-xs font-medium transition-colors duration-300 ${
                       calViewMode === m ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-700"
                     }`}
                   >
@@ -1224,37 +1241,49 @@ export default function ConfiguracionPage() {
                 ))}
               </div>
 
-              {/* Date navigation */}
-              <div className="flex items-center gap-1.5 ml-auto">
+              {/* Row 2 mobile / inline desktop: Date navigation */}
+              <div className="flex items-center justify-between sm:justify-end gap-1.5 sm:ml-auto">
                 <button
-                  onClick={() => setCalViewDate(d => calViewMode === "week" ? addDays(d, -7) : new Date(d.getFullYear(), d.getMonth() - 1, 1))}
-                  className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors duration-300"
+                  onClick={() => { setCalViewDate(new Date()); setSelectedDay(null); }}
+                  className="px-2.5 sm:px-3 py-1.5 text-xs font-medium text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 transition-colors duration-300"
                 >
-                  <ChevronLeft className="w-4 h-4 text-neutral-500" />
+                  Hoy
                 </button>
-                <span className="text-sm font-semibold text-neutral-700 min-w-[140px] text-center">
-                  {calViewMode === "week"
-                    ? (() => {
-                        const sw = startOfWeek(calViewDate);
-                        const ew = addDays(sw, 6);
-                        return `${sw.getDate()} ${sw.toLocaleString("es-CL", { month: "short" })} — ${ew.getDate()} ${ew.toLocaleString("es-CL", { month: "long", year: "numeric" })}`;
-                      })()
-                    : calViewDate.toLocaleString("es-CL", { month: "long", year: "numeric" })}
-                </span>
-                <button
-                  onClick={() => setCalViewDate(d => calViewMode === "week" ? addDays(d, 7) : new Date(d.getFullYear(), d.getMonth() + 1, 1))}
-                  className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors duration-300"
-                >
-                  <ChevronRight className="w-4 h-4 text-neutral-500" />
-                </button>
+                <div className="flex items-center gap-0.5">
+                  <button
+                    onClick={() => { setCalViewDate(d => calViewMode === "week" ? addDays(d, -7) : new Date(d.getFullYear(), d.getMonth() - 1, 1)); setSelectedDay(null); }}
+                    className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors duration-300"
+                  >
+                    <ChevronLeft className="w-4 h-4 text-neutral-500" />
+                  </button>
+                  <span className="text-sm font-semibold text-neutral-700 min-w-[120px] sm:min-w-[140px] text-center">
+                    {calViewMode === "week"
+                      ? (() => {
+                          const sw = startOfWeek(calViewDate);
+                          const ew = addDays(sw, 6);
+                          return `${sw.getDate()} ${sw.toLocaleString("es-CL", { month: "short" })} — ${ew.getDate()} ${ew.toLocaleString("es-CL", { month: "short" })}`;
+                        })()
+                      : (() => {
+                          const m = calViewDate.toLocaleString("es-CL", { month: "long" });
+                          const y = calViewDate.getFullYear();
+                          return `${m.charAt(0).toUpperCase()}${m.slice(1)} ${y}`;
+                        })()}
+                  </span>
+                  <button
+                    onClick={() => { setCalViewDate(d => calViewMode === "week" ? addDays(d, 7) : new Date(d.getFullYear(), d.getMonth() + 1, 1)); setSelectedDay(null); }}
+                    className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors duration-300"
+                  >
+                    <ChevronRight className="w-4 h-4 text-neutral-500" />
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Tiempo anticipado + leyenda */}
+            {/* Tiempo anticipado + leyenda de estados (legend hidden on mobile) */}
             <div className="flex items-center gap-4 flex-wrap">
               <div className="flex items-center gap-2 bg-white border border-neutral-200 rounded-lg px-3 py-2">
-                <Clock className="w-4 h-4 text-neutral-400" />
-                <span className="text-xs text-neutral-600 font-medium">Tiempo anticipado:</span>
+                <Clock className="w-4 h-4 text-neutral-600" />
+                <span className="text-xs text-neutral-600 font-medium">Anticipación:</span>
                 <div className="relative">
                   <select
                     value={calCfg.tiempoAnticipado}
@@ -1272,12 +1301,14 @@ export default function ConfiguracionPage() {
                 </div>
               </div>
 
-              {/* Leyenda */}
-              <div className="flex items-center gap-3 text-xs text-neutral-500">
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-green-100 border border-green-200 inline-block" /> Disponible</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-amber-100 border border-amber-200 inline-block" /> &gt;70% ocupado</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-red-100 border border-red-200 inline-block" /> Lleno / sobrecupo</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-neutral-200 border border-neutral-300 inline-block" /> Bloqueado</span>
+              {/* Leyenda de estados — hidden on mobile */}
+              <div className="hidden sm:flex items-center gap-3 text-xs text-neutral-500 flex-wrap">
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-sky-500 inline-block" /> Programado</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block" /> En bodega</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-primary-500 inline-block" /> En conteo</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block" /> Pendiente</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> Completada</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-neutral-400 inline-block" /> Cancelado</span>
               </div>
             </div>
 
@@ -1288,94 +1319,92 @@ export default function ConfiguracionPage() {
 
               return (
                 <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
-                  {/* Header */}
-                  <div className="grid border-b border-neutral-100" style={{ gridTemplateColumns: "80px repeat(7, 1fr)" }}>
-                    <div className="px-3 py-3 border-r border-neutral-100" />
-                    {weekDays.map((day, i) => {
-                      const iso     = isoDate(day);
-                      const blocked = isDayBlocked(iso);
-                      const feriado = isDayFeriado(iso);
-                      const isToday = sameDay(day, new Date());
-                      return (
-                        <div key={i} className={`px-2 py-3 text-center border-r border-neutral-100 last:border-0 ${blocked || feriado ? "bg-neutral-50" : ""}`}>
-                          <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">
-                            {day.toLocaleString("es-CL", { weekday: "short" })}
-                          </p>
-                          <p className={`text-lg font-bold mt-0.5 ${isToday ? "text-primary-500" : "text-neutral-800"}`}>
-                            {day.getDate()}
-                          </p>
-                          {(blocked || feriado) && (
-                            <span className="inline-flex items-center gap-0.5 text-[10px] text-neutral-500 font-medium">
-                              <SlashCircle01 className="w-2.5 h-2.5" />
-                              {blocked ? "Bloqueado" : "Feriado"}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                  {/* Scrollable wrapper for mobile */}
+                  <div className="overflow-x-auto">
+                    {/* Header */}
+                    <div className="grid border-b border-neutral-100" style={{ gridTemplateColumns: "56px repeat(7, minmax(80px, 1fr))", minWidth: "620px" }}>
+                      <div className="px-2 py-3 border-r border-neutral-100" />
+                      {weekDays.map((day, i) => {
+                        const iso     = isoDate(day);
+                        const blocked = isDayBlocked(iso);
+                        const feriado = isDayFeriado(iso);
+                        const isToday = sameDay(day, new Date());
+                        return (
+                          <div key={i} className={`px-1 sm:px-2 py-3 text-center border-r border-neutral-100 last:border-0 ${blocked || feriado ? "bg-neutral-50" : ""}`}>
+                            <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wide">
+                              {day.toLocaleString("es-CL", { weekday: "short" })}
+                            </p>
+                            <p className={`text-base sm:text-lg font-bold mt-0.5 ${isToday ? "text-primary-500" : "text-neutral-800"}`}>
+                              {day.getDate()}
+                            </p>
+                            {(blocked || feriado) && (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] text-neutral-500 font-medium">
+                                <SlashCircle01 className="w-2.5 h-2.5" />
+                                {blocked ? "Bloq." : "Fer."}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
 
-                  {/* Slots */}
-                  <div className="overflow-y-auto max-h-[500px]">
-                    {slots.map(slot => (
-                      <div
-                        key={slot}
-                        className="grid border-b border-neutral-50 last:border-0"
-                        style={{ gridTemplateColumns: "80px repeat(7, 1fr)" }}
-                      >
-                        <div className="px-3 py-2 border-r border-neutral-100 flex items-center">
-                          <span className="text-xs font-medium text-neutral-400 tabular-nums">{slot}</span>
-                        </div>
-                        {weekDays.map((day, di) => {
-                          const iso     = isoDate(day);
-                          const blocked = isDayBlocked(iso);
-                          const feriado = isDayFeriado(iso);
-                          if (blocked || feriado) {
+                    {/* Slots */}
+                    <div className="overflow-y-auto max-h-[400px] sm:max-h-[500px]">
+                      {slots.map(slot => (
+                        <div
+                          key={slot}
+                          className="grid border-b border-neutral-50 last:border-0"
+                          style={{ gridTemplateColumns: "56px repeat(7, minmax(80px, 1fr))", minWidth: "620px" }}
+                        >
+                          <div className="px-2 py-2 border-r border-neutral-100 flex items-center sticky left-0 bg-white z-[1]">
+                            <span className="text-[11px] sm:text-xs font-medium text-neutral-600 tabular-nums">{slot}</span>
+                          </div>
+                          {weekDays.map((day, di) => {
+                            const iso     = isoDate(day);
+                            const blocked = isDayBlocked(iso);
+                            const feriado = isDayFeriado(iso);
+                            if (blocked || feriado) {
+                              return (
+                                <div key={di} className="border-r border-neutral-100 last:border-0 bg-neutral-50/80 py-1 px-1 sm:px-2" />
+                              );
+                            }
+                            const orsHere = orsForSlot(iso, slot);
+                            const cap     = calCfg.slotsSimultaneos;
+                            const occ     = orsHere.length;
+                            const pct     = cap > 0 ? (occ / cap) * 100 : 0;
+                            const isSelected = selectedSlot?.date === iso && selectedSlot?.hora === slot;
+                            const cellColor =
+                              occ === 0        ? "hover:bg-green-50/50 cursor-default" :
+                              pct >= 100        ? "bg-red-50 hover:bg-red-100 cursor-pointer" :
+                              pct >= 70         ? "bg-amber-50 hover:bg-amber-100 cursor-pointer" :
+                                                 "bg-green-50/60 hover:bg-green-100 cursor-pointer";
                             return (
-                              <div key={di} className="border-r border-neutral-100 last:border-0 bg-neutral-50/80 py-1 px-2" />
+                              <div
+                                key={di}
+                                onClick={() => occ > 0 && setSelectedSlot(isSelected ? null : { date: iso, hora: slot })}
+                                className={`border-r border-neutral-100 last:border-0 py-1 px-1 sm:px-2 min-h-[40px] transition-colors duration-300 ${cellColor} ${isSelected ? "ring-2 ring-inset ring-primary-400" : ""}`}
+                              >
+                                {occ > 0 && (
+                                  <div className="flex items-center gap-1 flex-wrap">
+                                    <span className={`text-[11px] font-bold tabular-nums ${pct >= 100 ? "text-red-600" : pct >= 70 ? "text-amber-700" : "text-green-700"}`}>
+                                      {occ}/{cap}
+                                    </span>
+                                    <span className="hidden sm:inline text-[9px] text-neutral-500 truncate max-w-[60px]">{orsHere[0]?.seller ?? orsHere[0]?.id}</span>
+                                  </div>
+                                )}
+                              </div>
                             );
-                          }
-                          const orsHere = orsForSlot(iso, slot);
-                          const cap     = calCfg.slotsSimultaneos;
-                          const occ     = orsHere.length;
-                          const pct     = cap > 0 ? (occ / cap) * 100 : 0;
-                          const isSelected = selectedSlot?.date === iso && selectedSlot?.hora === slot;
-                          const cellColor =
-                            occ === 0        ? "hover:bg-green-50/50 cursor-default" :
-                            pct >= 100        ? "bg-red-50 hover:bg-red-100 cursor-pointer" :
-                            pct >= 70         ? "bg-amber-50 hover:bg-amber-100 cursor-pointer" :
-                                               "bg-green-50/60 hover:bg-green-100 cursor-pointer";
-                          return (
-                            <div
-                              key={di}
-                              onClick={() => occ > 0 && setSelectedSlot(isSelected ? null : { date: iso, hora: slot })}
-                              className={`border-r border-neutral-100 last:border-0 py-1 px-2 min-h-[40px] transition-colors duration-300 ${cellColor} ${isSelected ? "ring-2 ring-inset ring-primary-400" : ""}`}
-                            >
-                              {occ > 0 && (
-                                <div className="flex items-center gap-1 flex-wrap">
-                                  <span className={`text-[11px] font-bold tabular-nums ${pct >= 100 ? "text-red-600" : pct >= 70 ? "text-amber-700" : "text-green-700"}`}>
-                                    {occ}/{cap}
-                                  </span>
-                                  {orsHere.slice(0, 2).map((or, i) => (
-                                    <span key={i} className="text-[9px] text-neutral-500 truncate max-w-[60px]">{or.seller ?? or.id}</span>
-                                  ))}
-                                  {orsHere.length > 2 && (
-                                    <span className="text-[9px] text-neutral-400">+{orsHere.length - 2}</span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ))}
+                          })}
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Selected slot detail panel */}
                   {selectedSlot && (() => {
                     const ors = orsForSlot(selectedSlot.date, selectedSlot.hora);
                     return (
-                      <div className="border-t border-primary-100 bg-primary-50/50 px-5 py-4">
+                      <div className="border-t border-primary-100 bg-primary-50/50 px-4 sm:px-5 py-4">
                         <div className="flex items-center justify-between mb-3">
                           <p className="text-sm font-semibold text-primary-700">
                             {fmtFecha(selectedSlot.date)} · {selectedSlot.hora} — {ors.length} OR{ors.length !== 1 ? "s" : ""}
@@ -1386,14 +1415,14 @@ export default function ConfiguracionPage() {
                         </div>
                         <div className="space-y-2">
                           {ors.map((or, i) => (
-                            <div key={i} className="bg-white border border-primary-100 rounded-lg px-3 py-2 flex items-center gap-3 text-sm">
+                            <div key={i} className="bg-white border border-primary-100 rounded-lg px-3 py-2 flex items-center gap-2 sm:gap-3 text-sm flex-wrap sm:flex-nowrap">
                               <span className="font-sans text-xs text-neutral-500">{or.id ?? "—"}</span>
                               <span className="font-medium text-neutral-800">{or.seller ?? "—"}</span>
                               {or.estado && <StatusBadge status={or.estado as Status} />}
                               {or.id && (
                                 <Link
                                   href={`/recepciones/${or.id}`}
-                                  className="ml-auto px-3 py-1 bg-primary-500 hover:bg-primary-600 text-white text-xs font-semibold rounded-lg transition-colors duration-200"
+                                  className="ml-auto px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white text-xs font-semibold rounded-lg transition-colors duration-200"
                                 >
                                   Ver detalle
                                 </Link>
@@ -1414,17 +1443,66 @@ export default function ConfiguracionPage() {
               const year  = calViewDate.getFullYear();
               const month = calViewDate.getMonth();
               const firstDay = new Date(year, month, 1);
-              // Start grid on Monday before the first day
               const gridStart = startOfWeek(firstDay);
-              const days = Array.from({ length: 35 }, (_, i) => addDays(gridStart, i));
-              const DAY_HEADERS = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"];
+              const totalCells = 42;
+              const days = Array.from({ length: totalCells }, (_, i) => addDays(gridStart, i));
+              const lastRowStart = days[35];
+              const useDays = lastRowStart && lastRowStart.getMonth() !== month ? days.slice(0, 35) : days;
+              const DAY_HEADERS_FULL = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"];
+
+              const MAX_EVENTS_PER_CELL = 2;
+
+              // Status → pill color map
+              const statusPillStyle = (estado: string) => {
+                switch (estado) {
+                  case "Programado":                return "border-l-sky-500 bg-sky-50 text-sky-800";
+                  case "Recepcionado en bodega":     return "border-l-indigo-500 bg-indigo-50 text-indigo-800";
+                  case "En proceso de conteo":       return "border-l-primary-500 bg-primary-25 text-primary-700";
+                  case "Pendiente de aprobación":    return "border-l-orange-500 bg-orange-50 text-orange-800";
+                  case "Completada":                 return "border-l-green-500 bg-green-50 text-green-800";
+                  case "Cancelado":                  return "border-l-neutral-400 bg-neutral-50 text-neutral-600";
+                  default:                           return "border-l-neutral-300 bg-neutral-50 text-neutral-700";
+                }
+              };
+
+              // Status → dot color for mobile compact view
+              const statusDotColor = (estado: string) => {
+                switch (estado) {
+                  case "Programado":                return "bg-sky-500";
+                  case "Recepcionado en bodega":     return "bg-indigo-500";
+                  case "En proceso de conteo":       return "bg-primary-500";
+                  case "Pendiente de aprobación":    return "bg-orange-500";
+                  case "Completada":                 return "bg-green-500";
+                  case "Cancelado":                  return "bg-neutral-400";
+                  default:                           return "bg-neutral-300";
+                }
+              };
+
+              // Extract time from fechaAgendada "dd/mm/yyyy HH:mm"
+              const extractTime = (fa: string) => {
+                const parts = fa.split(" ");
+                return parts[1] ?? "";
+              };
+
+              // Helper: get ORs for a given ISO date
+              const getOrsForDay = (iso: string) => calOrs.filter(o => {
+                if (!o.fechaAgendada) return false;
+                const parts = o.fechaAgendada.split(" ");
+                const [d2, m2, y2] = parts[0].split("/");
+                return `${y2}-${m2?.padStart(2,"0")}-${d2?.padStart(2,"0")}` === iso;
+              });
+
+              // Selected day ORs for mobile expansion panel
+              const selectedDayOrs = selectedDay ? getOrsForDay(selectedDay) : [];
+              const selectedDayDate = selectedDay ? new Date(selectedDay + "T12:00:00") : null;
 
               return (
+                <>
                 <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
-                  {/* Day headers */}
-                  <div className="grid grid-cols-7 border-b border-neutral-100">
-                    {DAY_HEADERS.map(d => (
-                      <div key={d} className="px-2 py-2.5 text-center text-xs font-semibold text-neutral-400 border-r border-neutral-100 last:border-0">
+                  {/* Day headers with colored top borders */}
+                  <div className="grid grid-cols-7">
+                    {DAY_HEADERS_FULL.map((d, idx) => (
+                      <div key={idx} className={`px-1 sm:px-2 py-2 sm:py-2.5 text-center text-[11px] sm:text-xs font-semibold text-neutral-500 uppercase tracking-wider ${idx < 6 ? "border-r border-neutral-100" : ""}`}>
                         {d}
                       </div>
                     ))}
@@ -1432,82 +1510,159 @@ export default function ConfiguracionPage() {
 
                   {/* Days grid */}
                   <div className="grid grid-cols-7">
-                    {days.map((day, i) => {
+                    {useDays.map((day, i) => {
                       const iso       = isoDate(day);
                       const inMonth   = day.getMonth() === month;
                       const blocked   = isDayBlocked(iso);
-                      const feriado   = isDayFeriado(iso);
+                      const feriadoDay = isDayFeriado(iso);
                       const isToday   = sameDay(day, new Date());
-                      const dayOrs    = calOrs.filter(o => {
-                        if (!o.fechaAgendada) return false;
-                        const parts = o.fechaAgendada.split(" ");
-                        const [d2, m2, y2] = parts[0].split("/");
-                        return `${y2}-${m2?.padStart(2,"0")}-${d2?.padStart(2,"0")}` === iso;
-                      });
-                      const orCount   = dayOrs.length;
-                      const cap       = calCfg.slotsSimultaneos * slots.length;
-                      const pct       = cap > 0 ? (orCount / cap) * 100 : 0;
-                      const dotColor  =
-                        blocked || feriado ? "bg-neutral-400" :
-                        orCount === 0      ? "bg-green-400" :
-                        pct >= 80          ? "bg-red-400" :
-                        pct >= 50          ? "bg-amber-400" :
-                                             "bg-green-400";
+                      const dayOrs    = inMonth ? getOrsForDay(iso) : [];
+                      const colIdx    = i % 7;
+                      const isSelected = selectedDay === iso;
 
                       return (
                         <div
                           key={i}
-                          className={`min-h-[90px] border-b border-r border-neutral-100 last:border-r-0 p-2 flex flex-col gap-1 transition-colors duration-300 ${
-                            !inMonth     ? "bg-neutral-50/50" :
-                            blocked      ? "bg-neutral-100/80" :
-                            feriado      ? "bg-orange-50/60" :
-                                           "hover:bg-neutral-50/80"
+                          onClick={() => {
+                            if (inMonth && dayOrs.length > 0) {
+                              const next = isSelected ? null : iso;
+                              setSelectedDay(next);
+                              if (next) {
+                                setTimeout(() => {
+                                  document.getElementById("mobile-day-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                                }, 80);
+                              }
+                            }
+                          }}
+                          className={`min-h-[54px] sm:min-h-[110px] border-b border-neutral-100 p-1 sm:p-1.5 flex flex-col transition-colors duration-200 ${
+                            colIdx < 6 ? "border-r border-neutral-100" : ""
+                          } ${
+                            !inMonth     ? "bg-neutral-50/60" :
+                            isSelected   ? "bg-primary-50/60 ring-1 ring-inset ring-primary-300" :
+                            blocked      ? "bg-neutral-100/60" :
+                            feriadoDay   ? "bg-orange-50/40" :
+                            dayOrs.length > 0 ? "bg-white hover:bg-neutral-50/50 cursor-pointer sm:cursor-default" :
+                                           "bg-white"
                           }`}
                         >
                           {/* Day number */}
-                          <div className="flex items-center justify-between">
-                            <span className={`text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full ${
+                          <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+                            <span className={`text-[11px] sm:text-xs font-semibold w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center rounded-full ${
                               isToday   ? "bg-primary-500 text-white" :
                               !inMonth  ? "text-neutral-300" :
-                              blocked || feriado ? "text-neutral-400" :
-                              "text-neutral-800"
+                              blocked || feriadoDay ? "text-neutral-400" :
+                              "text-neutral-700"
                             }`}>
                               {day.getDate()}
                             </span>
-                            {inMonth && <span className={`w-2 h-2 rounded-full ${dotColor}`} />}
+                            {/* Mobile: colored dots for ORs */}
+                            {inMonth && dayOrs.length > 0 && (
+                              <div className="flex items-center gap-[2px] sm:hidden">
+                                {dayOrs.length <= 3
+                                  ? dayOrs.map((or, di) => (
+                                      <span key={di} className={`w-[5px] h-[5px] rounded-full ${statusDotColor(or.estado ?? "")}`} />
+                                    ))
+                                  : <>
+                                      {dayOrs.slice(0, 2).map((or, di) => (
+                                        <span key={di} className={`w-[5px] h-[5px] rounded-full ${statusDotColor(or.estado ?? "")}`} />
+                                      ))}
+                                      <span className="text-[8px] text-neutral-500 font-bold leading-none">+{dayOrs.length - 2}</span>
+                                    </>
+                                }
+                              </div>
+                            )}
                           </div>
 
-                          {/* Blocked / feriado label */}
-                          {inMonth && (blocked || feriado) && (
-                            <span className="text-[10px] text-neutral-500 font-medium flex items-center gap-0.5">
-                              <SlashCircle01 className="w-2.5 h-2.5" />
-                              {blocked ? "Bloqueado" : "Feriado"}
+                          {/* Blocked / feriado label — desktop only for full text */}
+                          {inMonth && (blocked || feriadoDay) && (
+                            <span className="text-[9px] sm:text-[10px] text-neutral-400 font-medium flex items-center gap-0.5 mb-0.5 truncate">
+                              <SlashCircle01 className="w-2.5 h-2.5 shrink-0" />
+                              <span className="truncate">{blocked ? "Bloqueado" : (() => {
+                                const f = feriados.find(f => f.fecha === iso);
+                                return f ? f.nombre : "Feriado";
+                              })()}</span>
                             </span>
                           )}
 
-                          {/* OR count badge */}
-                          {inMonth && !blocked && !feriado && orCount > 0 && (
-                            <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded w-fit ${
-                              pct >= 80 ? "bg-red-100 text-red-700" :
-                              pct >= 50 ? "bg-amber-100 text-amber-700" :
-                                          "bg-green-100 text-green-700"
-                            }`}>
-                              {orCount} OR{orCount !== 1 ? "s" : ""}
-                            </span>
+                          {/* Desktop: Event pills (hidden on mobile) */}
+                          {dayOrs.length > 0 && (
+                            <div className="hidden sm:flex flex-col gap-0.5 flex-1 min-h-0">
+                              {dayOrs.slice(0, MAX_EVENTS_PER_CELL).map((or, idx) => (
+                                <Link
+                                  key={idx}
+                                  href={`/recepciones/${or.id}`}
+                                  className={`flex items-center gap-1 px-1.5 py-[3px] rounded border-l-[3px] text-[10px] leading-tight truncate transition-opacity hover:opacity-80 ${statusPillStyle(or.estado ?? "")}`}
+                                >
+                                  <span className="font-semibold truncate">{or.seller}</span>
+                                  {or.fechaAgendada && extractTime(or.fechaAgendada) && (
+                                    <span className="text-[9px] opacity-60 shrink-0">{extractTime(or.fechaAgendada)}</span>
+                                  )}
+                                </Link>
+                              ))}
+                              {dayOrs.length > MAX_EVENTS_PER_CELL && (
+                                <button
+                                  onClick={() => {
+                                    setCalViewDate(day);
+                                    setCalViewMode("week");
+                                  }}
+                                  className="text-[10px] text-primary-500 font-medium hover:text-primary-700 text-left px-1.5 transition-colors"
+                                >
+                                  +{dayOrs.length - MAX_EVENTS_PER_CELL} más...
+                                </button>
+                              )}
+                            </div>
                           )}
-
-                          {/* Feriado name */}
-                          {inMonth && feriado && (() => {
-                            const f = feriados.find(f => f.fecha === iso);
-                            return f ? (
-                              <span className="text-[10px] text-orange-600 truncate">{f.nombre}</span>
-                            ) : null;
-                          })()}
                         </div>
                       );
                     })}
                   </div>
                 </div>
+
+                {/* Mobile: Selected day expansion panel — vertical card layout */}
+                {selectedDay && selectedDayOrs.length > 0 && (
+                  <div id="mobile-day-panel" className="sm:hidden bg-white border border-neutral-200 rounded-xl overflow-hidden mt-3 mb-24">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100 bg-neutral-50/50">
+                      <p className="text-sm font-semibold text-neutral-800">
+                        {selectedDayDate && selectedDayDate.toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })}
+                        <span className="text-neutral-400 font-normal"> · {selectedDayOrs.length} OR{selectedDayOrs.length !== 1 ? "s" : ""}</span>
+                      </p>
+                      <button onClick={() => setSelectedDay(null)} className="p-1 hover:bg-neutral-100 rounded-lg">
+                        <X className="w-4 h-4 text-neutral-400" />
+                      </button>
+                    </div>
+                    <div className="divide-y divide-neutral-100">
+                      {selectedDayOrs.map((or, idx) => (
+                        <Link
+                          key={idx}
+                          href={`/recepciones/${or.id}`}
+                          className="block px-4 py-3.5 hover:bg-neutral-50 transition-colors"
+                        >
+                          {/* Vertical layout */}
+                          <div className="flex items-start gap-3">
+                            <span className={`w-1 self-stretch rounded-full shrink-0 ${statusDotColor(or.estado ?? "")}`} />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-sm font-semibold text-neutral-800 truncate">{or.seller}</p>
+                                <ChevronRight className="w-4 h-4 text-neutral-300 shrink-0" />
+                              </div>
+                              <p className="text-xs text-neutral-500 mt-1">{or.id}</p>
+                              <div className="flex items-center justify-between mt-2">
+                                {or.fechaAgendada && extractTime(or.fechaAgendada) && (
+                                  <span className="text-xs text-neutral-400 flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {extractTime(or.fechaAgendada)}
+                                  </span>
+                                )}
+                                {or.estado && <StatusBadge status={or.estado as Status} />}
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                </>
               );
             })()}
 
@@ -1523,38 +1678,42 @@ export default function ConfiguracionPage() {
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-              <div className="p-6">
+              {/* Header */}
+              <div className="flex items-start justify-between px-5 pt-5 pb-3">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
                     <AlertTriangle className="w-6 h-6 text-red-500" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-neutral-900">Desactivar {suc.label}</h3>
+                    <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900">Desactivar {suc.label}</h1>
                     <p className="text-sm text-neutral-500 mt-2 leading-relaxed">
                       Desactivar esta sucursal ocultará sus slots del calendario y bloqueará nuevos
                       agendamientos. Los agendamientos existentes{" "}
                       <strong className="text-neutral-700">no se verán afectados</strong>.
                     </p>
-                    <p className="text-sm text-neutral-400 mt-1.5">
+                    <p className="text-sm text-neutral-600 mt-1.5">
                       Puedes reactivarla en cualquier momento desde este panel.
                     </p>
                   </div>
                 </div>
+                <button onClick={() => setDeactivateTarget(null)} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300 flex-shrink-0">
+                  <X className="w-4 h-4 text-neutral-600" />
+                </button>
               </div>
-              <div className="px-6 py-4 bg-neutral-50 border-t border-neutral-100 flex items-center justify-end gap-3">
-                <button
-                  onClick={() => setDeactivateTarget(null)}
-                  className="px-4 py-2 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-white transition-colors duration-300 font-medium"
-                >
+              {/* Footer */}
+              <div className="flex gap-3 border-t border-neutral-100 px-5 pt-3 pb-8 sm:pb-5">
+                <Button variant="secondary" size="lg" onClick={() => setDeactivateTarget(null)} className="flex-1">
                   Cancelar
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="primary"
+                  size="lg"
                   onClick={() => confirmDeactivate(deactivateTarget)}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
+                  iconLeft={<SlashCircle01 className="w-4 h-4" />}
+                  className="flex-1 !bg-red-600 hover:!bg-red-700"
                 >
-                  <SlashCircle01 className="w-4 h-4" />
                   Desactivar sucursal
-                </button>
+                </Button>
               </div>
             </div>
           </div>
