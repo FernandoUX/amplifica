@@ -1685,7 +1685,7 @@ export default function ConfiguracionPage() {
                     <AlertTriangle className="w-6 h-6 text-red-500" />
                   </div>
                   <div>
-                    <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900">Desactivar {suc.label}</h1>
+                    <h1 className="text-xl font-bold text-neutral-900">Desactivar {suc.label}</h1>
                     <p className="text-sm text-neutral-500 mt-2 leading-relaxed">
                       Desactivar esta sucursal ocultará sus slots del calendario y bloqueará nuevos
                       agendamientos. Los agendamientos existentes{" "}

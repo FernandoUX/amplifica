@@ -43,7 +43,7 @@ type Props = {
   getOrInfo: (orId: string) => OrInfo | undefined;
 };
 
-type Step = "input" | "validating" | "success" | "error";
+type Step = "input" | "validating" | "confirm" | "success" | "error";
 
 // ─── Embedded reception scan types ──────────────────────────────────────────
 type RecScanStatus = "ok" | "duplicate" | "unknown";
@@ -78,7 +78,21 @@ function ToleranceBadge({ fechaAgendada }: { fechaAgendada: string }) {
 }
 
 // ─── Valid states for QR scan ───────────────────────────────────────────────
-const SCANNABLE_STATES = ["Programado", "Recepcionado en bodega"];
+const SCANNABLE_STATES = ["Programado", "Recepcionado en bodega", "En proceso de conteo"];
+
+// ─── Action groups for the quick-scan list ──────────────────────────────────
+type ActionGroup = {
+  key: string;
+  icon: string;
+  label: string;
+  states: string[];
+};
+
+const ACTION_GROUPS: ActionGroup[] = [
+  { key: "recibir",   icon: "📦", label: "Recibir en bodega",  states: ["Programado"] },
+  { key: "conteo",    icon: "📋", label: "Iniciar conteo",     states: ["Recepcionado en bodega"] },
+  { key: "continuar", icon: "▶",  label: "Continuar conteo",   states: ["En proceso de conteo"] },
+];
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
@@ -134,10 +148,24 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
   }, []);
 
   // Detected flow based on OR estado
-  const detectedFlow: "recepcion" | "conteo" | null =
+  const detectedFlow: "recepcion" | "conteo" | "continuar" | null =
     matchedOr?.estado === "Programado" ? "recepcion"
     : matchedOr?.estado === "Recepcionado en bodega" ? "conteo"
+    : matchedOr?.estado === "En proceso de conteo" ? "continuar"
     : null;
+
+  // Human-readable action label
+  const flowLabel =
+    detectedFlow === "recepcion" ? "Recibir en bodega"
+    : detectedFlow === "conteo" ? "Iniciar conteo"
+    : detectedFlow === "continuar" ? "Continuar conteo"
+    : "";
+
+  const flowDescription =
+    detectedFlow === "recepcion" ? "Se registrarán pallets y bultos para confirmar la llegada física."
+    : detectedFlow === "conteo" ? "Se abrirá una sesión de conteo para verificar las unidades recibidas."
+    : detectedFlow === "continuar" ? "Se retomará la sesión de conteo existente con el progreso previo."
+    : "";
 
   // Seed tokens on first open
   useEffect(() => { if (open) ensureQrSeeded(); }, [open]);
@@ -155,14 +183,26 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
     }
   }, [open]);
 
-  // ── Scannable ORs for quick-scan list (Programado + Recepcionado en bodega) ──
-  const [scannableOrs, setScannableOrs] = useState<{ orId: string; token: string; seller: string; sucursal: string; estado: string }[]>([]);
+  // ── Scannable ORs for quick-scan list ──
+  type ScannableOr = {
+    orId: string;
+    token: string;
+    seller: string;
+    sucursal: string;
+    estado: string;
+    fechaAgendada: string;
+    fechaExtra?: string;
+    skus: number;
+    uTotales: string;
+    progreso?: { contadas: number; total: number };
+  };
+  const [scannableOrs, setScannableOrs] = useState<ScannableOr[]>([]);
 
   useEffect(() => {
     if (!open) return;
     ensureQrSeeded();
     const tokens = loadQrTokens().filter(t => t.estado === "activo");
-    const items = tokens.map(t => {
+    const items: ScannableOr[] = tokens.map(t => {
       const or = getOrInfo(t.orden_recepcion_id);
       const meta = QR_OR_META[t.orden_recepcion_id];
       return {
@@ -171,6 +211,10 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
         seller: or?.seller ?? meta?.seller ?? "—",
         sucursal: or?.sucursal ?? meta?.sucursal ?? "—",
         estado: or?.estado ?? "Programado",
+        fechaAgendada: or?.fechaAgendada ?? "—",
+        fechaExtra: (or as Record<string, unknown>)?.fechaExtra as string | undefined,
+        skus: or?.skus ?? meta?.skus ?? 0,
+        uTotales: or?.uTotales ?? meta?.uTotales ?? "—",
       };
     }).filter(item => SCANNABLE_STATES.includes(item.estado));
     setScannableOrs(items);
@@ -231,10 +275,15 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
 
       setMatchedToken(token);
       setMatchedOr(resolvedOr);
-      setStep("success");
+      setStep("confirm");
       playScanSuccessSound();
     }, 500);
   }, [getOrInfo]);
+
+  // ── From confirm → proceed to action ──
+  const handleProceedFromConfirm = () => {
+    setStep("success");
+  };
 
   const handleConfirmRecepcion = () => {
     if (!matchedToken || validRecEntries.length === 0) return;
@@ -280,7 +329,7 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
 
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 flex-shrink-0">
-          <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900">
+          <h1 className="text-xl font-bold text-neutral-900">
             Escanear QR de recepción
           </h1>
           <button onClick={onClose} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">
@@ -305,14 +354,14 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
                   <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-white/70 rounded-br-md" />
                   {/* Animated scan line */}
                   <div className="absolute left-4 right-4 h-0.5 bg-primary-400/60 animate-pulse" style={{ top: "45%" }} />
-                  {/* Two action buttons — stacked full-width */}
-                  <div className="relative z-10 flex flex-col gap-2 w-full px-4">
+                  {/* Two action buttons — stacked vertically, auto-width */}
+                  <div className="relative z-10 flex flex-col items-center gap-2 px-4">
                     <button
                       onClick={() => {
                         const programado = scannableOrs.find(o => o.estado === "Programado");
                         if (programado) doScan(programado.token);
                       }}
-                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 transition-colors shadow-lg"
+                      className="inline-flex items-center justify-center gap-2 px-5 py-2 text-sm font-medium text-white bg-neutral-700 rounded-lg hover:bg-neutral-600 transition-colors shadow-lg"
                     >
                       <PackageCheck className="w-4 h-4" />
                       Recibir en bodega
@@ -322,7 +371,7 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
                         const recepcionado = scannableOrs.find(o => o.estado === "Recepcionado en bodega");
                         if (recepcionado) doScan(recepcionado.token);
                       }}
-                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-neutral-700 rounded-lg hover:bg-neutral-600 transition-colors shadow-lg"
+                      className="inline-flex items-center justify-center gap-2 px-5 py-2 text-sm font-medium text-white bg-neutral-700 rounded-lg hover:bg-neutral-600 transition-colors shadow-lg"
                     >
                       <Play className="w-4 h-4" />
                       Iniciar conteo
@@ -368,31 +417,64 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
                 </div>
               </div>
 
-              {/* Quick-scan list */}
+              {/* Quick-scan list — grouped by action */}
               <div className="flex-1 min-h-0 flex flex-col">
                 <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2 flex-shrink-0">
-                  Órdenes disponibles (escaneo rápido)
+                  Órdenes disponibles
                 </p>
                 {scannableOrs.length === 0 ? (
                   <p className="text-sm text-neutral-400 italic">No hay órdenes disponibles con QR activo.</p>
                 ) : (
-                  <ScrollArea className="space-y-1.5 flex-1 min-h-0">
-                    {scannableOrs.map((item, idx) => (
-                      <button
-                        key={item.orId}
-                        onClick={() => doScan(item.token, MOCK_FLOWS[idx - 1])}
-                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-neutral-200 hover:border-primary-300 hover:bg-primary-50/50 transition-colors text-left group"
-                      >
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <p className="text-sm font-medium text-neutral-800 truncate">{item.orId}</p>
-                            <StatusBadge status={item.estado as Status} />
+                  <ScrollArea className="space-y-4 flex-1 min-h-0">
+                    {ACTION_GROUPS.map(group => {
+                      const groupItems = scannableOrs.filter(item => group.states.includes(item.estado));
+                      if (groupItems.length === 0) return null;
+                      return (
+                        <div key={group.key}>
+                          {/* Group header */}
+                          <div className="flex items-center gap-2 mb-1.5 px-1">
+                            <span className="text-sm">{group.icon}</span>
+                            <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide">{group.label}</span>
+                            <span className="text-[10px] font-semibold text-neutral-400 bg-neutral-100 rounded-full px-1.5 py-0.5 tabular-nums">{groupItems.length}</span>
                           </div>
-                          <p className="text-xs text-neutral-500">{item.seller} · {item.sucursal}</p>
+                          <div className="space-y-1.5">
+                            {groupItems.map((item, idx) => (
+                              <button
+                                key={item.orId}
+                                onClick={() => doScan(item.token, group.key === "recibir" ? MOCK_FLOWS[idx - 1] : undefined)}
+                                className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-neutral-200 hover:border-primary-300 hover:bg-primary-50/50 transition-colors text-left group"
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2 mb-0.5">
+                                    <p className="text-sm font-medium text-neutral-800 truncate">{item.orId}</p>
+                                  </div>
+                                  <p className="text-xs text-neutral-500">{item.seller} · {item.sucursal}</p>
+                                  {/* Temporal info: fecha agendada + urgency */}
+                                  {item.fechaAgendada && item.fechaAgendada !== "—" && (
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <span className="text-[10px] text-neutral-400 tabular-nums flex items-center gap-1">
+                                        <Clock className="w-3 h-3" />
+                                        {item.fechaAgendada}
+                                      </span>
+                                      {item.fechaExtra && (
+                                        <span className={`text-[10px] font-medium ${
+                                          item.fechaExtra.toLowerCase().includes("expirado") ? "text-red-500" :
+                                          item.fechaExtra.toLowerCase().includes("expira") ? "text-amber-500" :
+                                          "text-neutral-400"
+                                        }`}>
+                                          {item.fechaExtra}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-primary-400 flex-shrink-0 ml-2" />
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-primary-400 flex-shrink-0 ml-2" />
-                      </button>
-                    ))}
+                      );
+                    })}
                   </ScrollArea>
                 )}
               </div>
@@ -404,6 +486,70 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
             <div className="flex flex-col items-center justify-center gap-3 py-6">
               <div className="w-10 h-10 border-3 border-neutral-200 border-t-primary-500 rounded-full animate-spin" />
               <p className="text-sm font-medium text-neutral-600">Validando código QR...</p>
+            </div>
+          )}
+
+          {/* STEP: CONFIRM — Confirmation screen before action */}
+          {step === "confirm" && matchedOr && (
+            <div className="flex flex-col gap-4">
+              {/* Success indicator */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-base font-semibold text-neutral-900">{matchedOr.id} identificada</p>
+                  <StatusBadge status={matchedOr.estado as Status} />
+                </div>
+              </div>
+
+              {/* OR details card */}
+              <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4 space-y-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="font-medium text-neutral-800">{matchedOr.seller}</span>
+                  <span className="text-neutral-300">·</span>
+                  <span className="text-neutral-500">{matchedOr.sucursal}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-neutral-400">SKUs</span>
+                    <p className="font-semibold text-neutral-700 tabular-nums">{matchedOr.skus}</p>
+                  </div>
+                  <div>
+                    <span className="text-neutral-400">Unidades</span>
+                    <p className="font-semibold text-neutral-700 tabular-nums">{matchedOr.uTotales}</p>
+                  </div>
+                  {matchedOr.fechaAgendada && matchedOr.fechaAgendada !== "—" && (
+                    <div className="col-span-2">
+                      <span className="text-neutral-400">Fecha agendada</span>
+                      <p className="font-semibold text-neutral-700 tabular-nums">{matchedOr.fechaAgendada}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action to perform */}
+              <div className="bg-primary-50 border border-primary-200 rounded-xl p-4">
+                <p className="text-xs font-semibold text-primary-700 uppercase tracking-wide mb-1">Acción a ejecutar</p>
+                <p className="text-sm font-bold text-primary-900">→ {flowLabel}</p>
+                <p className="text-xs text-primary-600 mt-1">{flowDescription}</p>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={resetToInput}
+                  className="flex-1 px-4 py-2.5 text-sm font-medium text-neutral-700 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors"
+                >
+                  Volver
+                </button>
+                <button
+                  onClick={handleProceedFromConfirm}
+                  className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 transition-colors"
+                >
+                  Continuar
+                </button>
+              </div>
             </div>
           )}
 
@@ -464,6 +610,46 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
                           <p className="font-medium text-neutral-800">{matchedOr.bultos}</p>
                         </div>
                       )}
+                      <div>
+                        <span className="text-neutral-500">Unidades</span>
+                        <p className="font-medium text-neutral-800">{matchedOr.uTotales}</p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Continuar conteo flow */}
+              {detectedFlow === "continuar" && (
+                <>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
+                      <Play className="w-5 h-5 text-primary-600" />
+                    </div>
+                    <div>
+                      <p className="text-base font-semibold text-neutral-900">Retomar sesión de conteo</p>
+                      <p className="text-sm text-neutral-500">La orden tiene una sesión de conteo en progreso.</p>
+                    </div>
+                  </div>
+
+                  <div className="border border-neutral-200 rounded-xl p-4 space-y-3 mb-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-neutral-900">{matchedOr.id}</span>
+                      <StatusBadge status={matchedOr.estado as Status} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                      <div>
+                        <span className="text-neutral-500">Seller</span>
+                        <p className="font-medium text-neutral-800">{matchedOr.seller}</p>
+                      </div>
+                      <div>
+                        <span className="text-neutral-500">Sucursal</span>
+                        <p className="font-medium text-neutral-800">{matchedOr.sucursal}</p>
+                      </div>
+                      <div>
+                        <span className="text-neutral-500">SKUs</span>
+                        <p className="font-medium text-neutral-800">{matchedOr.skus}</p>
+                      </div>
                       <div>
                         <span className="text-neutral-500">Unidades</span>
                         <p className="font-medium text-neutral-800">{matchedOr.uTotales}</p>
@@ -684,6 +870,24 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
               className="w-full"
             >
               Iniciar conteo
+            </Button>
+            <Button variant="secondary" size="lg" onClick={onClose} className="w-full">
+              Cancelar
+            </Button>
+          </div>
+        )}
+
+        {/* ── Footer: Continuar conteo flow ── */}
+        {step === "success" && matchedOr && detectedFlow === "continuar" && (
+          <div className="flex-shrink-0 border-t border-neutral-100 px-5 pt-3 pb-8 sm:pb-5 flex flex-col gap-2">
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={handleConfirmConteo}
+              iconLeft={<Play className="w-4 h-4" />}
+              className="w-full"
+            >
+              Continuar conteo
             </Button>
             <Button variant="secondary" size="lg" onClick={onClose} className="w-full">
               Cancelar

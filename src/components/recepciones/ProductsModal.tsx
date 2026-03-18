@@ -103,7 +103,7 @@ export default function ProductsModal({ onClose, onAdd, initialSearch = "" }: Pr
 
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0">
-          <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900">Agregar productos</h1>
+          <h1 className="text-xl font-bold text-neutral-900">Agregar productos</h1>
           <button
             onClick={onClose}
             className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-500 transition-colors duration-300"

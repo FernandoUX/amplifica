@@ -1039,7 +1039,7 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="flex items-center justify-between">
-              <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900">Conteo manual</h1>
+              <h1 className="text-xl font-bold text-neutral-900">Conteo manual</h1>
               <button onClick={() => setShowManualModal(false)} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">
                 <X className="w-4 h-4 text-neutral-600" />
               </button>
@@ -1563,7 +1563,7 @@ function IncidenciasSKUModal({ product, initialRows, onClose, onSave, onLiveUpda
               : <ImageOff className="w-5 h-5 text-neutral-300" />}
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900 truncate">{product.nombre}</h1>
+            <h1 className="text-xl font-bold text-neutral-900 truncate">{product.nombre}</h1>
             <p className="text-xs text-neutral-600 mt-0.5">SKU: {product.sku} · {product.esperadas} uds. declaradas</p>
           </div>
           <button onClick={onClose} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300 flex-shrink-0">
@@ -1667,7 +1667,7 @@ function AddProductModal({ onCancel, onConfirm, defaultCategoria }: {
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-neutral-100 flex-shrink-0">
-          <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900">Añadir producto</h1>
+          <h1 className="text-xl font-bold text-neutral-900">Añadir producto</h1>
           <button onClick={onCancel} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">
             <X className="w-4 h-4 text-neutral-600" />
           </button>
@@ -1797,7 +1797,7 @@ function AddProductChoiceModal({ onRecognized, onUnrecognized, onCancel }: {
       <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full space-y-5">
         {/* Header */}
         <div className="flex items-start justify-between">
-          <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900">Añadir producto</h1>
+          <h1 className="text-xl font-bold text-neutral-900">Añadir producto</h1>
           <button onClick={onCancel} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">
             <X className="w-4 h-4 text-neutral-600" />
           </button>
@@ -1909,7 +1909,7 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
           <div className="bg-white w-full sm:max-w-3xl h-[90vh] sm:h-auto sm:max-h-[90vh] rounded-t-2xl sm:rounded-2xl shadow-xl flex flex-col overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-neutral-100 flex-shrink-0">
-              <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900">Registrar decisión del seller</h1>
+              <h1 className="text-xl font-bold text-neutral-900">Registrar decisión del seller</h1>
               <button onClick={() => setCatCModal(null)} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">
                 <X className="w-4 h-4 text-neutral-600" />
               </button>
@@ -3006,31 +3006,31 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
               </div>
 
               {/* Filter: desktop tabs */}
-              <div className="hidden sm:flex items-center gap-1.5 px-5 overflow-x-auto pb-4">
+              <div className="hidden sm:flex items-center gap-0.5 mx-5 mb-4 overflow-x-auto p-1 bg-neutral-100 rounded-xl">
                 <button
                   onClick={() => setIncFilter("all")}
-                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors duration-200 ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all duration-200 flex-shrink-0 ${
                     incFilter === "all"
-                      ? "bg-neutral-900 text-white font-medium"
-                      : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                      ? "bg-white text-neutral-900 font-medium shadow-sm"
+                      : "text-neutral-500 hover:text-neutral-700"
                   }`}
                 >
                   Todas
-                  <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md leading-none ${incFilter === "all" ? "bg-white/20 text-white" : "bg-neutral-200 text-neutral-500"}`}>{flatInc.length}</span>
+                  <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md leading-none ${incFilter === "all" ? "bg-neutral-900 text-white" : "bg-neutral-200 text-neutral-500"}`}>{flatInc.length}</span>
                 </button>
                 {catTabs.map(g => (
                   <button
                     key={g.cat}
                     onClick={() => setIncFilter(g.cat as "A" | "B" | "C")}
-                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors duration-200 ${
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all duration-200 flex-shrink-0 ${
                       incFilter === g.cat
-                        ? "bg-neutral-900 text-white font-medium"
-                        : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                        ? "bg-white text-neutral-900 font-medium shadow-sm"
+                        : "text-neutral-500 hover:text-neutral-700"
                     }`}
                   >
                     <span className={`w-2 h-2 rounded-full flex-shrink-0 ${g.dotCls}`} />
                     {g.labelShort}
-                    <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md leading-none ${incFilter === g.cat ? "bg-white/20 text-white" : "bg-neutral-200 text-neutral-500"}`}>{g.rows.length}</span>
+                    <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md leading-none ${incFilter === g.cat ? "bg-neutral-900 text-white" : "bg-neutral-200 text-neutral-500"}`}>{g.rows.length}</span>
                   </button>
                 ))}
               </div>
@@ -3219,6 +3219,7 @@ export default function ConteoORPage() {
   const [addProductFlow, setAddProductFlow] = useState<"closed" | "choice" | "catalog" | "manual">("closed");
   const [quarantineRecs,   setQuarantineRecs]   = useState<QuarantineRecord[]>([]);
   const [guiaModal,        setGuiaModal]        = useState(false);
+  const [approveModal,     setApproveModal]     = useState(false);
   const [qrScannerOpen,    setQrScannerOpen]    = useState(false);
   const [lastScannedId,    setLastScannedId]    = useState<string | null>(null);
   const [scanError,        setScanError]        = useState(false);
@@ -3387,6 +3388,31 @@ export default function ConteoORPage() {
     }
     return map;
   }, [incidencias]);
+
+  // ── Approval helpers ─────────────────────────────────────────────────────
+  const approvalData = useMemo(() => {
+    const totalEsperadas = products.reduce((s, p) => s + p.esperadas, 0);
+    const totalRecibidas = products.reduce((s, p) => {
+      const acc = acumulado[p.id] ?? 0;
+      const inc = (incidencias[p.id] ?? []).filter(r => r.tag !== "").reduce((rs, r) => rs + r.cantidad, 0);
+      return s + acc + inc;
+    }, 0);
+    const diffNeta = totalRecibidas - totalEsperadas;
+    const totalInc = products.reduce((s, p) => (incidencias[p.id] ?? []).filter(r => r.tag !== "").length + s, 0);
+    const pendientesQR = quarantineRecs.filter(r => r.estado !== "resuelto").length;
+    const allResolved = quarantineRecs.length > 0 && pendientesQR === 0;
+    const canApprove = quarantineRecs.length === 0 || allResolved;
+    return { totalEsperadas, totalRecibidas, diffNeta, totalInc, pendientesQR, canApprove };
+  }, [products, acumulado, incidencias, quarantineRecs]);
+
+  const handleApproveOR = () => {
+    setApproveModal(false);
+    setOrEstado("Completada");
+    try {
+      localStorage.setItem(`amplifica_or_${id}`, JSON.stringify({ estado: "Completada" }));
+      localStorage.setItem(`amplifica_or_${id}_approved`, "true");
+    } catch { /* ignore */ }
+  };
 
   // ── QR Scanner helpers ──────────────────────────────────────────────────
   const getOrInfo = useCallback((orId: string) => {
@@ -3653,7 +3679,7 @@ export default function ConteoORPage() {
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm px-0 sm:px-4" onClick={() => setGuiaModal(false)}>
           <div className="relative bg-white w-full sm:max-w-md h-[90vh] sm:h-auto sm:max-h-[90vh] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-neutral-100 flex-shrink-0">
-              <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900">Guía de despacho</h1>
+              <h1 className="text-xl font-bold text-neutral-900">Guía de despacho</h1>
               <button onClick={() => setGuiaModal(false)} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">
                 <X className="w-4 h-4 text-neutral-600" />
               </button>
@@ -3728,14 +3754,9 @@ export default function ConteoORPage() {
                   <Button
                     variant="primary"
                     size="lg"
-                    onClick={() => {
-                      setOrEstado("Completada");
-                      try {
-                        localStorage.setItem(`amplifica_or_${id}`, JSON.stringify({ estado: "Completada" }));
-                        // Also update ORDENES_SEED estado in localStorage
-                        localStorage.setItem(`amplifica_or_${id}_approved`, "true");
-                      } catch { /* ignore */ }
-                    }}
+                    onClick={() => setApproveModal(true)}
+                    disabled={!approvalData.canApprove}
+                    title={!approvalData.canApprove ? `Hay ${approvalData.pendientesQR} incidencia${approvalData.pendientesQR !== 1 ? "s" : ""} sin resolver` : undefined}
                     iconLeft={<CheckCircle2 className="w-4 h-4" />}
                   >
                     Aprobar OR
@@ -3876,13 +3897,15 @@ export default function ConteoORPage() {
                     const isRecepcionado = displayEstado === "Recepcionado en bodega" || displayEstado === "En proceso de conteo" || displayEstado === "Pendiente de aprobación";
                     const comentario = isRecepcionado ? baseData.comentarioRecepcion : baseData.comentarios;
                     const label = isRecepcionado ? "Comentarios del operador" : "Comentarios del seller";
-                    if (!comentario) return null;
                     return (
                       <div className="mt-2.5 pt-2.5 border-t border-neutral-100 flex-1 flex flex-col">
                         <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">{label}</p>
                         <div className="mt-1.5 flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2.5 flex-1">
-                          <MessageSquare className="w-3.5 h-3.5 text-neutral-600 flex-shrink-0 mt-0.5" />
-                          <p className="text-sm text-neutral-600 leading-relaxed">{comentario}</p>
+                          <MessageSquare className={`w-3.5 h-3.5 flex-shrink-0 mt-0.5 ${comentario ? "text-neutral-600" : "text-neutral-400"}`} />
+                          {comentario
+                            ? <p className="text-sm text-neutral-600 leading-relaxed">{comentario}</p>
+                            : <p className="text-sm text-neutral-400 italic">Sin comentarios adicionales</p>
+                          }
                         </div>
                       </div>
                     );
@@ -4754,20 +4777,64 @@ export default function ConteoORPage() {
           <Button
             variant="primary"
             size="lg"
-            onClick={() => {
-              setOrEstado("Completada");
-              try {
-                localStorage.setItem(`amplifica_or_${id}`, JSON.stringify({ estado: "Completada" }));
-                localStorage.setItem(`amplifica_or_${id}_approved`, "true");
-              } catch { /* ignore */ }
-            }}
+            onClick={() => setApproveModal(true)}
+            disabled={!approvalData.canApprove}
             iconLeft={<CheckCircle2 className="w-4 h-4" />}
             className="w-full"
           >
-            Aprobar OR
+            {!approvalData.canApprove
+              ? `${approvalData.pendientesQR} incidencia${approvalData.pendientesQR !== 1 ? "s" : ""} sin resolver`
+              : "Aprobar OR"}
           </Button>
         </div>
       )}
+
+      {/* ── AlertModal: Aprobar OR ── */}
+      <AlertModal
+        open={approveModal}
+        onClose={() => setApproveModal(false)}
+        icon={CheckCircle2}
+        variant="warning"
+        title="Aprobar orden de recepción"
+        subtitle="Esta acción es definitiva y no puede deshacerse"
+        confirm={{
+          label: "Sí, aprobar OR",
+          icon: <CheckCircle2 className="w-4 h-4" />,
+          onClick: handleApproveOR,
+        }}
+      >
+        <p>
+          ¿Confirmas aprobar la orden{" "}
+          <span className="font-bold text-neutral-900">{id}</span>?
+        </p>
+        <div className="mt-3 space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-neutral-500">Uds. recibidas</span>
+            <span className="font-semibold text-neutral-900">{approvalData.totalRecibidas.toLocaleString("es-CL")}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-neutral-500">Uds. esperadas</span>
+            <span className="font-semibold text-neutral-900">{approvalData.totalEsperadas.toLocaleString("es-CL")}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-neutral-500">Diferencia neta</span>
+            <span className={`font-semibold ${approvalData.diffNeta === 0 ? "text-green-600" : approvalData.diffNeta > 0 ? "text-blue-600" : "text-red-600"}`}>
+              {approvalData.diffNeta === 0 ? "0" : (approvalData.diffNeta > 0 ? "+" : "") + approvalData.diffNeta.toLocaleString("es-CL")}
+            </span>
+          </div>
+          {approvalData.totalInc > 0 && (
+            <div className="flex justify-between">
+              <span className="text-neutral-500">Incidencias</span>
+              <span className="font-semibold text-amber-600">{approvalData.totalInc}</span>
+            </div>
+          )}
+        </div>
+        {approvalData.totalInc > 0 && (
+          <p className="mt-3 text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">
+            Todas las incidencias han sido resueltas.
+          </p>
+        )}
+      </AlertModal>
     </div>
   );
 }

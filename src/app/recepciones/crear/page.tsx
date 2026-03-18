@@ -908,7 +908,7 @@ function CrearORPageInner() {
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50" onClick={() => setShowInfo(false)}>
             <div className="bg-white rounded-2xl mx-4 max-w-md w-full p-6 shadow-xl" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-4">
-                <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900">Orden de Recepción</h1>
+                <h1 className="text-xl font-bold text-neutral-900">Orden de Recepción</h1>
                 <button onClick={() => setShowInfo(false)} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">
                   <X className="w-4 h-4 text-neutral-600" />
                 </button>

@@ -154,7 +154,7 @@ export default function CuarentenaPage() {
             {/* Header */}
             <div className="flex items-start justify-between px-5 pt-5 pb-3">
               <div>
-                <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900">Registrar decisión del seller</h1>
+                <h1 className="text-xl font-bold text-neutral-900">Registrar decisión del seller</h1>
                 <p className="text-xs text-neutral-500 mt-0.5">
                   {catCModal.productName}
                   <span className="font-sans ml-1 text-neutral-600">· {catCModal.sku}</span>

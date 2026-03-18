@@ -18,7 +18,8 @@
       "name": "amplifica-admin-saas",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev:admin-saas"],
-      "port": 3020
+      "port": 3020,
+      "autoPort": true
     }
   ]
 }

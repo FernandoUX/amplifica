@@ -40,7 +40,7 @@ export default function BulkLabelsModal({ open, onClose, orId, seller, sucursal,
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
-          <h1 className="text-[1.2rem] sm:text-lg font-bold text-neutral-900">
+          <h1 className="text-xl font-bold text-neutral-900">
             Generar etiquetas para bultos
           </h1>
           <button onClick={onClose} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">

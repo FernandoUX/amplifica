@@ -215,10 +215,9 @@ const stickyRight: React.CSSProperties = {
 // ─── Badge helper for fechaExtra ──────────────────────────────────────────────
 function fechaExtraClass(label: string): string {
   const lower = label.toLowerCase();
-  if (lower.startsWith("expirado")) return "bg-red-50 text-red-600";
-  // "Expira en X minutos" → less than 1 hour → warning
-  if (lower.includes("minutos") || lower.includes("min ")) return "bg-amber-50 text-amber-600";
-  return "bg-orange-50 text-orange-500";
+  if (lower.startsWith("expirado")) return "text-red-600";
+  if (lower.includes("minutos") || lower.includes("min ")) return "text-amber-600";
+  return "text-orange-500";
 }
 
 // ─── Feature 1 · Feature Antigua — Contextual actions per status ──────────────
@@ -985,6 +984,28 @@ function OrdenesPageInner() {
     else { setSortField(field); setSortDir("asc"); }
   };
 
+  // ── Counts per status tab (respects sidebar filters but NOT active tab) ──
+  const statusCounts = useMemo(() => {
+    let rows = [...ordenesEffective];
+    if (sidebarSucursal) rows = rows.filter(o => o.sucursal === sidebarSucursal);
+    if (sidebarSeller)   rows = rows.filter(o => o.seller === sidebarSeller);
+    if (sidebarDateFrom || sidebarDateTo) {
+      rows = rows.filter(o => {
+        const [d, m, y] = o.creacion.split("/").map(Number);
+        const iso = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        if (sidebarDateFrom && iso < sidebarDateFrom) return false;
+        if (sidebarDateTo   && iso > sidebarDateTo)   return false;
+        return true;
+      });
+    }
+    const counts: Record<string, number> = {};
+    for (const tab of TABS) {
+      const statusVal = TAB_STATUS[tab];
+      counts[tab] = statusVal ? rows.filter(o => o.estado === statusVal).length : rows.length;
+    }
+    return counts;
+  }, [ordenesEffective, sidebarSucursal, sidebarSeller, sidebarDateFrom, sidebarDateTo]);
+
   const filtered = useMemo(() => {
     let rows = [...ordenesEffective];
     const statusFilter = TAB_STATUS[activeTab];
@@ -1325,7 +1346,7 @@ function OrdenesPageInner() {
               className="w-full appearance-none bg-neutral-100 border border-neutral-200 rounded-lg px-3 py-2 pr-8 text-sm text-neutral-700 font-medium focus:outline-none focus:ring-2 focus:ring-primary-200"
             >
               {TABS.map(tab => (
-                <option key={tab} value={tab}>{tab}</option>
+                <option key={tab} value={tab}>{tab}{statusCounts[tab] > 0 ? ` (${statusCounts[tab]})` : ""}</option>
               ))}
             </select>
             <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
@@ -1353,11 +1374,20 @@ function OrdenesPageInner() {
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 style={NW}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 flex-shrink-0 ${
+                className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 flex-shrink-0 flex items-center ${
                   activeTab === tab ? "bg-white text-neutral-900 font-medium shadow-sm" : "text-neutral-500 hover:text-neutral-700"
                 }`}
               >
                 {tab}
+                {statusCounts[tab] > 0 && (
+                  <span className={`ml-1.5 text-[10px] tabular-nums rounded-full px-1.5 py-0.5 font-medium ${
+                    activeTab === tab
+                      ? "bg-primary-100 text-primary-700"
+                      : "bg-neutral-200/70 text-neutral-500"
+                  }`}>
+                    {statusCounts[tab]}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -1494,11 +1524,12 @@ function OrdenesPageInner() {
               >
                 {/* Row 1: ID + Status */}
                 <div className="flex items-center justify-between gap-2 mb-2.5">
-                  <span
-                    className="inline-block bg-neutral-100 text-neutral-700 rounded px-2 py-0.5 font-medium w-fit text-xs"
+                  <Link
+                    href={`/recepciones/${encodeURIComponent(orden.id)}`}
+                    className="inline-block bg-neutral-100 text-neutral-700 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 font-medium w-fit text-xs transition-colors"
                   >
                     {orden.id}
-                  </span>
+                  </Link>
                   <StatusBadge status={orden.estado} />
                 </div>
 
@@ -1522,7 +1553,7 @@ function OrdenesPageInner() {
                     <span className="text-neutral-600">{orden.fechaAgendada}</span>
                   )}
                   {orden.fechaExtra && (
-                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${fechaExtraClass(orden.fechaExtra)}`}>
+                    <span className={`text-[10px] font-medium ${fechaExtraClass(orden.fechaExtra)}`}>
                       {orden.fechaExtra}
                     </span>
                   )}
@@ -1668,22 +1699,29 @@ function OrdenesPageInner() {
             const el = e.currentTarget;
             el.classList.toggle("scrolled-end", el.scrollLeft + el.clientWidth >= el.scrollWidth - 2);
           }}>
-          <table className="text-sm border-collapse" style={{ width: "max-content", minWidth: "100%" }}>
+          <table className="w-full table-fixed text-sm border-collapse">
 
             <thead className="sticky top-0 z-10">
               <tr className="border-b border-neutral-100 bg-neutral-50">
                 {/* Fixed: ID */}
-                <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-500" style={NW}>ID</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-500 w-[130px]" style={NW}>ID</th>
 
                 {/* Dynamic columns */}
                 {activeColumns.map(key => {
+                  const COL_WIDTHS: Record<ColumnKey, string> = {
+                    creacion: "w-[110px]", fechaAgendada: "w-[150px]",
+                    seller: "w-[110px]", sucursal: "w-[110px]", estado: "w-[210px]",
+                    progreso: "w-[130px]", sesiones: "w-[75px]",
+                    skus: "w-[60px]", uTotales: "w-[85px]", tags: "w-[130px]",
+                  };
+                  const w = COL_WIDTHS[key];
                   if (key === "creacion") return (
-                    <th key="creacion" className="text-left py-3 px-4 text-xs font-semibold text-neutral-500 cursor-pointer hover:text-neutral-700 select-none" style={NW} onClick={() => toggleSort("creacion")}>
+                    <th key="creacion" className={`text-left py-3 px-4 text-xs font-semibold text-neutral-500 cursor-pointer hover:text-neutral-700 select-none ${w}`} style={NW} onClick={() => toggleSort("creacion")}>
                       Creación <SortIcon field="creacion" sortField={sortField} sortDir={sortDir} />
                     </th>
                   );
                   if (key === "fechaAgendada") return (
-                    <th key="fechaAgendada" className="text-left py-3 px-4 text-xs font-semibold text-neutral-500 cursor-pointer hover:text-neutral-700 select-none" style={NW} onClick={() => toggleSort("fechaAgendada")}>
+                    <th key="fechaAgendada" className={`text-left py-3 px-4 text-xs font-semibold text-neutral-500 cursor-pointer hover:text-neutral-700 select-none ${w}`} style={NW} onClick={() => toggleSort("fechaAgendada")}>
                       F. agendada <SortIcon field="fechaAgendada" sortField={sortField} sortDir={sortDir} />
                     </th>
                   );
@@ -1693,15 +1731,17 @@ function OrdenesPageInner() {
                     progreso: "Progreso", sesiones: "Sesiones",
                     skus: "SKUs", uTotales: "U. totales", tags: "Estado productos",
                   };
+                  const CENTER_COLS: ColumnKey[] = ["sesiones", "skus"];
+                  const align = CENTER_COLS.includes(key) ? "text-center" : "text-left";
                   return (
-                    <th key={key} className="text-left py-3 px-4 text-xs font-semibold text-neutral-500" style={NW}>
+                    <th key={key} className={`${align} py-3 px-4 text-xs font-semibold text-neutral-500 ${w}`} style={NW}>
                       {LABELS[key]}
                     </th>
                   );
                 })}
 
                 {/* Fixed: Acciones */}
-                <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-500 bg-neutral-50" style={{ ...NW, ...stickyRight }}>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-500 bg-neutral-50 w-[100px]" style={{ ...NW, ...stickyRight }}>
                   Acciones
                 </th>
               </tr>
@@ -1728,18 +1768,20 @@ function OrdenesPageInner() {
                         {orden.isSubId ? (
                           <span className="flex items-center gap-1">
                             <span className="text-neutral-300 text-sm select-none pl-1">└</span>
-                            <span
-                              className="inline-block bg-neutral-100 text-neutral-500 rounded px-2 py-0.5 w-fit text-[11px] font-sans"
+                            <Link
+                              href={`/recepciones/${encodeURIComponent(orden.id)}`}
+                              className="inline-block bg-neutral-100 text-neutral-500 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 w-fit text-[11px] font-sans transition-colors"
                             >
                               {orden.id}
-                            </span>
+                            </Link>
                           </span>
                         ) : (
-                          <span
-                            className="inline-block bg-neutral-100 text-neutral-700 rounded px-2 py-0.5 w-fit text-xs font-sans"
+                          <Link
+                            href={`/recepciones/${encodeURIComponent(orden.id)}`}
+                            className="inline-block bg-neutral-100 text-neutral-700 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 w-fit text-xs font-sans transition-colors"
                           >
                             {orden.id}
-                          </span>
+                          </Link>
                         )}
                         <span className="sm:hidden">
                           <StatusBadge status={orden.estado} />
@@ -1766,8 +1808,8 @@ function OrdenesPageInner() {
                                 }
                               </p>
                               {orden.fechaExtra && (
-                                <p className="mt-0.5" style={NW}>
-                                  <span className={`inline text-xs font-medium px-1.5 py-0.5 rounded ${fechaExtraClass(orden.fechaExtra)}`}>
+                                <p style={NW}>
+                                  <span className={`inline text-xs font-medium ${fechaExtraClass(orden.fechaExtra)}`}>
                                     {orden.fechaExtra}
                                   </span>
                                 </p>
@@ -1794,7 +1836,7 @@ function OrdenesPageInner() {
                           );
                         case "skus":
                           return (
-                            <td key="skus" className="py-3 px-4 text-neutral-700 tabular-nums" style={NW}>
+                            <td key="skus" className="py-3 px-4 text-neutral-700 tabular-nums text-center" style={NW}>
                               {orden.skus}
                             </td>
                           );
@@ -1823,7 +1865,7 @@ function OrdenesPageInner() {
                           );
                         case "sesiones":
                           return (
-                            <td key="sesiones" className="py-3 px-4 text-neutral-700 tabular-nums" style={NW}>
+                            <td key="sesiones" className="py-3 px-4 text-neutral-700 tabular-nums text-center" style={NW}>
                               {orden.sesiones ? (
                                 <span>{orden.sesiones}</span>
                               ) : (
@@ -1903,10 +1945,11 @@ function OrdenesPageInner() {
           <button
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={clampedPage <= 1}
-            className="px-3 h-[44px] bg-neutral-100 rounded-lg text-sm text-neutral-700 hover:bg-neutral-200 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300"
+            className="px-3 h-[44px] bg-neutral-100 rounded-lg text-sm text-neutral-700 hover:bg-neutral-200 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300 flex items-center gap-1.5"
             style={NW}
           >
-            ← Anterior
+            <ChevronLeft className="w-4 h-4" />
+            Anterior
           </button>
           <span className="text-sm text-neutral-500 tabular-nums" style={NW}>
             {fromRow}–{toRow} de {filtered.length}
@@ -1914,10 +1957,11 @@ function OrdenesPageInner() {
           <button
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
             disabled={clampedPage >= totalPages}
-            className="px-3 h-[44px] bg-neutral-100 rounded-lg text-sm text-neutral-700 hover:bg-neutral-200 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300"
+            className="px-3 h-[44px] bg-neutral-100 rounded-lg text-sm text-neutral-700 hover:bg-neutral-200 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300 flex items-center gap-1.5"
             style={NW}
           >
-            Siguiente →
+            Siguiente
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
         </div>
@@ -1932,16 +1976,16 @@ function OrdenesPageInner() {
           <button
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={clampedPage <= 1}
-            className="px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-700 hover:bg-neutral-50 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300"
+            className="p-2 bg-white border border-neutral-200 rounded-lg text-neutral-700 hover:bg-neutral-50 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300"
           >
-            ←
+            <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
             disabled={clampedPage >= totalPages}
-            className="px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-700 hover:bg-neutral-50 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300"
+            className="p-2 bg-white border border-neutral-200 rounded-lg text-neutral-700 hover:bg-neutral-50 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300"
           >
-            →
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
