@@ -31,7 +31,7 @@ export default function KpiCard({ title, value, prefix, delta, icon }: KpiCardPr
 
       {/* Value + delta */}
       <div className="flex flex-col gap-0.5">
-        <span className="text-[1.75rem] font-bold text-neutral-900 leading-tight tracking-tight tabular-nums">
+        <span className="text-[1.75rem] font-bold text-neutral-900 leading-tight tracking-tight tabular-nums truncate">
           {prefix}{value}
         </span>
         <span className={`text-xs font-medium ${color}`}>
