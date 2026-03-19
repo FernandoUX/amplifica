@@ -564,7 +564,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
       )}
 
       {/* ── Menu ─────────────────────────────────────────────────────────── */}
-      <nav className="flex-1 overflow-y-auto py-2 px-2 sidebar-scroll">
+      <nav className={`flex-1 overflow-y-auto py-2 sidebar-scroll ${collapsed ? "px-1.5" : "px-2"}`}>
         {!collapsed && (
           <p className="text-white/25 text-[9px] px-2 mb-1.5 uppercase tracking-widest font-medium">
             Menú
@@ -582,7 +582,9 @@ export default function Sidebar({ onClose }: SidebarProps) {
                   <div className={`rounded-lg transition-colors duration-200 ${isOpen && !collapsed ? "bg-white/[0.04] pb-1.5" : ""}`}>
                     <button
                       onClick={() => toggleMenu(item.label)}
+                      title={collapsed ? item.label : undefined}
                       className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-[14px] lg:text-[13px] transition-colors duration-300
+                        ${collapsed ? "justify-center" : ""}
                         ${isActive ? "text-white" : "text-white/70 hover:text-white hover:bg-white/5"}`}
                     >
                       <Icon className="w-4 h-4 flex-shrink-0" />
@@ -625,7 +627,10 @@ export default function Sidebar({ onClose }: SidebarProps) {
                   <Link
                     href={item.href}
                     onClick={onClose}
+                    title={collapsed ? item.label : undefined}
                     className={`flex items-center gap-2.5 px-2 py-2 rounded-lg text-[14px] lg:text-[13px] transition-colors duration-300 ${
+                      collapsed ? "justify-center" : ""
+                    } ${
                       pathname === item.href
                         ? "text-white bg-white/10"
                         : "text-white/70 hover:text-white hover:bg-white/5"
@@ -642,11 +647,12 @@ export default function Sidebar({ onClose }: SidebarProps) {
       </nav>
 
       {/* ── Footer ───────────────────────────────────────────────────────── */}
-      <div className="border-t border-white/10 px-2 py-2 space-y-0.5">
+      <div className={`border-t border-white/10 py-2 space-y-0.5 ${collapsed ? "px-1.5" : "px-2"}`}>
         <Link
           href="/configuracion"
           onClick={onClose}
-          className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-[14px] lg:text-[13px] text-white/70 hover:text-white hover:bg-white/5 transition-colors duration-300"
+          title={collapsed ? "Configuración" : undefined}
+          className={`flex items-center gap-2.5 px-2 py-2 rounded-lg text-[14px] lg:text-[13px] text-white/70 hover:text-white hover:bg-white/5 transition-colors duration-300 ${collapsed ? "justify-center" : ""}`}
         >
           <Settings01 className="w-4 h-4 flex-shrink-0" />
           {!collapsed && <span>Configuración</span>}
