@@ -831,10 +831,9 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
   const status = getProductStatus(total, product.esperadas);
   const pct    = product.esperadas > 0 ? Math.min(100, (total / product.esperadas) * 100) : 0;
 
-  const barColor =
-    status === "completo"   ? "bg-green-500" :
-    status === "diferencia" ? "bg-amber-400" :
-    status === "exceso"     ? "bg-red-400"   : "bg-neutral-200";
+  const normalCount = acumulado + product.contadasSesion;
+  const pctNormal = product.esperadas > 0 ? Math.min(100, (normalCount / product.esperadas) * 100) : 0;
+  const pctIncidencias = product.esperadas > 0 ? Math.min(100 - pctNormal, (incidenciasTotal / product.esperadas) * 100) : 0;
 
   // Display: editing active session counts; or accumulated total when idle
   const displayVal = sesionActiva ? product.contadasSesion : total;
@@ -949,11 +948,17 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
             </div>
           </div>
 
-          {/* Desktop: progress bar */}
+          {/* Desktop: stacked progress bar */}
           {product.esperadas > 0 && (
-            <div className="hidden sm:block mt-3 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-              <div className={`h-full rounded-full transition-all duration-300 ${barColor}`}
-                style={{ width: `${pct}%` }} />
+            <div className="hidden sm:flex mt-3 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+              {pctNormal > 0 && (
+                <div className={`h-full transition-all duration-300 ${status === "completo" ? "bg-green-500" : status === "exceso" ? "bg-red-400" : "bg-primary-500"}`}
+                  style={{ width: `${pctNormal}%` }} />
+              )}
+              {pctIncidencias > 0 && (
+                <div className="h-full bg-amber-400 transition-all duration-300"
+                  style={{ width: `${pctIncidencias}%` }} />
+              )}
             </div>
           )}
         </div>
@@ -972,9 +977,15 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
             )}
           </div>
           {product.esperadas > 0 && (
-            <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-              <div className={`h-full rounded-full transition-all duration-300 ${barColor}`}
-                style={{ width: `${pct}%` }} />
+            <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden flex">
+              {pctNormal > 0 && (
+                <div className={`h-full transition-all duration-300 ${status === "completo" ? "bg-green-500" : status === "exceso" ? "bg-red-400" : "bg-primary-500"}`}
+                  style={{ width: `${pctNormal}%` }} />
+              )}
+              {pctIncidencias > 0 && (
+                <div className="h-full bg-amber-400 transition-all duration-300"
+                  style={{ width: `${pctIncidencias}%` }} />
+              )}
             </div>
           )}
         </div>
@@ -1236,7 +1247,7 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
                         const tag = INCIDENCIA_TAGS.find(t => t.key === r.tag);
                         if (!tag) return null;
                         return (
-                          <span key={r.rowId} title={tag.tooltip} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] text-xs sm:text-[10px] font-medium leading-none border cursor-help ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
+                          <span key={r.rowId} title={tag.tooltip} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] text-xs sm:text-[10px] font-medium leading-none border cursor-default ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
                             {tag.label}
                             <span className="opacity-60 font-normal">· {r.cantidad}</span>
                           </span>
@@ -1282,7 +1293,7 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
                               const tag = INCIDENCIA_TAGS.find(t => t.key === r.tag);
                               if (!tag) return null;
                               return (
-                                <span key={r.rowId} title={tag.tooltip} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] text-[12px] font-medium leading-none border cursor-help ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
+                                <span key={r.rowId} title={tag.tooltip} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] text-[12px] font-medium leading-none border cursor-default ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
                                   {tag.label}
                                   <span className="opacity-60 font-normal">· {r.cantidad} uds.</span>
                                 </span>
@@ -2801,7 +2812,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                         const tag = INCIDENCIA_TAGS.find(t => t.key === r.tag);
                         if (!tag) return null;
                         return (
-                          <span key={r.rowId} title={tag.tooltip} className={`inline-flex px-1.5 py-0.5 rounded-[6px] text-xs font-medium leading-none border cursor-help ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
+                          <span key={r.rowId} title={tag.tooltip} className={`inline-flex px-1.5 py-0.5 rounded-[6px] text-xs font-medium leading-none border cursor-default ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
                             {tag.label}
                           </span>
                         );
@@ -2876,7 +2887,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                                 const tag = INCIDENCIA_TAGS.find(t => t.key === r.tag);
                                 if (!tag) return null;
                                 return (
-                                  <span key={r.rowId} title={tag.tooltip} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] text-[12px] font-medium leading-none border whitespace-nowrap cursor-help ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
+                                  <span key={r.rowId} title={tag.tooltip} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] text-[12px] font-medium leading-none border whitespace-nowrap cursor-default ${tagColorCls(r.tag as IncidenciaTagKey)}`}>
                                     {tag.label}
                                     <span className="opacity-60 font-normal">· {r.cantidad} uds.</span>
                                   </span>
@@ -3373,7 +3384,7 @@ export default function ConteoORPage() {
     );
     const totalContadas = totalAcum + totalSesionAct + totalIncidencias;
     const pct = totalEsperadas > 0 ? Math.round((totalContadas / totalEsperadas) * 100) : 0;
-    return { totalEsperadas, totalContadas, totalSesionAct, pct, sinDiferencias, conDiferencias, pendientes };
+    return { totalEsperadas, totalContadas, totalSesionAct, totalIncidencias, pct, sinDiferencias, conDiferencias, pendientes };
   }, [products, acumulado, totalPP, incidencias]);
 
   // ── Incidencias breakdown by tag (for progress bar chips) ───────────────
@@ -3937,13 +3948,24 @@ export default function ConteoORPage() {
             <div className="flex items-center gap-2">
               <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${scanError ? "bg-red-500" : "bg-primary-500 animate-pulse"}`} />
               <span className={`text-xs font-bold flex-shrink-0 ${scanError ? "text-red-600" : "text-primary-600"}`}>{scanError ? "No encontrado" : sesionId(sesionNumActual)}</span>
-              <div className="flex-1 h-1.5 bg-primary-200/50 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    stats.pct === 100 ? "bg-green-500" : "bg-primary-500"
-                  }`}
-                  style={{ width: `${stats.pct}%` }}
-                />
+              <div className="flex-1 h-1.5 bg-primary-200/50 rounded-full overflow-hidden flex">
+                {(() => {
+                  const normalContadas = stats.totalContadas - stats.totalIncidencias;
+                  const pctNorm = stats.totalEsperadas > 0 ? Math.min(100, (normalContadas / stats.totalEsperadas) * 100) : 0;
+                  const pctInc = stats.totalEsperadas > 0 ? Math.min(100 - pctNorm, (stats.totalIncidencias / stats.totalEsperadas) * 100) : 0;
+                  return (
+                    <>
+                      {pctNorm > 0 && (
+                        <div className={`h-full transition-all duration-500 ${stats.pct === 100 ? "bg-green-500" : "bg-primary-500"}`}
+                          style={{ width: `${pctNorm}%` }} />
+                      )}
+                      {pctInc > 0 && (
+                        <div className="h-full bg-amber-400 transition-all duration-500"
+                          style={{ width: `${pctInc}%` }} />
+                      )}
+                    </>
+                  );
+                })()}
               </div>
               <span className="text-[11px] font-bold text-primary-600 tabular-nums flex-shrink-0">
                 {stats.pct}%
@@ -4036,16 +4058,23 @@ export default function ConteoORPage() {
                   {stats.pct}%
                 </span>
                 <div className="flex-1">
-                  <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        stats.pct === 100 ? "bg-green-500" :
-                        stats.pct >= 75  ? "bg-primary-500" :
-                        stats.conDiferencias > 0 ? "bg-amber-400" : "bg-primary-400"
-                      }`}
-                      style={{ width: `${stats.pct}%` }}
-                    />
-                  </div>
+                  {(() => {
+                    const normalContadas = stats.totalContadas - stats.totalIncidencias;
+                    const pctNorm = stats.totalEsperadas > 0 ? Math.min(100, (normalContadas / stats.totalEsperadas) * 100) : 0;
+                    const pctInc = stats.totalEsperadas > 0 ? Math.min(100 - pctNorm, (stats.totalIncidencias / stats.totalEsperadas) * 100) : 0;
+                    return (
+                      <div className="h-2 bg-neutral-100 rounded-full overflow-hidden flex">
+                        {pctNorm > 0 && (
+                          <div className={`h-full transition-all duration-500 ${stats.pct === 100 ? "bg-green-500" : "bg-primary-500"}`}
+                            style={{ width: `${pctNorm}%` }} />
+                        )}
+                        {pctInc > 0 && (
+                          <div className="h-full bg-amber-400 transition-all duration-500"
+                            style={{ width: `${pctInc}%` }} />
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
                 <span className="text-xs text-neutral-600 tabular-nums flex-shrink-0">
                   {stats.totalContadas.toLocaleString("es-CL")}/{stats.totalEsperadas.toLocaleString("es-CL")}
@@ -4079,7 +4108,7 @@ export default function ConteoORPage() {
                   const tag = INCIDENCIA_TAGS.find(t => t.key === tagKey);
                   if (!tag || total === 0) return null;
                   return (
-                    <span key={tagKey} title={tag.tooltip} className={`inline-flex items-center gap-1 text-[11px] font-medium leading-none px-2 py-0.5 rounded-[6px] border cursor-help ${tagColorCls(tagKey)}`}>
+                    <span key={tagKey} title={tag.tooltip} className={`inline-flex items-center gap-1 text-[11px] font-medium leading-none px-2 py-0.5 rounded-[6px] border cursor-default ${tagColorCls(tagKey)}`}>
                       {tag.label}
                       <span className="opacity-60 font-normal tabular-nums ml-0.5">· {total}</span>
                     </span>
@@ -4102,16 +4131,23 @@ export default function ConteoORPage() {
               <span className="text-xs text-neutral-600 italic">Sin conteo iniciado</span>
             )}
             <div className="flex-1">
-              <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    stats.pct === 100 ? "bg-green-500" :
-                    stats.pct >= 75  ? "bg-primary-500" :
-                    stats.conDiferencias > 0 ? "bg-amber-400" : "bg-primary-400"
-                  }`}
-                  style={{ width: `${stats.pct}%` }}
-                />
-              </div>
+              {(() => {
+                const normalContadas = stats.totalContadas - stats.totalIncidencias;
+                const pctNorm = stats.totalEsperadas > 0 ? Math.min(100, (normalContadas / stats.totalEsperadas) * 100) : 0;
+                const pctInc = stats.totalEsperadas > 0 ? Math.min(100 - pctNorm, (stats.totalIncidencias / stats.totalEsperadas) * 100) : 0;
+                return (
+                  <div className="h-2 bg-neutral-100 rounded-full overflow-hidden flex">
+                    {pctNorm > 0 && (
+                      <div className={`h-full transition-all duration-500 ${stats.pct === 100 ? "bg-green-500" : "bg-primary-500"}`}
+                        style={{ width: `${pctNorm}%` }} />
+                    )}
+                    {pctInc > 0 && (
+                      <div className="h-full bg-amber-400 transition-all duration-500"
+                        style={{ width: `${pctInc}%` }} />
+                    )}
+                  </div>
+                );
+              })()}
             </div>
             <span className="text-xs text-neutral-600 tabular-nums flex-shrink-0">
               {stats.totalContadas.toLocaleString("es-CL")}/{stats.totalEsperadas.toLocaleString("es-CL")}
@@ -4141,7 +4177,7 @@ export default function ConteoORPage() {
               const tag = INCIDENCIA_TAGS.find(t => t.key === tagKey);
               if (!tag || total === 0) return null;
               return (
-                <span key={tagKey} title={tag.tooltip} className={`inline-flex items-center gap-1 text-[11px] font-medium leading-none px-2 py-0.5 rounded-[6px] border cursor-help ${tagColorCls(tagKey)}`}>
+                <span key={tagKey} title={tag.tooltip} className={`inline-flex items-center gap-1 text-[11px] font-medium leading-none px-2 py-0.5 rounded-[6px] border cursor-default ${tagColorCls(tagKey)}`}>
                   {tag.label}
                   <span className="opacity-60 font-normal tabular-nums ml-0.5">· {total}</span>
                 </span>
