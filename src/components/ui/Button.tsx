@@ -27,9 +27,9 @@ type ButtonProps = ButtonAsButton | ButtonAsLink;
 // ─── Size tokens ──────────────────────────────────────────────────────────────
 const sizeClasses: Record<Size, string> = {
   sm: "h-8 px-3 text-xs gap-1.5 rounded-lg",
-  md: "h-10 px-4 text-sm gap-2 rounded-xl",
-  lg: "h-11 px-5 text-sm gap-2 rounded-xl",
-  xl: "h-12 px-6 text-base gap-2.5 rounded-xl",
+  md: "h-10 px-4 text-sm gap-2 rounded-lg",
+  lg: "h-11 px-5 text-sm gap-2 rounded-lg",
+  xl: "h-12 px-6 text-base gap-2.5 rounded-lg",
 };
 
 const iconSizeClasses: Record<Size, string> = {

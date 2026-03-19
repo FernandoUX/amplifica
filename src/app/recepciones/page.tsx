@@ -184,6 +184,18 @@ const TAB_STATUS: Record<string, Status | null> = {
   "Cancelada":                    "Cancelado",
 };
 
+// Badge colors per tab — matches StatusBadge colors
+const TAB_BADGE_COLORS: Record<string, { active: string; inactive: string }> = {
+  "Todas":                   { active: "bg-primary-100 text-primary-700", inactive: "bg-neutral-200/70 text-neutral-500" },
+  "Creado":                  { active: "bg-neutral-200 text-neutral-700", inactive: "bg-neutral-200/70 text-neutral-500" },
+  "Programado":              { active: "bg-sky-100 text-sky-700",         inactive: "bg-sky-100/60 text-sky-600/70" },
+  "Recepción en bodega":     { active: "bg-indigo-100 text-indigo-700",   inactive: "bg-indigo-100/60 text-indigo-600/70" },
+  "En proceso de conteo":    { active: "bg-primary-100 text-primary-700", inactive: "bg-primary-100/60 text-primary-600/70" },
+  "Pendiente de aprobación": { active: "bg-orange-100 text-orange-700",   inactive: "bg-orange-100/60 text-orange-600/70" },
+  "Completada":              { active: "bg-green-100 text-green-700",     inactive: "bg-green-100/60 text-green-600/70" },
+  "Cancelada":               { active: "bg-neutral-200 text-neutral-700", inactive: "bg-neutral-200/70 text-neutral-500" },
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const NW: React.CSSProperties = { whiteSpace: "nowrap" };
 
@@ -1379,15 +1391,21 @@ function OrdenesPageInner() {
                 }`}
               >
                 {tab}
-                {statusCounts[tab] > 0 && (
-                  <span className={`ml-1.5 text-[10px] tabular-nums rounded-full min-w-[18px] h-[18px] inline-flex items-center justify-center px-1 font-medium ${
-                    activeTab === tab
-                      ? "bg-primary-100 text-primary-700"
-                      : "bg-neutral-200/70 text-neutral-500"
-                  }`}>
-                    {statusCounts[tab]}
-                  </span>
-                )}
+                {statusCounts[tab] > 0 && (() => {
+                  const colors = TAB_BADGE_COLORS[tab] || TAB_BADGE_COLORS["Todas"];
+                  const isActive = activeTab === tab;
+                  // "Todas" activo: primary bg con texto blanco
+                  const badgeCls = tab === "Todas" && isActive
+                    ? "bg-primary-500 text-white"
+                    : isActive
+                      ? colors.active
+                      : colors.inactive;
+                  return (
+                    <span className={`ml-1.5 text-[10px] tabular-nums rounded-full min-w-[18px] h-[18px] inline-flex items-center justify-center px-1 font-medium ${badgeCls}`}>
+                      {statusCounts[tab]}
+                    </span>
+                  );
+                })()}
               </button>
             ))}
           </div>
