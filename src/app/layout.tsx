@@ -37,7 +37,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={cn("font-sans", inter.variable)}>
+    <html lang="es" className={cn("font-sans content-sm", inter.variable)}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var s=localStorage.getItem("amplifica_content_size");if(s==="md"||s==="lg"){document.documentElement.classList.remove("content-sm");document.documentElement.classList.add("content-"+s)}}catch(e){}`,
+          }}
+        />
+      </head>
       <body className={`${inter.variable} ${geistMono.variable} ${atkinson.variable} antialiased`}>
         {children}
       </body>

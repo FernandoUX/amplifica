@@ -233,7 +233,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
       className={`${collapsed ? "lg:w-14" : "lg:w-60"} w-full text-white flex flex-col flex-shrink-0 transition-all duration-200 h-full`}
       style={{ backgroundColor: "#1D1D1F" }}
     >
-      {/* ── Logo ──────────────────────────────────────────────────────────── */}
+      {/* ── Logo + collapse ────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-3 py-3.5 border-b border-white/10">
         <div className="hidden lg:block">
           {!collapsed && <AmplificaLogo />}
@@ -248,9 +248,10 @@ export default function Sidebar({ onClose }: SidebarProps) {
             <XClose className="w-5 h-5" />
           </button>
         )}
+        {/* Desktop collapse toggle — icon only, right of logo */}
         <button
           onClick={() => setCollapsed(c => !c)}
-          className="text-white/40 hover:text-white p-1 rounded ml-auto flex-shrink-0 hidden lg:block"
+          className={`text-white/40 hover:text-white p-1 rounded flex-shrink-0 hidden lg:flex ${collapsed ? "mx-auto" : "ml-auto"}`}
         >
           <ChevronLeft
             className={`w-4 h-4 transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`}
@@ -651,42 +652,44 @@ export default function Sidebar({ onClose }: SidebarProps) {
           {!collapsed && <span>Configuración</span>}
         </Link>
 
-        {!collapsed && (
-          <div ref={roleRef} className="relative">
-            <button
-              onClick={() => setRoleOpen(o => !o)}
-              className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-white/5 transition-colors duration-300"
-            >
-              <div className="w-7 h-7 rounded-full bg-primary-500 flex items-center justify-center text-[11px] font-bold flex-shrink-0">
-                F
-              </div>
-              <div className="flex-1 min-w-0 text-left">
-                <p className="text-white text-xs font-medium truncate">Fernando Roblero</p>
-                <p className="text-white/40 text-[10px] truncate">{currentRole}</p>
-              </div>
-              <ChevronSelectorVertical className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />
-            </button>
-
-            {roleOpen && (
-              <div className="absolute left-0 right-0 bottom-full mb-1 bg-[#1a1a1a] border border-white/10 rounded-lg shadow-xl z-50 py-1">
-                <p className="px-3 py-1 text-[10px] text-white/30 uppercase tracking-wider font-medium">Cambiar rol</p>
-                {ROLES.map(role => (
-                  <button
-                    key={role}
-                    onClick={() => switchRole(role)}
-                    className={`w-full text-left px-3 py-1.5 text-xs transition-colors duration-150 ${
-                      currentRole === role
-                        ? "text-white bg-white/10 font-medium"
-                        : "text-white/70 hover:text-white hover:bg-white/5"
-                    }`}
-                  >
-                    {role}
-                  </button>
-                ))}
-              </div>
+        <div ref={roleRef} className="relative">
+          <button
+            onClick={() => collapsed ? setCollapsed(false) : setRoleOpen(o => !o)}
+            className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-white/5 transition-colors duration-300 ${collapsed ? "justify-center" : ""}`}
+          >
+            <div className="w-7 h-7 rounded-full bg-primary-500 flex items-center justify-center text-[11px] font-bold flex-shrink-0">
+              F
+            </div>
+            {!collapsed && (
+              <>
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-white text-xs font-medium truncate">Fernando Roblero</p>
+                  <p className="text-white/40 text-[10px] truncate">{currentRole}</p>
+                </div>
+                <ChevronSelectorVertical className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />
+              </>
             )}
-          </div>
-        )}
+          </button>
+
+          {roleOpen && !collapsed && (
+            <div className="absolute left-0 right-0 bottom-full mb-1 bg-[#1a1a1a] border border-white/10 rounded-lg shadow-xl z-50 py-1">
+              <p className="px-3 py-1 text-[10px] text-white/30 uppercase tracking-wider font-medium">Cambiar rol</p>
+              {ROLES.map(role => (
+                <button
+                  key={role}
+                  onClick={() => switchRole(role)}
+                  className={`w-full text-left px-3 py-1.5 text-xs transition-colors duration-150 ${
+                    currentRole === role
+                      ? "text-white bg-white/10 font-medium"
+                      : "text-white/70 hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  {role}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </aside>
   );
