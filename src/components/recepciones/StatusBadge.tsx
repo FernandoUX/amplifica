@@ -1,12 +1,12 @@
 import {
-  IconPlus,
-  IconCalendar,
-  IconBuildingWarehouse,
-  IconClock,
-  IconBan,
-  IconClipboardList,
-  IconCheck,
-} from "@tabler/icons-react";
+  Plus,
+  Calendar,
+  Warehouse,
+  Clock,
+  Ban,
+  ClipboardList,
+  Check,
+} from "lucide-react";
 import type { ComponentType } from "react";
 
 // ─── Status type — single source of truth ─────────────────────────────────────
@@ -22,13 +22,13 @@ type Status =
 // ─── Icon lookup (tree-shaking safe) ──────────────────────────────────────────
 type StatusIconKey = "plus" | "calendar" | "warehouse" | "clipboard" | "clock" | "check" | "ban";
 const STATUS_ICON_MAP: Record<StatusIconKey, ComponentType<{ className?: string }>> = {
-  plus:      IconPlus,
-  calendar:  IconCalendar,
-  warehouse: IconBuildingWarehouse,
-  clipboard: IconClipboardList,
-  clock:     IconClock,
-  check:     IconCheck,
-  ban:       IconBan,
+  plus:      Plus,
+  calendar:  Calendar,
+  warehouse: Warehouse,
+  clipboard: ClipboardList,
+  clock:     Clock,
+  check:     Check,
+  ban:       Ban,
 };
 
 // ─── Config per status ─────────────────────────────────────────────────────────
@@ -93,8 +93,7 @@ export default function StatusBadge({ status }: { status: Status }) {
 
   return (
     <span
-      title={config.tooltip}
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full pl-1.5 pr-2 py-0.5 text-xs font-medium leading-none cursor-help ${config.className}`}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full pl-1.5 pr-2 py-0.5 text-xs font-medium leading-none ${config.className}`}
     >
       {IconComp && <IconComp className="w-3.5 h-3.5 flex-shrink-0" />}
       {config.label}

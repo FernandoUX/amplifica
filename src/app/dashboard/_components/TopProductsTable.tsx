@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { TOP_PRODUCTS, fmtCLP } from "../_data";
-import { IconDownload } from "@tabler/icons-react";
+import { Download } from "lucide-react";
 import ChartCard from "./ChartCard";
 
 const TABS = ["Por Productos", "Por Pedidos", "Por Producto Pedido"] as const;
@@ -23,7 +23,7 @@ export default function TopProductsTable() {
       subtitle={`Mostrando ${rows.length} de ${data.length} entradas`}
       action={
         <button className="flex items-center gap-1.5 text-xs font-medium text-neutral-600 hover:text-neutral-900 border border-neutral-200 rounded-lg px-3 py-1.5 hover:bg-neutral-50 transition-colors">
-          <IconDownload className="w-3.5 h-3.5" />
+          <Download className="w-3.5 h-3.5" />
           Exportar
         </button>
       }

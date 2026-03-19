@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  IconX, IconQrcode, IconCircleCheck, IconAlertTriangle, IconCircleX,
-  IconClock, IconSearch, IconChevronRight, IconRefresh,
-  IconPackage, IconPlayerPlay,
-} from "@tabler/icons-react";
+  X, QrCode, CheckCircle2, AlertTriangle, XCircle,
+  Clock, Search, ChevronRight, RefreshCw,
+  Package, Play,
+} from "lucide-react";
 import Button from "@/components/ui/Button";
 import AlertModal from "@/components/ui/AlertModal";
 import StatusBadge, { Status } from "@/components/recepciones/StatusBadge";
@@ -71,7 +71,7 @@ function ToleranceBadge({ fechaAgendada }: { fechaAgendada: string }) {
   };
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border ${colors[code]}`}>
-      <IconClock className="w-3 h-3" />
+      <Clock className="w-3 h-3" />
       {label}
     </span>
   );
@@ -333,7 +333,7 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
             Escanear QR de recepción
           </h1>
           <button onClick={onClose} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">
-            <IconX className="w-4 h-4 text-neutral-600" />
+            <X className="w-4 h-4 text-neutral-600" />
           </button>
         </div>
 
@@ -363,7 +363,7 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
                       }}
                       className="inline-flex items-center justify-center gap-2 px-5 py-2 text-sm font-medium text-white bg-neutral-700 rounded-lg hover:bg-neutral-600 transition-colors shadow-lg"
                     >
-                      <IconPackage className="w-4 h-4" />
+                      <Package className="w-4 h-4" />
                       Recibir en bodega
                     </button>
                     <button
@@ -373,7 +373,7 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
                       }}
                       className="inline-flex items-center justify-center gap-2 px-5 py-2 text-sm font-medium text-white bg-neutral-700 rounded-lg hover:bg-neutral-600 transition-colors shadow-lg"
                     >
-                      <IconPlayerPlay className="w-4 h-4" />
+                      <Play className="w-4 h-4" />
                       Iniciar conteo
                     </button>
                   </div>
@@ -398,7 +398,7 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
                 </label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
-                    <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
                     <input
                       value={inputVal}
                       onChange={e => setInputVal(e.target.value)}
@@ -453,7 +453,7 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
                                   {item.fechaAgendada && item.fechaAgendada !== "—" && (
                                     <div className="flex items-center gap-2 mt-1">
                                       <span className="text-[10px] text-neutral-400 tabular-nums flex items-center gap-1">
-                                        <IconClock className="w-3 h-3" />
+                                        <Clock className="w-3 h-3" />
                                         {item.fechaAgendada}
                                       </span>
                                       {item.fechaExtra && (
@@ -468,7 +468,7 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
                                     </div>
                                   )}
                                 </div>
-                                <IconChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-primary-400 flex-shrink-0 ml-2" />
+                                <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-primary-400 flex-shrink-0 ml-2" />
                               </button>
                             ))}
                           </div>
@@ -495,7 +495,7 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
               {/* Success indicator */}
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                  <IconCircleCheck className="w-5 h-5 text-green-600" />
+                  <CheckCircle2 className="w-5 h-5 text-green-600" />
                 </div>
                 <div>
                   <p className="text-base font-semibold text-neutral-900">{matchedOr.id} identificada</p>
@@ -569,7 +569,7 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
                 <>
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                      <IconCircleCheck className="w-5 h-5 text-green-600" />
+                      <CheckCircle2 className="w-5 h-5 text-green-600" />
                     </div>
                     <div>
                       <p className="text-base font-semibold text-neutral-900">Orden lista para conteo</p>
@@ -624,7 +624,7 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
                 <>
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
-                      <IconPlayerPlay className="w-5 h-5 text-primary-600" />
+                      <Play className="w-5 h-5 text-primary-600" />
                     </div>
                     <div>
                       <p className="text-base font-semibold text-neutral-900">Retomar sesión de conteo</p>
@@ -704,16 +704,16 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
                     <div className="w-full bg-neutral-900 rounded-xl flex flex-col items-center overflow-hidden">
                       <div className="w-full h-[160px] flex flex-col items-center justify-center gap-2 relative">
                         <div className="absolute inset-4 border-2 border-white/15 rounded-lg" />
-                        <IconQrcode className="w-8 h-8 text-white/40 relative z-10" />
+                        <QrCode className="w-8 h-8 text-white/40 relative z-10" />
                         <p className="text-[11px] text-white/40 relative z-10">Escanea QR de pallet o bulto</p>
                       </div>
                       <div className="grid grid-cols-2 gap-2 w-full px-3 pb-3">
                         <button onClick={() => handleRecScan("Bulto")} className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-[0.8125rem] sm:text-xs font-medium rounded-lg bg-neutral-800 text-neutral-100 hover:text-white transition-colors active:scale-[0.97]">
-                          <IconQrcode className="w-3.5 h-3.5" />
+                          <QrCode className="w-3.5 h-3.5" />
                           Escanear bulto
                         </button>
                         <button onClick={() => handleRecScan("Pallet")} className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-[0.8125rem] sm:text-xs font-medium rounded-lg bg-neutral-800 text-neutral-100 hover:text-white transition-colors active:scale-[0.97]">
-                          <IconQrcode className="w-3.5 h-3.5" />
+                          <QrCode className="w-3.5 h-3.5" />
                           Escanear pallet
                         </button>
                       </div>
@@ -731,7 +731,7 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
                           <div key={`${entry.code}-${i}`} className={`flex items-center gap-1.5 rounded-md px-1.5 py-0.5 ${i === 0 ? "bg-neutral-50" : ""}`}>
                             {entry.status === "ok" && (
                               <>
-                                <IconCircleCheck className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                                <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
                                 <p className="text-xs text-neutral-700">
                                   <span className="font-medium">{entry.type}</span>{" "}
                                   <span className="font-sans font-semibold text-neutral-800">{entry.code}</span>{" "}
@@ -741,13 +741,13 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
                             )}
                             {entry.status === "duplicate" && (
                               <>
-                                <IconAlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                                <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
                                 <p className="text-xs text-amber-600 font-medium">Código ya escaneado</p>
                               </>
                             )}
                             {entry.status === "unknown" && (
                               <>
-                                <IconCircleX className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
+                                <XCircle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
                                 <p className="text-xs text-red-600 font-medium">Código no pertenece a esta orden</p>
                               </>
                             )}
@@ -762,12 +762,12 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
                     <div className="mt-3">
                       {recCoincide ? (
                         <div className="flex items-center gap-1.5 justify-center">
-                          <IconCircleCheck className="w-3.5 h-3.5 text-green-500" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
                           <p className="text-xs font-medium text-green-600">Coincide con la orden</p>
                         </div>
                       ) : (
                         <div className="flex items-center gap-1.5 justify-center">
-                          <IconAlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
                           <p className="text-xs font-medium text-amber-600">Diferencia con lo esperado</p>
                         </div>
                       )}
@@ -797,8 +797,8 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
                   ERROR_META[scanError].icon === "red" ? "bg-red-100" : "bg-amber-100"
                 }`}>
                   {ERROR_META[scanError].icon === "red"
-                    ? <IconCircleX className="w-5 h-5 text-red-600" />
-                    : <IconAlertTriangle className="w-5 h-5 text-amber-600" />
+                    ? <XCircle className="w-5 h-5 text-red-600" />
+                    : <AlertTriangle className="w-5 h-5 text-amber-600" />
                   }
                 </div>
                 <div>
@@ -829,7 +829,7 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
               size="lg"
               onClick={handleConfirmRecepcion}
               disabled={validRecEntries.length === 0}
-              iconLeft={<IconCircleCheck className="w-4 h-4" />}
+              iconLeft={<CheckCircle2 className="w-4 h-4" />}
               className="w-full"
             >
               Confirmar recepción
@@ -844,7 +844,7 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
         <AlertModal
           open={showDiffAlert}
           onClose={() => setShowDiffAlert(false)}
-          icon={IconAlertTriangle}
+          icon={AlertTriangle}
           variant="warning"
           title="Recepción con diferencias"
           confirm={{
@@ -866,7 +866,7 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
               variant="primary"
               size="lg"
               onClick={handleConfirmConteo}
-              iconLeft={<IconPlayerPlay className="w-4 h-4" />}
+              iconLeft={<Play className="w-4 h-4" />}
               className="w-full"
             >
               Iniciar conteo
@@ -884,7 +884,7 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
               variant="primary"
               size="lg"
               onClick={handleConfirmConteo}
-              iconLeft={<IconPlayerPlay className="w-4 h-4" />}
+              iconLeft={<Play className="w-4 h-4" />}
               className="w-full"
             >
               Continuar conteo
@@ -901,7 +901,7 @@ export default function QrScannerModal({ open, onClose, onConfirm, onStartConteo
               variant="primary"
               size="lg"
               onClick={resetToInput}
-              iconLeft={<IconRefresh className="w-4 h-4" />}
+              iconLeft={<RefreshCw className="w-4 h-4" />}
               className="w-full"
             >
               Volver a escanear

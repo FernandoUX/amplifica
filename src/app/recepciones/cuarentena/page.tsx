@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useState, useEffect, useMemo } from "react";
 import {
-  IconChevronRight, IconChevronDown, IconChevronUp, IconCheck, IconX,
-  IconSearch, IconAdjustmentsHorizontal, IconAlertTriangle, IconClock,
-} from "@tabler/icons-react";
+  ChevronRight, ChevronDown, ChevronUp, ChevronLeft, Check, X,
+  Search, SlidersHorizontal, AlertTriangle, Clock,
+} from "lucide-react";
 import Button from "@/components/ui/Button";
 import {
   QuarantineRecord, QuarantineStatus, QuarantineResolution, QuarantineCategory,
@@ -62,18 +62,80 @@ const INCIDENCIA_TAGS: { key: string; label: string; color: "amber" | "red" | "o
   { key: "no-en-sistema",     label: "No creado en sistema",       color: "purple" },
 ];
 
+// ─── Filter accordion (same pattern as OR page) ─────────────────────────────
+function FilterAccordion({
+  title, options, selected, onToggle, renderOption, defaultOpen = true,
+}: {
+  title: string;
+  options: string[];
+  selected: Set<string>;
+  onToggle: (val: string) => void;
+  renderOption?: (val: string) => React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const scrollable = options.length >= 4;
+  const count = selected.size;
+  return (
+    <div>
+      <button type="button" onClick={() => setOpen(o => !o)} className="flex items-center justify-between w-full group">
+        <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide flex items-center gap-2">
+          {title}
+          {count > 0 && (
+            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold leading-none">
+              {count}
+            </span>
+          )}
+        </span>
+        <ChevronDown className={`w-3.5 h-3.5 text-neutral-600 transition-transform duration-200 ${open ? "" : "-rotate-90"}`} />
+      </button>
+      {open && (
+        <div className={`space-y-1 mt-2 ${scrollable ? "overflow-y-auto max-h-[176px] pr-1 filter-scroll" : ""}`}>
+          {options.map(opt => (
+            <label key={opt} className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-neutral-50 transition-colors duration-300">
+              <input
+                type="checkbox"
+                checked={selected.has(opt)}
+                onChange={() => onToggle(opt)}
+                className="w-4 h-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500 cursor-pointer"
+              />
+              {renderOption ? renderOption(opt) : <span className="text-sm text-neutral-700">{opt}</span>}
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const NW: React.CSSProperties = { whiteSpace: "nowrap" };
+const stickyRight: React.CSSProperties = {
+  position: "sticky",
+  right: 0,
+  boxShadow: "-4px 0 8px -2px rgba(0,0,0,0.07)",
+};
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function CuarentenaPage() {
   const [records, setRecords] = useState<QuarantineRecord[]>([]);
 
-  // Filters
-  const [filterCat,     setFilterCat]     = useState<QuarantineCategory | "all">("all");
-  const [filterEstado,  setFilterEstado]  = useState<QuarantineStatus | "all">("all");
-  const [filterSeller,  setFilterSeller]  = useState("");
-  const [filterSucursal, setFilterSucursal] = useState("");
+  // Category tab (pill tabs like OR page)
+  const [activeTab, setActiveTab] = useState<QuarantineCategory | "all">("all");
+
+  // Filters (modal)
+  const [filterEstados,   setFilterEstados]   = useState<Set<string>>(new Set());
+  const [filterSellers,   setFilterSellers]   = useState<Set<string>>(new Set());
+  const [filterSucursales, setFilterSucursales] = useState<Set<string>>(new Set());
   const [searchTerm,    setSearchTerm]    = useState("");
   const [showFilters,   setShowFilters]   = useState(false);
-  const activeFilterCount = [filterCat !== "all", filterEstado !== "all", filterSeller !== "", filterSucursal !== ""].filter(Boolean).length;
+  const activeFilterCount = filterEstados.size + filterSellers.size + filterSucursales.size;
+
+  const toggleInSet = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, val: string) =>
+    setter(prev => { const next = new Set(prev); next.has(val) ? next.delete(val) : next.add(val); return next; });
+
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   // Cat C modal
   const [catCModal,    setCatCModal]    = useState<QuarantineRecord | null>(null);
@@ -97,13 +159,20 @@ export default function CuarentenaPage() {
   const sellers    = useMemo(() => [...new Set(records.map(r => r.seller))].sort(),    [records]);
   const sucursales = useMemo(() => [...new Set(records.map(r => r.sucursal))].sort(),  [records]);
 
+  // Category counts (for tab badges)
+  const catCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: records.length };
+    for (const r of records) counts[r.categoria] = (counts[r.categoria] || 0) + 1;
+    return counts;
+  }, [records]);
+
   // Filtered list
   const filtered = useMemo(() => {
     return records.filter(r => {
-      if (filterCat    !== "all" && r.categoria !== filterCat)    return false;
-      if (filterEstado !== "all" && r.estado    !== filterEstado) return false;
-      if (filterSeller  && r.seller   !== filterSeller)          return false;
-      if (filterSucursal && r.sucursal !== filterSucursal)       return false;
+      if (activeTab       !== "all" && r.categoria !== activeTab)       return false;
+      if (filterEstados.size   > 0  && !filterEstados.has(r.estado))   return false;
+      if (filterSellers.size   > 0  && !filterSellers.has(r.seller))   return false;
+      if (filterSucursales.size > 0 && !filterSucursales.has(r.sucursal)) return false;
       if (searchTerm) {
         const q = searchTerm.toLowerCase();
         if (!r.sku.toLowerCase().includes(q) &&
@@ -112,7 +181,20 @@ export default function CuarentenaPage() {
       }
       return true;
     });
-  }, [records, filterCat, filterEstado, filterSeller, filterSucursal, searchTerm]);
+  }, [records, activeTab, filterEstados, filterSellers, filterSucursales, searchTerm]);
+
+  const clearAllFilters = () => {
+    setFilterEstados(new Set());
+    setFilterSellers(new Set());
+    setFilterSucursales(new Set());
+  };
+
+  // Pagination computed
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const clampedPage = Math.min(page, totalPages);
+  const fromRow = filtered.length === 0 ? 0 : (clampedPage - 1) * pageSize + 1;
+  const toRow = Math.min(clampedPage * pageSize, filtered.length);
+  const paginatedRows = filtered.slice((clampedPage - 1) * pageSize, clampedPage * pageSize);
 
   // Stats
   const totalPendientes = records.filter(r => r.estado === "pendiente").length;
@@ -147,7 +229,7 @@ export default function CuarentenaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="p-4 lg:p-6 min-w-0 pb-36 sm:pb-0 max-w-[1680px] mx-auto sm:flex sm:flex-col sm:h-[98dvh] sm:overflow-hidden">
 
       {/* ── Cat C Modal ── */}
       {catCModal && (
@@ -164,7 +246,7 @@ export default function CuarentenaPage() {
                 </p>
               </div>
               <button onClick={() => setCatCModal(null)} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300 flex-shrink-0">
-                <IconX className="w-4 h-4 text-neutral-600" />
+                <X className="w-4 h-4 text-neutral-600" />
               </button>
             </div>
 
@@ -245,18 +327,16 @@ export default function CuarentenaPage() {
       )}
 
       {/* ── Breadcrumb ── */}
-      <div className="bg-white border-b border-neutral-100">
-        <nav className="max-w-6xl mx-auto px-6 py-3 flex items-center gap-1.5 text-sm text-neutral-500">
-          <Link href="/recepciones" className="hover:text-primary-500 transition-colors duration-300">Recepciones</Link>
-          <IconChevronRight className="w-3.5 h-3.5 text-neutral-300" />
-          <span className="text-neutral-700 font-medium">Stock en cuarentena</span>
-        </nav>
-      </div>
+      <nav className="pb-1 flex items-center justify-center sm:justify-start gap-1.5 text-sm text-neutral-500">
+        <Link href="/recepciones" className="hover:text-primary-500 transition-colors duration-300">Recepciones</Link>
+        <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
+        <span className="text-neutral-700 font-medium">Stock en cuarentena</span>
+      </nav>
 
-      <div className="max-w-6xl mx-auto px-6 py-6 space-y-5">
+      <div className="space-y-5 sm:flex-1 sm:flex sm:flex-col sm:min-h-0 sm:overflow-hidden">
 
         {/* ── Title ── */}
-        <div>
+        <div className="text-center sm:text-left">
           <h1 className="text-2xl font-bold text-neutral-900">Stock en cuarentena</h1>
           <p className="text-sm text-neutral-600 mt-0.5">
             Gestión transversal de unidades con incidencia pendientes de resolución
@@ -264,25 +344,25 @@ export default function CuarentenaPage() {
         </div>
 
         {/* ── Summary chips ── */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 text-neutral-600 rounded-full text-xs font-medium border border-neutral-200">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide">
+          <span className="inline-flex items-center px-2 py-0.5 bg-neutral-100 text-neutral-600 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0">
             {totalPendientes} pendiente{totalPendientes !== 1 ? "s" : ""}
           </span>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
+          <span className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0">
             {totalEnGestion} en gestión
           </span>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-xs font-medium border border-green-200">
+          <span className="inline-flex items-center px-2 py-0.5 bg-green-50 text-green-700 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0">
             {totalResueltos} resuelto{totalResueltos !== 1 ? "s" : ""}
           </span>
-          <span className="text-xs text-neutral-600 ml-auto tabular-nums">
-            {records.length} registros totales
+          <span className="text-xs text-neutral-500 tabular-nums whitespace-nowrap flex-shrink-0">
+            {records.length} registros
           </span>
         </div>
 
         {/* ── Alerts ── */}
         {alertaPendiente48h.length > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3">
-            <IconAlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-semibold text-amber-800">
                 {alertaPendiente48h.length} registro{alertaPendiente48h.length !== 1 ? "s" : ""} con más de 48h en estado pendiente
@@ -293,7 +373,7 @@ export default function CuarentenaPage() {
         )}
         {alertaGestion7d.length > 0 && (
           <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-3">
-            <IconClock className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+            <Clock className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-semibold text-red-800">
                 {alertaGestion7d.length} registro{alertaGestion7d.length !== 1 ? "s" : ""} con más de 7 días en gestión
@@ -303,99 +383,244 @@ export default function CuarentenaPage() {
           </div>
         )}
 
-        {/* ── Filters ── */}
-        <div className="bg-white border border-neutral-200 rounded-xl p-4">
-          {/* Search + mobile filter toggle */}
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1 min-w-0">
-              <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
-              <input
-                type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-                placeholder="Buscar SKU, producto u OR..."
-                className="w-full pl-9 pr-4 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 placeholder-neutral-400"
-              />
-            </div>
-            <button
-              onClick={() => setShowFilters(f => !f)}
-              className="sm:hidden flex items-center gap-1.5 px-3 py-2 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 transition-colors flex-shrink-0"
+        {/* ── Filter Modal ── */}
+        {showFilters && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            style={{ background: "rgba(0,0,0,0.35)" }}
+            onMouseDown={() => setShowFilters(false)}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 flex flex-col overflow-hidden"
+              onMouseDown={e => e.stopPropagation()}
             >
-              <IconAdjustmentsHorizontal className="w-4 h-4" />
-              Filtros
-              {activeFilterCount > 0 && (
-                <span className="w-5 h-5 flex items-center justify-center bg-primary-500 text-white text-[10px] font-bold rounded-full">{activeFilterCount}</span>
-              )}
-              {showFilters ? <IconChevronUp className="w-3.5 h-3.5" /> : <IconChevronDown className="w-3.5 h-3.5" />}
-            </button>
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-neutral-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <SlidersHorizontal className="w-4 h-4 text-neutral-600" />
+                  </div>
+                  <h2 className="text-base font-semibold text-neutral-900">Filtros</h2>
+                  {activeFilterCount > 0 && (
+                    <span className="inline-flex items-center justify-center w-5 h-5 bg-primary-500 text-white text-[10px] font-bold rounded-full">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </div>
+                <button onClick={() => setShowFilters(false)} className="text-neutral-600 hover:text-neutral-600 transition-colors duration-300">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-5 space-y-5 overflow-y-auto max-h-[60vh]">
+                <FilterAccordion
+                  title="Estado"
+                  options={["pendiente", "en_gestion", "resuelto"]}
+                  selected={filterEstados}
+                  onToggle={v => toggleInSet(setFilterEstados, v)}
+                  renderOption={v => {
+                    const labels: Record<string, string> = { pendiente: "Pendiente", en_gestion: "En gestión", resuelto: "Resuelto" };
+                    return <span className="text-sm text-neutral-700">{labels[v] ?? v}</span>;
+                  }}
+                />
+                <FilterAccordion
+                  title="Seller"
+                  options={sellers}
+                  selected={filterSellers}
+                  onToggle={v => toggleInSet(setFilterSellers, v)}
+                />
+                <FilterAccordion
+                  title="Sucursal"
+                  options={sucursales}
+                  selected={filterSucursales}
+                  onToggle={v => toggleInSet(setFilterSucursales, v)}
+                />
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between px-5 py-4 border-t border-neutral-100 bg-neutral-50">
+                <button
+                  onClick={clearAllFilters}
+                  className="text-sm text-neutral-500 hover:text-neutral-700 font-medium transition-colors duration-300 disabled:opacity-40"
+                  disabled={activeFilterCount === 0}
+                >
+                  Limpiar filtros
+                </button>
+                <button
+                  onClick={() => setShowFilters(false)}
+                  className="bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors duration-300"
+                >
+                  Aplicar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Toolbar: tabs left, controls right ── */}
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 sm:flex-shrink-0">
+          {/* Category pill tabs */}
+          <div className="relative flex-1 min-w-0">
+            {/* Mobile: select */}
+            <div className="sm:hidden">
+              <select
+                value={activeTab}
+                onChange={e => setActiveTab(e.target.value as QuarantineCategory | "all")}
+                className="w-full h-9 bg-neutral-100 rounded-lg pl-3 pr-8 text-sm text-neutral-700 appearance-none focus:outline-none focus:ring-2 focus:ring-primary-200"
+              >
+                {([ "all", "interna", "devolucion_seller", "decision_seller" ] as const).map(tab => {
+                  const labels: Record<string, string> = { all: "Todas", interna: "Res. interna", devolucion_seller: "Dev. obligatoria", decision_seller: "Dec. seller" };
+                  return <option key={tab} value={tab}>{labels[tab]}{catCounts[tab] ? ` (${catCounts[tab]})` : ""}</option>;
+                })}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
+            </div>
+
+            {/* Desktop: pill tabs */}
+            <div className="hidden sm:flex items-center gap-0.5 overflow-x-auto bg-neutral-100 rounded-lg select-none h-9 px-0.5" style={{ scrollbarWidth: "none" } as React.CSSProperties}>
+              {([ "all", "interna", "devolucion_seller", "decision_seller" ] as const).map(tab => {
+                const labels: Record<string, string> = { all: "Todas", interna: "Res. interna", devolucion_seller: "Dev. obligatoria", decision_seller: "Dec. seller" };
+                const isActive = activeTab === tab;
+                const count = catCounts[tab] || 0;
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    style={NW}
+                    className={`px-2.5 rounded-md text-[13px] leading-tight transition-all duration-200 flex-shrink-0 flex items-center h-8 ${
+                      isActive ? "bg-white text-neutral-900 font-medium shadow-sm" : "text-neutral-500 hover:text-neutral-700"
+                    }`}
+                  >
+                    {labels[tab]}
+                    {count > 0 && (
+                      <span className={`ml-1.5 text-[10px] tabular-nums rounded-full min-w-[18px] h-[18px] inline-flex items-center justify-center px-1 font-medium ${
+                        isActive ? "bg-primary-500 text-white" : "bg-neutral-200/70 text-neutral-500"
+                      }`}>
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Dropdowns: always visible on desktop, collapsible on mobile */}
-          <div className={`flex items-center gap-3 flex-wrap mt-3 ${showFilters ? "flex" : "hidden sm:flex"}`}>
-            {/* Categoría */}
-            <div className="relative w-full sm:w-auto">
-              <select value={filterCat} onChange={e => setFilterCat(e.target.value as QuarantineCategory | "all")}
-                className="appearance-none w-full sm:w-auto pl-3 pr-8 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 bg-white text-neutral-700">
-                <option value="all">Todas las categorías</option>
-                <option value="interna">Resolución interna Amplifica</option>
-                <option value="devolucion_seller">Devolución obligatoria a seller</option>
-                <option value="decision_seller">Decisión del seller</option>
-              </select>
-              <IconChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
-            </div>
+          {/* Right controls: filter button + search */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={() => setShowFilters(true)}
+              className={`relative h-9 w-9 flex items-center justify-center border border-transparent rounded-lg transition-colors duration-300 ${
+                activeFilterCount > 0
+                  ? "bg-primary-50 text-primary-500 hover:bg-primary-100"
+                  : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
+              }`}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-primary-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center" style={{ lineHeight: 1 }}>
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
 
-            {/* Estado */}
-            <div className="relative w-full sm:w-auto">
-              <select value={filterEstado} onChange={e => setFilterEstado(e.target.value as QuarantineStatus | "all")}
-                className="appearance-none w-full sm:w-auto pl-3 pr-8 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 bg-white text-neutral-700">
-                <option value="all">Todos los estados</option>
-                <option value="pendiente">Pendiente</option>
-                <option value="en_gestion">En gestión</option>
-                <option value="resuelto">Resuelto</option>
-              </select>
-              <IconChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
-            </div>
-
-            {/* Seller */}
-            <div className="relative w-full sm:w-auto">
-              <select value={filterSeller} onChange={e => setFilterSeller(e.target.value)}
-                className="appearance-none w-full sm:w-auto pl-3 pr-8 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 bg-white text-neutral-700">
-                <option value="">Todos los sellers</option>
-                {sellers.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <IconChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
-            </div>
-
-            {/* Sucursal */}
-            <div className="relative w-full sm:w-auto">
-              <select value={filterSucursal} onChange={e => setFilterSucursal(e.target.value)}
-                className="appearance-none w-full sm:w-auto pl-3 pr-8 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 bg-white text-neutral-700">
-                <option value="">Todas las sucursales</option>
-                {sucursales.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <IconChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
+            <div className="hidden sm:block relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
+              <input
+                type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                placeholder="Buscar OR..."
+                className="pl-9 pr-8 py-2 h-9 bg-neutral-100 rounded-lg text-sm text-neutral-700 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200 w-52"
+              />
+              {searchTerm && (
+                <button onClick={() => setSearchTerm("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-600 hover:text-neutral-600">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           </div>
         </div>
 
-        {/* ── Table ── */}
-        <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[900px]">
-              <thead>
-                <tr className="bg-neutral-50/60 border-b border-neutral-100">
-                  {["OR", "SKU", "Producto / Tag", "Cant.", "Seller", "Sucursal", "Categoría", "Estado", "Antigüedad", "Resolución", "Acciones"].map(h => (
-                    <th key={h} className="px-3 py-2.5 text-left text-[11px] font-semibold text-neutral-500">{h}</th>
-                  ))}
+        {/* Mobile search — full width below toolbar */}
+        <div className="sm:hidden relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
+          <input
+            type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+            placeholder="Buscar SKU, producto u OR..."
+            className="w-full pl-9 pr-8 py-2.5 bg-neutral-100 rounded-lg text-sm text-neutral-700 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+          />
+          {searchTerm && (
+            <button onClick={() => setSearchTerm("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-600 hover:text-neutral-600">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Active filter chips */}
+        {activeFilterCount > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-neutral-500 font-medium">Filtros activos:</span>
+            {[...filterEstados].map(k => {
+              const labels: Record<string, string> = { pendiente: "Pendiente", en_gestion: "En gestión", resuelto: "Resuelto" };
+              return (
+                <span key={k} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-primary-50 text-primary-600 border border-primary-200 rounded-full font-medium">
+                  {labels[k] ?? k}
+                  <button onClick={() => toggleInSet(setFilterEstados, k)} className="ml-0.5 text-primary-400 hover:text-primary-500"><X className="w-3 h-3" /></button>
+                </span>
+              );
+            })}
+            {[...filterSellers].map(k => (
+              <span key={k} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-primary-50 text-primary-600 border border-primary-200 rounded-full font-medium">
+                {k}
+                <button onClick={() => toggleInSet(setFilterSellers, k)} className="ml-0.5 text-primary-400 hover:text-primary-500"><X className="w-3 h-3" /></button>
+              </span>
+            ))}
+            {[...filterSucursales].map(k => (
+              <span key={k} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-primary-50 text-primary-600 border border-primary-200 rounded-full font-medium">
+                {k}
+                <button onClick={() => toggleInSet(setFilterSucursales, k)} className="ml-0.5 text-primary-400 hover:text-primary-500"><X className="w-3 h-3" /></button>
+              </span>
+            ))}
+            <button onClick={clearAllFilters} className="text-xs text-neutral-600 hover:text-neutral-600 underline underline-offset-2">
+              Limpiar todo
+            </button>
+          </div>
+        )}
+
+        {/* ── Table (desktop) ── */}
+        <div className="hidden sm:flex flex-col flex-1 min-h-0 bg-white border border-neutral-200 rounded-2xl overflow-hidden relative">
+          <div
+            className="overflow-x-auto overflow-y-auto flex-1 min-h-0 w-full table-scroll scroll-fade-right"
+            style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+            onScroll={e => {
+              const el = e.currentTarget;
+              el.classList.toggle("scrolled-end", el.scrollLeft + el.clientWidth >= el.scrollWidth - 2);
+            }}
+          >
+            <table className="w-full table-fixed text-sm border-collapse font-sans tracking-normal">
+              <thead className="sticky top-0 z-10">
+                <tr className="border-b border-neutral-100 bg-neutral-50">
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 w-[130px]" style={NW}>OR</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 w-[90px]" style={NW}>SKU</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 w-[180px]" style={NW}>Producto / Tag</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 w-[65px]" style={NW}>Cant.</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 w-[100px]" style={NW}>Seller</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 w-[100px]" style={NW}>Sucursal</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 w-[140px]" style={NW}>Categoría</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 w-[110px]" style={NW}>Estado</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 w-[90px]" style={NW}>Antigüedad</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 w-[160px]" style={NW}>Resolución</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 bg-neutral-50 w-[150px]" style={{ ...NW, ...stickyRight }}>Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-50">
-                {filtered.length === 0 ? (
+                {paginatedRows.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="px-4 py-10 text-center text-sm text-neutral-600">
-                      No se encontraron registros con los filtros seleccionados
+                    <td colSpan={11} className="py-14 text-center text-sm text-neutral-600" style={NW}>
+                      No se encontraron registros con los filtros seleccionados.
                     </td>
                   </tr>
                 ) : (
-                  filtered.map(rec => {
+                  paginatedRows.map(rec => {
                     const cat     = catBadge(rec.categoria);
                     const est     = estadoBadge(rec.estado);
                     const tagInfo = INCIDENCIA_TAGS.find(t => t.key === rec.tag);
@@ -404,56 +629,60 @@ export default function CuarentenaPage() {
                     const alert7d = rec.estado === "en_gestion" && days > 7;
 
                     return (
-                      <tr key={rec.id} className={`transition-colors duration-300 ${
+                      <tr key={rec.id} className={`transition-colors duration-300 group ${
                         alert48 ? "bg-amber-50/40" :
-                        alert7d ? "bg-red-50/40"   : "hover:bg-neutral-50/40"
+                        alert7d ? "bg-red-50/40"   : "hover:bg-neutral-50/60"
                       }`}>
-                        <td className="px-3 py-3 align-top">
-                          <Link href={`/recepciones/${rec.orId}`} className="text-xs font-sans text-primary-500 hover:underline">
+                        <td className="py-3 px-4" style={NW}>
+                          <Link href={`/recepciones/${rec.orId}`}
+                            className="inline-block bg-neutral-100 text-neutral-700 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 text-xs font-mono transition-colors">
                             {rec.orId}
                           </Link>
                         </td>
-                        <td className="px-3 py-3 font-sans text-xs text-neutral-500 whitespace-nowrap align-top">{rec.sku}</td>
-                        <td className="px-3 py-3 align-top max-w-[160px]">
+                        <td className="py-3 px-4 text-xs text-neutral-500 font-mono tabular-nums" style={NW}>{rec.sku}</td>
+                        <td className="py-3 px-4">
                           <p className="text-xs text-neutral-700 leading-snug">{rec.productName}</p>
                           {tagInfo && (
-                            <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium border mt-1 ${
-                              tagInfo.color === "amber"  ? "bg-amber-50 text-amber-700 border-amber-200"  :
-                              tagInfo.color === "orange" ? "bg-orange-50 text-orange-700 border-orange-200":
-                              tagInfo.color === "purple" ? "bg-purple-50 text-purple-700 border-purple-200":
-                                                           "bg-red-50 text-red-700 border-red-200"
+                            <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded font-medium mt-1 ${
+                              tagInfo.color === "amber"  ? "bg-amber-50 text-amber-700"  :
+                              tagInfo.color === "orange" ? "bg-orange-50 text-orange-700" :
+                              tagInfo.color === "purple" ? "bg-purple-50 text-purple-700" :
+                                                           "bg-red-50 text-red-700"
                             }`}>{tagInfo.label}</span>
                           )}
                         </td>
-                        <td className="px-3 py-3 tabular-nums font-semibold text-neutral-800 align-top">{rec.cantidad}</td>
-                        <td className="px-3 py-3 text-xs text-neutral-600 align-top">{rec.seller}</td>
-                        <td className="px-3 py-3 text-xs text-neutral-600 align-top">{rec.sucursal}</td>
-                        <td className="px-3 py-3 align-top">
-                          <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${cat.cls}`}>
+                        <td className="py-3 px-4 tabular-nums font-semibold text-neutral-700" style={NW}>{rec.cantidad}</td>
+                        <td className="py-3 px-4 text-xs text-neutral-600" style={NW}>{rec.seller}</td>
+                        <td className="py-3 px-4 text-xs text-neutral-600" style={NW}>{rec.sucursal}</td>
+                        <td className="py-3 px-4" style={NW}>
+                          <span className={`inline-flex items-center whitespace-nowrap rounded-full pl-1.5 pr-2 py-0.5 text-xs font-medium leading-none ${cat.cls}`}>
                             {cat.short}
                           </span>
                         </td>
-                        <td className="px-3 py-3 align-top">
-                          <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${est.cls}`}>
+                        <td className="py-3 px-4" style={NW}>
+                          <span className={`inline-flex items-center whitespace-nowrap rounded-full pl-1.5 pr-2 py-0.5 text-xs font-medium leading-none ${est.cls}`}>
                             {est.label}
                           </span>
                         </td>
-                        <td className="px-3 py-3 align-top">
+                        <td className="py-3 px-4" style={NW}>
                           <span className={`text-xs tabular-nums font-medium ${
                             alert48 ? "text-amber-600" : alert7d ? "text-red-600" : "text-neutral-500"
                           }`}>
                             {days}d
                           </span>
                           {(alert48 || alert7d) && (
-                            <IconAlertTriangle className={`w-3 h-3 ml-1 inline-block ${alert7d ? "text-red-500" : "text-amber-500"}`} />
+                            <AlertTriangle className={`w-3 h-3 ml-1 inline-block ${alert7d ? "text-red-500" : "text-amber-500"}`} />
                           )}
                         </td>
-                        <td className="px-3 py-3 text-xs text-neutral-600 align-top">
+                        <td className="py-3 px-4 text-xs text-neutral-600" style={NW}>
                           {rec.resolucion
                             ? <span className="font-medium">{resolucionLabel(rec.resolucion, rec)}</span>
                             : <span className="text-neutral-300">—</span>}
                         </td>
-                        <td className="px-3 py-3 align-top">
+                        <td
+                          className="py-3 px-4 bg-white group-hover:bg-neutral-50/60"
+                          style={{ ...NW, ...stickyRight }}
+                        >
                           {rec.estado === "pendiente" && (
                             <button onClick={() => updateRecord(rec.id, { estado: "en_gestion" })}
                               className="text-xs font-semibold px-2.5 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors duration-300 whitespace-nowrap">
@@ -479,8 +708,8 @@ export default function CuarentenaPage() {
                             </button>
                           )}
                           {rec.estado === "resuelto" && (
-                            <span className="text-[10px] text-neutral-600 flex items-center gap-1">
-                              <IconCheck className="w-3 h-3 text-green-500" /> Resuelto
+                            <span className="text-xs text-neutral-600 flex items-center gap-1">
+                              <Check className="w-3 h-3 text-green-500" /> Resuelto
                             </span>
                           )}
                         </td>
@@ -490,6 +719,165 @@ export default function CuarentenaPage() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex-shrink-0 flex items-center justify-between px-3 py-3 bg-white border-t border-neutral-100">
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-1.5 bg-neutral-100 rounded-lg px-3 h-[44px] text-sm text-neutral-700 cursor-pointer">
+                <span className="text-neutral-500">Mostrar</span>
+                <select
+                  value={pageSize}
+                  onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
+                  className="bg-transparent font-medium focus:outline-none cursor-pointer"
+                >
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={clampedPage <= 1}
+                className="px-3 h-[44px] bg-neutral-100 rounded-lg text-sm text-neutral-700 hover:bg-neutral-200 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300 flex items-center gap-1.5"
+                style={NW}
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Anterior
+              </button>
+              <span className="text-sm text-neutral-500 tabular-nums" style={NW}>
+                {fromRow}–{toRow} de {filtered.length}
+              </span>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={clampedPage >= totalPages}
+                className="px-3 h-[44px] bg-neutral-100 rounded-lg text-sm text-neutral-700 hover:bg-neutral-200 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300 flex items-center gap-1.5"
+                style={NW}
+              >
+                Siguiente
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Mobile cards ── */}
+        <div className="sm:hidden space-y-3">
+          {paginatedRows.length === 0 ? (
+            <p className="text-center text-sm text-neutral-600 py-10">
+              No se encontraron registros con los filtros seleccionados.
+            </p>
+          ) : (
+            paginatedRows.map(rec => {
+              const cat     = catBadge(rec.categoria);
+              const est     = estadoBadge(rec.estado);
+              const tagInfo = INCIDENCIA_TAGS.find(t => t.key === rec.tag);
+              const days    = daysSince(rec.creadoEn);
+              const alert48 = rec.estado === "pendiente"  && days > 2;
+              const alert7d = rec.estado === "en_gestion" && days > 7;
+
+              return (
+                <div key={rec.id} className={`bg-white border border-neutral-200 rounded-2xl p-4 space-y-3 ${
+                  alert48 ? "border-amber-200 bg-amber-50/30" :
+                  alert7d ? "border-red-200 bg-red-50/30" : ""
+                }`}>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <Link href={`/recepciones/${rec.orId}`}
+                        className="inline-block bg-neutral-100 text-neutral-700 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 text-xs font-mono transition-colors">
+                        {rec.orId}
+                      </Link>
+                      <p className="text-sm text-neutral-700 font-medium mt-1.5">{rec.productName}</p>
+                      <p className="text-xs text-neutral-500 font-mono">{rec.sku} · {rec.cantidad} uds.</p>
+                    </div>
+                    <span className={`inline-flex items-center whitespace-nowrap rounded-full pl-1.5 pr-2 py-0.5 text-xs font-medium leading-none ${est.cls}`}>
+                      {est.label}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <span className={`inline-flex items-center whitespace-nowrap rounded-full pl-1.5 pr-2 py-0.5 text-xs font-medium leading-none ${cat.cls}`}>
+                      {cat.short}
+                    </span>
+                    {tagInfo && (
+                      <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded font-medium ${
+                        tagInfo.color === "amber"  ? "bg-amber-50 text-amber-700"  :
+                        tagInfo.color === "orange" ? "bg-orange-50 text-orange-700" :
+                        tagInfo.color === "purple" ? "bg-purple-50 text-purple-700" :
+                                                     "bg-red-50 text-red-700"
+                      }`}>{tagInfo.label}</span>
+                    )}
+                    <span className={`text-xs tabular-nums font-medium ${
+                      alert48 ? "text-amber-600" : alert7d ? "text-red-600" : "text-neutral-500"
+                    }`}>
+                      {days}d
+                      {(alert48 || alert7d) && (
+                        <AlertTriangle className={`w-3 h-3 ml-1 inline-block ${alert7d ? "text-red-500" : "text-amber-500"}`} />
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-neutral-500">
+                    <span>{rec.seller} · {rec.sucursal}</span>
+                    {rec.resolucion && <span className="font-medium text-neutral-700">{resolucionLabel(rec.resolucion, rec)}</span>}
+                  </div>
+                  <div>
+                    {rec.estado === "pendiente" && (
+                      <button onClick={() => updateRecord(rec.id, { estado: "en_gestion" })}
+                        className="w-full text-xs font-semibold px-3 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors duration-300">
+                        Iniciar gestión
+                      </button>
+                    )}
+                    {rec.estado === "en_gestion" && rec.categoria === "interna" && (
+                      <button onClick={() => updateRecord(rec.id, { estado: "resuelto", resolucion: "stock_disponible", resueltoen: new Date().toISOString() })}
+                        className="w-full text-xs font-medium px-3 py-2 border border-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors duration-300">
+                        Re-etiquetado OK
+                      </button>
+                    )}
+                    {rec.estado === "en_gestion" && rec.categoria === "devolucion_seller" && (
+                      <button onClick={() => updateRecord(rec.id, { estado: "resuelto", resolucion: "devolucion", resueltoen: new Date().toISOString() })}
+                        className="w-full text-xs font-medium px-3 py-2 border border-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors duration-300">
+                        Confirmar retiro
+                      </button>
+                    )}
+                    {rec.estado === "en_gestion" && rec.categoria === "decision_seller" && (
+                      <button onClick={() => openCatC(rec)}
+                        className="w-full text-xs font-semibold px-3 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors duration-300">
+                        Registrar decisión
+                      </button>
+                    )}
+                    {rec.estado === "resuelto" && (
+                      <span className="text-xs text-neutral-600 flex items-center gap-1">
+                        <Check className="w-3 h-3 text-green-500" /> Resuelto
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+
+          {/* Mobile pagination */}
+          <div className="flex items-center justify-between pb-8">
+            <span className="text-xs text-neutral-600 tabular-nums">
+              {fromRow}–{toRow} de {filtered.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={clampedPage <= 1}
+                className="p-2 bg-white border border-neutral-200 rounded-lg text-neutral-700 hover:bg-neutral-50 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={clampedPage >= totalPages}
+                className="p-2 bg-white border border-neutral-200 rounded-lg text-neutral-700 hover:bg-neutral-50 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
 

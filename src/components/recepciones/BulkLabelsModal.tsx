@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { IconX, IconPrinter, IconQrcode, IconPackage } from "@tabler/icons-react";
+import { X, Printer, QrCode, Package } from "lucide-react";
 import Button from "@/components/ui/Button";
 import FormField from "@/components/ui/FormField";
 
@@ -44,7 +44,7 @@ export default function BulkLabelsModal({ open, onClose, orId, seller, sucursal,
             Generar etiquetas para bultos
           </h1>
           <button onClick={onClose} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">
-            <IconX className="w-4 h-4 text-neutral-600" />
+            <X className="w-4 h-4 text-neutral-600" />
           </button>
         </div>
 
@@ -97,14 +97,14 @@ export default function BulkLabelsModal({ open, onClose, orId, seller, sucursal,
             </p>
             <div className="border border-dashed border-neutral-300 rounded-lg p-4 flex items-center gap-4 bg-neutral-50">
               <div className="w-14 h-14 bg-white rounded border border-neutral-200 flex items-center justify-center flex-shrink-0">
-                <IconQrcode className="w-8 h-8 text-neutral-400" />
+                <QrCode className="w-8 h-8 text-neutral-400" />
               </div>
               <div className="min-w-0 text-xs text-neutral-600 space-y-0.5">
                 <p className="font-semibold text-neutral-800">{orId}</p>
                 <p>{seller}</p>
                 <p>{sucursal}</p>
                 <p className="flex items-center gap-1">
-                  <IconPackage className="w-3 h-3" />
+                  <Package className="w-3 h-3" />
                   Bulto 1/{bultos}
                 </p>
               </div>
@@ -127,7 +127,7 @@ export default function BulkLabelsModal({ open, onClose, orId, seller, sucursal,
                 <path d="M3 8l3.5 3.5L13 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             ) : (
-              <IconPrinter className="w-4 h-4" />
+              <Printer className="w-4 h-4" />
             )}
             className={`flex-1 ${generated ? "!bg-green-500" : ""}`}
           >

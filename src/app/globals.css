@@ -51,7 +51,16 @@
 }
 
 body {
-  font-family: var(--font-inter), "Inter", sans-serif;
+  font-family: "Inter", var(--font-sans), sans-serif;
+}
+
+/* Ensure Recharts tooltips & legends inherit Inter */
+.recharts-tooltip-wrapper,
+.recharts-default-tooltip,
+.recharts-legend-wrapper,
+.recharts-text,
+tspan {
+  font-family: "Inter", var(--font-sans), sans-serif !important;
 }
 
 /* ── Hide default number input spinners ─────────────────────────────────── */
@@ -346,6 +355,8 @@ input[type="number"] {
   --btn-h-md: 2.5rem;     /* 40px */
   --btn-h-lg: 2.75rem;    /* 44px */
   --btn-h-xl: 3rem;       /* 48px */
+  --sidebar-font: 0.8125rem;   /* 13px */
+  --sidebar-font-mobile: 0.875rem; /* 14px */
 }
 
 /* Medium */
@@ -360,6 +371,8 @@ input[type="number"] {
   --btn-h-md: 2.75rem;    /* 44px */
   --btn-h-lg: 3rem;       /* 48px */
   --btn-h-xl: 3.25rem;    /* 52px */
+  --sidebar-font: 0.875rem;    /* 14px */
+  --sidebar-font-mobile: 0.9375rem; /* 15px */
 }
 
 /* Large */
@@ -374,4 +387,6 @@ input[type="number"] {
   --btn-h-md: 3rem;       /* 48px */
   --btn-h-lg: 3.25rem;    /* 52px */
   --btn-h-xl: 3.5rem;     /* 56px */
+  --sidebar-font: 1rem;        /* 16px */
+  --sidebar-font-mobile: 1.0625rem; /* 17px */
 }

@@ -5,11 +5,11 @@ import { ORDENES_SEED } from "../_data";
 import Link from "next/link";
 import StatusBadge, { type Status } from "@/components/recepciones/StatusBadge";
 import {
-  IconChevronRight, IconChevronLeft, IconCheck, IconX, IconTrash,
-  IconPlus, IconChevronDown, IconChevronUp,
-  IconSettings, IconCalendar, IconAlertTriangle, IconCircleCheck,
-  IconClock, IconBuilding, IconCircleOff, IconCalendarEvent,
-} from "@tabler/icons-react";
+  ChevronRight, ChevronLeft, Check, X, Trash2,
+  Plus, ChevronDown, ChevronUp,
+  Settings, Calendar, AlertTriangle, CheckCircle2,
+  Clock, Building2, CircleOff, CalendarDays,
+} from "lucide-react";
 import Button from "@/components/ui/Button";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -236,13 +236,13 @@ function TimePicker({ value, onChange, className = "" }: {
               onClick={() => emit((hours + 1) % 24, minutes)}
               className="p-1.5 text-neutral-600 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors duration-300"
             >
-              <IconChevronUp className="w-4 h-4" />
+              <ChevronUp className="w-4 h-4" />
             </button>
             <button
               onClick={() => emit(hours, (minutes + 1) % 60)}
               className="p-1.5 text-neutral-600 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors duration-300"
             >
-              <IconChevronUp className="w-4 h-4" />
+              <ChevronUp className="w-4 h-4" />
             </button>
           </div>
 
@@ -259,13 +259,13 @@ function TimePicker({ value, onChange, className = "" }: {
               onClick={() => emit((hours - 1 + 24) % 24, minutes)}
               className="p-1.5 text-neutral-600 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors duration-300"
             >
-              <IconChevronDown className="w-4 h-4" />
+              <ChevronDown className="w-4 h-4" />
             </button>
             <button
               onClick={() => emit(hours, (minutes - 1 + 60) % 60)}
               className="p-1.5 text-neutral-600 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors duration-300"
             >
-              <IconChevronDown className="w-4 h-4" />
+              <ChevronDown className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -478,7 +478,7 @@ export default function ConfiguracionPage() {
       <div>
         <nav className="max-w-5xl mx-auto px-6 py-3 flex items-center gap-1.5 text-sm text-neutral-500">
           <Link href="/recepciones" className="hover:text-primary-500 transition-colors duration-300">Recepciones</Link>
-          <IconChevronRight className="w-3.5 h-3.5 text-neutral-300" />
+          <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
           <span className="text-neutral-700 font-medium">Configuración</span>
         </nav>
       </div>
@@ -489,7 +489,7 @@ export default function ConfiguracionPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-neutral-900 flex items-center gap-2.5">
-              <IconSettings className="w-6 h-6 text-neutral-600" />
+              <Settings className="w-6 h-6 text-neutral-600" />
               Configuración
             </h1>
             <p className="text-sm text-neutral-600 mt-0.5">Panel de administración del calendario de recepciones</p>
@@ -499,9 +499,9 @@ export default function ConfiguracionPage() {
         {/* ── Tabs ── */}
         <div className="flex border-b border-neutral-200 overflow-x-auto overflow-y-hidden scrollbar-hide">
           {([
-            { key: "sucursales",  label: "Sucursales",           shortLabel: "Sucursales",  icon: IconBuilding },
-            { key: "feriados",    label: "Feriados y bloqueos",  shortLabel: "Feriados",    icon: IconCalendarEvent },
-            { key: "calendario",  label: "Vista de calendario",  shortLabel: "Calendario",  icon: IconCalendar },
+            { key: "sucursales",  label: "Sucursales",           shortLabel: "Sucursales",  icon: Building2 },
+            { key: "feriados",    label: "Feriados y bloqueos",  shortLabel: "Feriados",    icon: CalendarDays },
+            { key: "calendario",  label: "Vista de calendario",  shortLabel: "Calendario",  icon: Calendar },
           ] as const).map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.key;
@@ -542,7 +542,7 @@ export default function ConfiguracionPage() {
                           : "bg-white text-neutral-600 border-neutral-200 hover:border-primary-300 hover:text-primary-500"
                       }`}
                     >
-                      <IconBuilding className="w-3.5 h-3.5" />
+                      <Building2 className="w-3.5 h-3.5" />
                       {s.label}
                     </button>
                     {/* Deactivate button (visible on hover) */}
@@ -551,7 +551,7 @@ export default function ConfiguracionPage() {
                       title="Desactivar sucursal"
                       className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white border border-neutral-200 rounded-full flex items-center justify-center text-neutral-600 hover:text-red-500 hover:border-red-300 opacity-0 group-hover:opacity-100 transition-all shadow-sm z-10"
                     >
-                      <IconX className="w-2.5 h-2.5" />
+                      <X className="w-2.5 h-2.5" />
                     </button>
                   </div>
                 ))}
@@ -560,7 +560,7 @@ export default function ConfiguracionPage() {
                   onClick={() => setShowAddSucursal(v => !v)}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-dashed border-neutral-300 text-neutral-600 hover:border-primary-400 hover:text-primary-500 transition-colors duration-300"
                 >
-                  <IconPlus className="w-3.5 h-3.5" />
+                  <Plus className="w-3.5 h-3.5" />
                   Nueva sucursal
                 </button>
               </div>
@@ -576,7 +576,7 @@ export default function ConfiguracionPage() {
                       title="Reactivar sucursal"
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border border-dashed border-neutral-200 text-neutral-600 hover:border-green-300 hover:text-green-600 transition-colors duration-300"
                     >
-                      <IconCheck className="w-3 h-3" />
+                      <Check className="w-3 h-3" />
                       {s.label}
                     </button>
                   ))}
@@ -589,7 +589,7 @@ export default function ConfiguracionPage() {
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-semibold text-primary-700">Nueva sucursal</p>
                     <button onClick={() => setShowAddSucursal(false)} className="text-primary-400 hover:text-primary-500">
-                      <IconX className="w-4 h-4" />
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -613,7 +613,7 @@ export default function ConfiguracionPage() {
                         >
                           {TIMEZONES.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
                         </select>
-                        <IconChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
+                        <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
                       </div>
                     </div>
                   </div>
@@ -639,7 +639,7 @@ export default function ConfiguracionPage() {
                       disabled={!newSucursalForm.label.trim()}
                       className="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-neutral-100 disabled:text-neutral-600 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors duration-300"
                     >
-                      <IconCheck className="w-4 h-4" />
+                      <Check className="w-4 h-4" />
                       Agregar
                     </button>
                   </div>
@@ -674,7 +674,7 @@ export default function ConfiguracionPage() {
                           >
                             {TIMEZONES.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
                           </select>
-                          <IconChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
+                          <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
                         </div>
                       </div>
                     </div>
@@ -744,7 +744,7 @@ export default function ConfiguracionPage() {
                         <option key={m} value={m}>{m} minutos</option>
                       ))}
                     </select>
-                    <IconChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
                   </div>
                 </FieldRow>
               </div>
@@ -822,7 +822,7 @@ export default function ConfiguracionPage() {
                       <option key={h} value={h}>{h} horas antes</option>
                     ))}
                   </select>
-                  <IconChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
                 </div>
               </FieldRow>
               <div className="border-t border-neutral-100 pt-4">
@@ -841,7 +841,7 @@ export default function ConfiguracionPage() {
             <div className="hidden lg:flex items-center justify-end gap-3 pt-1 pb-8">
               {savedToast && (
                 <span className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
-                  <IconCircleCheck className="w-4 h-4" />
+                  <CheckCircle2 className="w-4 h-4" />
                   Configuración guardada
                 </span>
               )}
@@ -849,7 +849,7 @@ export default function ConfiguracionPage() {
                 onClick={saveConfig}
                 className="flex items-center gap-2 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
               >
-                <IconCheck className="w-4 h-4" />
+                <Check className="w-4 h-4" />
                 Guardar configuración
               </button>
             </div>
@@ -897,14 +897,14 @@ export default function ConfiguracionPage() {
                     onClick={cargarFeriados2026}
                     className="flex items-center gap-2 px-4 py-2 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 font-medium transition-colors duration-300"
                   >
-                    <IconCalendarEvent className="w-4 h-4" />
+                    <CalendarDays className="w-4 h-4" />
                     Cargar feriados 2026
                   </button>
                 </div>
 
                 {feriados.length === 0 ? (
                   <div className="bg-white border border-dashed border-neutral-200 rounded-xl py-12 flex flex-col items-center gap-3 text-center">
-                    <IconCalendarEvent className="w-10 h-10 text-neutral-300" />
+                    <CalendarDays className="w-10 h-10 text-neutral-300" />
                     <div>
                       <p className="text-sm font-semibold text-neutral-600">Sin feriados cargados</p>
                       <p className="text-xs text-neutral-600 mt-0.5">Haz clic en "Cargar feriados 2026" para precargar el calendario nacional</p>
@@ -941,7 +941,7 @@ export default function ConfiguracionPage() {
                                           : "bg-neutral-100 text-neutral-600 border-neutral-200 hover:bg-neutral-200"
                                       }`}
                                     >
-                                      {opera ? <IconCheck className="w-3 h-3" /> : <IconX className="w-3 h-3" />}
+                                      {opera ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
                                       {s.label}
                                     </button>
                                   );
@@ -956,7 +956,7 @@ export default function ConfiguracionPage() {
                 )}
 
                 <p className="text-xs text-neutral-600 flex items-center gap-1.5">
-                  <IconAlertTriangle className="w-3.5 h-3.5" />
+                  <AlertTriangle className="w-3.5 h-3.5" />
                   Por defecto los feriados aplican a todas las sucursales. Activa una sucursal para indicar que sí opera ese día.
                 </p>
               </div>
@@ -974,7 +974,7 @@ export default function ConfiguracionPage() {
                     onClick={() => setShowAddBloqueo(s => !s)}
                     className="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
                   >
-                    <IconPlus className="w-4 h-4" />
+                    <Plus className="w-4 h-4" />
                     Agregar bloqueo
                   </button>
                 </div>
@@ -985,7 +985,7 @@ export default function ConfiguracionPage() {
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold text-primary-700">Nuevo bloqueo</p>
                       <button onClick={() => setShowAddBloqueo(false)} className="text-primary-400 hover:text-primary-500">
-                        <IconX className="w-4 h-4" />
+                        <X className="w-4 h-4" />
                       </button>
                     </div>
 
@@ -1001,7 +1001,7 @@ export default function ConfiguracionPage() {
                           >
                             {sucursales.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                           </select>
-                          <IconChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
+                          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
                         </div>
                       </div>
 
@@ -1018,7 +1018,7 @@ export default function ConfiguracionPage() {
                             <option value="rango">Rango de fechas</option>
                             <option value="horario">Rango horario</option>
                           </select>
-                          <IconChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
+                          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
                         </div>
                       </div>
 
@@ -1094,7 +1094,7 @@ export default function ConfiguracionPage() {
                         disabled={!bloqueoForm.fechaInicio || !bloqueoForm.motivo}
                         className="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-neutral-100 disabled:text-neutral-600 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors duration-300"
                       >
-                        <IconCheck className="w-4 h-4" />
+                        <Check className="w-4 h-4" />
                         Guardar bloqueo
                       </button>
                     </div>
@@ -1104,7 +1104,7 @@ export default function ConfiguracionPage() {
                 {/* Bloqueos table */}
                 {bloqueos.length === 0 && !showAddBloqueo ? (
                   <div className="bg-white border border-dashed border-neutral-200 rounded-xl py-12 flex flex-col items-center gap-3 text-center">
-                    <IconCircleOff className="w-10 h-10 text-neutral-300" />
+                    <CircleOff className="w-10 h-10 text-neutral-300" />
                     <div>
                       <p className="text-sm font-semibold text-neutral-600">Sin bloqueos activos</p>
                       <p className="text-xs text-neutral-600 mt-0.5">Agrega un bloqueo para deshabilitar una sucursal en una fecha específica</p>
@@ -1168,7 +1168,7 @@ export default function ConfiguracionPage() {
                                     onClick={() => setDeleteBloqueo(b.id)}
                                     className="p-1.5 text-neutral-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors duration-300"
                                   >
-                                    <IconTrash className="w-3.5 h-3.5" />
+                                    <Trash2 className="w-3.5 h-3.5" />
                                   </button>
                                 )}
                               </td>
@@ -1195,7 +1195,7 @@ export default function ConfiguracionPage() {
 
               {/* Row 1 mobile: Sucursal full-width | Desktop: inline */}
               <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
-                <IconBuilding className="w-4 h-4 text-neutral-600 shrink-0 sm:block hidden" />
+                <Building2 className="w-4 h-4 text-neutral-600 shrink-0 sm:block hidden" />
                 <div className="relative w-full sm:w-auto">
                   <select
                     value={calSucursal}
@@ -1204,7 +1204,7 @@ export default function ConfiguracionPage() {
                   >
                     {sucursales.filter(s => s.active).map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                   </select>
-                  <IconChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-600 pointer-events-none" />
+                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-600 pointer-events-none" />
                 </div>
 
                 <div className="h-5 w-px bg-neutral-200 hidden sm:block" />
@@ -1253,7 +1253,7 @@ export default function ConfiguracionPage() {
                     onClick={() => { setCalViewDate(d => calViewMode === "week" ? addDays(d, -7) : new Date(d.getFullYear(), d.getMonth() - 1, 1)); setSelectedDay(null); }}
                     className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors duration-300"
                   >
-                    <IconChevronLeft className="w-4 h-4 text-neutral-500" />
+                    <ChevronLeft className="w-4 h-4 text-neutral-500" />
                   </button>
                   <span className="text-sm font-semibold text-neutral-700 min-w-[120px] sm:min-w-[140px] text-center">
                     {calViewMode === "week"
@@ -1272,7 +1272,7 @@ export default function ConfiguracionPage() {
                     onClick={() => { setCalViewDate(d => calViewMode === "week" ? addDays(d, 7) : new Date(d.getFullYear(), d.getMonth() + 1, 1)); setSelectedDay(null); }}
                     className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors duration-300"
                   >
-                    <IconChevronRight className="w-4 h-4 text-neutral-500" />
+                    <ChevronRight className="w-4 h-4 text-neutral-500" />
                   </button>
                 </div>
               </div>
@@ -1307,7 +1307,7 @@ export default function ConfiguracionPage() {
                             </p>
                             {(blocked || feriado) && (
                               <span className="inline-flex items-center gap-0.5 text-[10px] text-neutral-500 font-medium">
-                                <IconCircleOff className="w-2.5 h-2.5" />
+                                <CircleOff className="w-2.5 h-2.5" />
                                 {blocked ? "Bloq." : "Fer."}
                               </span>
                             )}
@@ -1380,7 +1380,7 @@ export default function ConfiguracionPage() {
                             {fmtFecha(selectedSlot.date)} · {selectedSlot.hora} — {ors.length} OR{ors.length !== 1 ? "s" : ""}
                           </p>
                           <button onClick={() => setSelectedSlot(null)} className="text-primary-400 hover:text-primary-500">
-                            <IconX className="w-4 h-4" />
+                            <X className="w-4 h-4" />
                           </button>
                         </div>
                         <div className="space-y-2">
@@ -1546,7 +1546,7 @@ export default function ConfiguracionPage() {
                           {/* Blocked / feriado label — desktop only for full text */}
                           {inMonth && (blocked || feriadoDay) && (
                             <span className="text-[9px] sm:text-[10px] text-neutral-400 font-medium flex items-center gap-0.5 mb-0.5 truncate">
-                              <IconCircleOff className="w-2.5 h-2.5 shrink-0" />
+                              <CircleOff className="w-2.5 h-2.5 shrink-0" />
                               <span className="truncate">{blocked ? "Bloqueado" : (() => {
                                 const f = feriados.find(f => f.fecha === iso);
                                 return f ? f.nombre : "Feriado";
@@ -1597,7 +1597,7 @@ export default function ConfiguracionPage() {
                         <span className="text-neutral-400 font-normal"> · {selectedDayOrs.length} OR{selectedDayOrs.length !== 1 ? "s" : ""}</span>
                       </p>
                       <button onClick={() => setSelectedDay(null)} className="p-1 hover:bg-neutral-100 rounded-lg">
-                        <IconX className="w-4 h-4 text-neutral-400" />
+                        <X className="w-4 h-4 text-neutral-400" />
                       </button>
                     </div>
                     <div className="divide-y divide-neutral-100">
@@ -1613,13 +1613,13 @@ export default function ConfiguracionPage() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between gap-2">
                                 <p className="text-sm font-semibold text-neutral-800 truncate">{or.seller}</p>
-                                <IconChevronRight className="w-4 h-4 text-neutral-300 shrink-0" />
+                                <ChevronRight className="w-4 h-4 text-neutral-300 shrink-0" />
                               </div>
                               <p className="text-xs text-neutral-500 mt-1">{or.id}</p>
                               <div className="flex items-center justify-between mt-2">
                                 {or.fechaAgendada && extractTime(or.fechaAgendada) && (
                                   <span className="text-xs text-neutral-400 flex items-center gap-1">
-                                    <IconClock className="w-3 h-3" />
+                                    <Clock className="w-3 h-3" />
                                     {extractTime(or.fechaAgendada)}
                                   </span>
                                 )}
@@ -1652,7 +1652,7 @@ export default function ConfiguracionPage() {
               <div className="flex items-start justify-between px-5 pt-5 pb-3">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
-                    <IconAlertTriangle className="w-6 h-6 text-red-500" />
+                    <AlertTriangle className="w-6 h-6 text-red-500" />
                   </div>
                   <div>
                     <h1 className="text-xl font-bold text-neutral-900">Desactivar {suc.label}</h1>
@@ -1667,7 +1667,7 @@ export default function ConfiguracionPage() {
                   </div>
                 </div>
                 <button onClick={() => setDeactivateTarget(null)} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300 flex-shrink-0">
-                  <IconX className="w-4 h-4 text-neutral-600" />
+                  <X className="w-4 h-4 text-neutral-600" />
                 </button>
               </div>
               {/* Footer */}
@@ -1679,7 +1679,7 @@ export default function ConfiguracionPage() {
                   variant="primary"
                   size="lg"
                   onClick={() => confirmDeactivate(deactivateTarget)}
-                  iconLeft={<IconCircleOff className="w-4 h-4" />}
+                  iconLeft={<CircleOff className="w-4 h-4" />}
                   className="flex-1 !bg-red-600 hover:!bg-red-700"
                 >
                   Desactivar sucursal
@@ -1695,7 +1695,7 @@ export default function ConfiguracionPage() {
         <div className="flex items-center gap-3">
           {savedToast && (
             <span className="flex items-center gap-1.5 text-sm text-green-600 font-medium flex-1">
-              <IconCircleCheck className="w-4 h-4" />
+              <CheckCircle2 className="w-4 h-4" />
               Guardada
             </span>
           )}
@@ -1703,7 +1703,7 @@ export default function ConfiguracionPage() {
             onClick={saveConfig}
             className="flex-1 h-12 flex items-center justify-center gap-2 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
           >
-            <IconCheck className="w-4 h-4" />
+            <Check className="w-4 h-4" />
             Guardar configuración
           </button>
         </div>

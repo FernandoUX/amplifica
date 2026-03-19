@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { IconChevronRight, IconCheck, IconSettings, IconDeviceDesktop, IconUser, IconBell } from "@tabler/icons-react";
+import { ChevronRight, Check, Settings, Monitor, User, Bell } from "lucide-react";
 import { useContentSize, type ContentSize } from "@/hooks/useContentSize";
 
 // ─── Content size options ────────────────────────────────────────────────────
@@ -30,10 +30,10 @@ const SIZE_OPTIONS: { key: ContentSize; label: string; description: string; prev
 // ─── Tabs ────────────────────────────────────────────────────────────────────
 type Tab = "general" | "visualizacion" | "cuenta" | "notificaciones";
 const TABS: { key: Tab; label: string; shortLabel: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { key: "general",         label: "General",         shortLabel: "General",   icon: IconSettings },
-  { key: "visualizacion",   label: "Visualización",   shortLabel: "Visual",    icon: IconDeviceDesktop },
-  { key: "cuenta",          label: "Cuenta",          shortLabel: "Cuenta",    icon: IconUser },
-  { key: "notificaciones",  label: "Notificaciones",  shortLabel: "Notif.",    icon: IconBell },
+  { key: "general",         label: "General",         shortLabel: "General",   icon: Settings },
+  { key: "visualizacion",   label: "Visualización",   shortLabel: "Visual",    icon: Monitor },
+  { key: "cuenta",          label: "Cuenta",          shortLabel: "Cuenta",    icon: User },
+  { key: "notificaciones",  label: "Notificaciones",  shortLabel: "Notif.",    icon: Bell },
 ];
 
 // ─── ConfigCard helper ──────────────────────────────────────────────────────
@@ -59,7 +59,7 @@ export default function ConfiguracionGlobalPage() {
       {/* Breadcrumb */}
       <div className="flex items-center gap-1.5 text-xs text-neutral-500 mb-4">
         <Link href="/recepciones" className="hover:text-neutral-700 transition-colors">Inicio</Link>
-        <IconChevronRight className="w-3 h-3" />
+        <ChevronRight className="w-3 h-3" />
         <span className="text-neutral-700 font-medium">Configuración</span>
       </div>
 
@@ -67,7 +67,7 @@ export default function ConfiguracionGlobalPage() {
       <div className="mb-6">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-neutral-100 flex items-center justify-center">
-            <IconSettings className="w-5 h-5 text-neutral-600" />
+            <Settings className="w-5 h-5 text-neutral-600" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-neutral-900">Configuración</h1>
@@ -136,7 +136,7 @@ export default function ConfiguracionGlobalPage() {
                     <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
                       isSelected ? "border-primary-500 bg-primary-500" : "border-neutral-300"
                     }`}>
-                      {isSelected && <IconCheck className="w-3 h-3 text-white" />}
+                      {isSelected && <Check className="w-3 h-3 text-white" />}
                     </div>
 
                     {/* Label + description */}

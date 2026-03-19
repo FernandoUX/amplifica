@@ -1,12 +1,12 @@
 "use client";
 
 import {
-  IconCalendar,
-  IconCurrencyDollar,
-  IconShoppingCart,
-  IconReceipt,
-  IconShoppingBag,
-} from "@tabler/icons-react";
+  Calendar,
+  DollarSign,
+  ShoppingCart,
+  Receipt,
+  ShoppingBag,
+} from "lucide-react";
 import KpiCard from "./_components/KpiCard";
 import SalesTrendChart from "./_components/SalesTrendChart";
 import SalesChannelChart from "./_components/SalesChannelChart";
@@ -32,39 +32,43 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <button className="flex items-center gap-2 px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-700 hover:bg-neutral-50 transition-colors">
-            <IconCalendar className="w-4 h-4 text-neutral-400" />
+            <Calendar className="w-4 h-4 text-neutral-400" />
             <span className="tabular-nums">18/02/2026 – 18/03/2026</span>
           </button>
         </div>
       </div>
 
-      {/* ── ROW 1: KPI Cards (with icons, no sparklines) ───────────── */}
+      {/* ── ROW 1: KPI Cards ────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
-          title="Ventas Totales"
+          title="Ingresos totales"
           prefix="$"
-          value="3.395.491.104"
-          delta={{ value: "+12,4%", label: "desde el mes pasado", color: "green" }}
-          icon={<IconCurrencyDollar className="w-5 h-5" />}
+          value="3.395M"
+          delta={{ value: "+25.2%", label: "vs mismo período 2025", color: "green" }}
+          icon={<DollarSign className="w-5 h-5" />}
+          sparkline={[20,25,22,30,28,35,32,40,38,45,42,50,48,55,60]}
         />
         <KpiCard
-          title="Pedidos Totales"
-          value="51.393"
-          delta={{ value: "+8,2%", label: "desde el mes pasado", color: "green" }}
-          icon={<IconShoppingCart className="w-5 h-5" />}
+          title="Suscripciones"
+          value="353"
+          delta={{ value: "+180.2%", label: "vs mismo período 2025", color: "green" }}
+          icon={<ShoppingCart className="w-5 h-5" />}
+          sparkline={[5,8,6,12,10,15,14,20,18,25,30,28,35,40,45]}
         />
         <KpiCard
-          title="Ticket Promedio"
-          prefix="$"
-          value="66.069"
-          delta={{ value: "+3,8%", label: "desde el mes pasado", color: "green" }}
-          icon={<IconReceipt className="w-5 h-5" />}
+          title="Ventas"
+          value="1.835"
+          delta={{ value: "+19.1%", label: "vs mismo período 2025", color: "green" }}
+          icon={<Receipt className="w-5 h-5" />}
+          sparkline={[30,32,28,35,33,38,36,40,42,45,43,48,50,52,55]}
         />
         <KpiCard
-          title="Canasta Promedio"
-          value="3,2"
-          delta={{ value: "-0,1", label: "desde el mes pasado", color: "red" }}
-          icon={<IconShoppingBag className="w-5 h-5" />}
+          title="Activos ahora"
+          value="86"
+          delta={{ value: "+30", label: "vs mismo período 2025", color: "blue" }}
+          icon={<ShoppingBag className="w-5 h-5" />}
+          sparkline={[40,38,42,35,45,40,48,42,50,45,38,42,48,44,46]}
+          sparklineColor="#6366f1"
         />
       </div>
 

@@ -2,7 +2,7 @@
 
 import type { ReactNode, ButtonHTMLAttributes } from "react";
 import Link from "next/link";
-import { IconLoader2 } from "@tabler/icons-react";
+import { Loader2 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Variant = "primary" | "secondary" | "tertiary";
@@ -101,7 +101,7 @@ export default function Button(props: ButtonProps) {
 
   const content = loading ? (
     <>
-      <IconLoader2 className={`${iconSizeClasses[size]} animate-spin`} />
+      <Loader2 className={`${iconSizeClasses[size]} animate-spin`} />
       {loadingText}
     </>
   ) : (

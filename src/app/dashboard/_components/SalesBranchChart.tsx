@@ -5,7 +5,7 @@ import {
   ChartContainer, ChartTooltip, ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { BRANCHES, BRANCH_COLORS, fmtShort } from "../_data";
+import { BRANCHES, BRANCH_COLORS, fmtShort, fmtCLP } from "../_data";
 import ChartCard from "./ChartCard";
 
 const sorted = [...BRANCHES].sort((a, b) => b.value - a.value);
@@ -22,7 +22,22 @@ export default function SalesBranchChart() {
           <CartesianGrid horizontal={false} />
           <XAxis type="number" tickFormatter={fmtShort} tickLine={false} axisLine={false} />
           <YAxis type="category" dataKey="name" tickLine={false} axisLine={false} width={100} />
-          <ChartTooltip content={<ChartTooltipContent />} />
+          <ChartTooltip content={({ active, payload }) => {
+            if (!active || !payload?.length) return null;
+            const item = payload[0];
+            const name = item.payload.name;
+            const value = Number(item.value);
+            const color = BRANCH_COLORS[name] ?? "#D1D5DB";
+            return (
+              <div className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs shadow-xl" style={{ fontFamily: "Inter, sans-serif" }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: color }} />
+                  <span className="text-neutral-500">{name}</span>
+                  <span className="font-medium text-neutral-900 tabular-nums">{fmtCLP(value)}</span>
+                </div>
+              </div>
+            );
+          }} />
           <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={28}>
             {sorted.map(entry => (
               <Cell key={entry.name} fill={BRANCH_COLORS[entry.name] ?? "#D1D5DB"} />

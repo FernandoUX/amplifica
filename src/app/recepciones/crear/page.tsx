@@ -5,10 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { createPortal } from "react-dom";
 import {
-  IconAlertCircle, IconChevronDown, IconUpload, IconTrash, IconDotsVertical,
-  IconPackage, IconArrowRight, IconChevronLeft, IconChevronRight, IconCheck,
-  IconCirclePlus, IconFileSpreadsheet, IconPlus, IconX,
-} from "@tabler/icons-react";
+  AlertCircle, ChevronDown, Upload, Trash2, MoreVertical,
+  Package, ArrowRight, ChevronLeft, ChevronRight, Check,
+  CirclePlus, FileSpreadsheet, Plus, X,
+} from "lucide-react";
 import StepIndicator from "@/components/recepciones/StepIndicator";
 import ProductsModal, { AddProduct } from "@/components/recepciones/ProductsModal";
 import FormField from "@/components/ui/FormField";
@@ -47,7 +47,7 @@ function Step1({ form, setForm, lockedSucursal, lockedSeller }: { form: FormData
       {/* Warning */}
       {showAlert && (
         <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <IconAlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm font-semibold text-amber-800">Asegura tu mercancía</p>
             <p className="text-xs text-amber-600 mt-0.5">
@@ -161,7 +161,7 @@ function Step1({ form, setForm, lockedSucursal, lockedSeller }: { form: FormData
         {form.guiaDespacho ? (
           <div className="flex items-center gap-3 border border-green-200 bg-green-50 rounded-xl p-4">
             <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <IconCheck className="w-5 h-5 text-green-600" />
+              <Check className="w-5 h-5 text-green-600" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-neutral-800 truncate">{form.guiaDespacho.name}</p>
@@ -169,7 +169,7 @@ function Step1({ form, setForm, lockedSucursal, lockedSeller }: { form: FormData
             </div>
             <button onClick={() => setForm(f => ({ ...f, guiaDespacho: null }))}
               className="text-neutral-600 hover:text-red-500 p-1">
-              <IconTrash className="w-4 h-4" />
+              <Trash2 className="w-4 h-4" />
             </button>
           </div>
         ) : (
@@ -182,7 +182,7 @@ function Step1({ form, setForm, lockedSucursal, lockedSeller }: { form: FormData
               ${dragging ? "border-primary-400 bg-primary-50" : "border-neutral-200 hover:border-primary-300 hover:bg-neutral-50"}`}
           >
             <div className="w-12 h-12 bg-neutral-100 rounded-xl flex items-center justify-center">
-              <IconUpload className="w-6 h-6 text-neutral-600" />
+              <Upload className="w-6 h-6 text-neutral-600" />
             </div>
             <p className="text-sm text-neutral-600 text-center">
               <span className="text-primary-500 font-medium">Haz clic para subir guía de despacho</span>
@@ -234,7 +234,7 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
 
       {/* Warning */}
       <div className="flex gap-3 bg-amber-50 border border-amber-200 rounded-lg p-4">
-        <IconAlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+        <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
         <div>
           <p className="text-sm font-semibold text-amber-800">Declaración de inventario entrante</p>
           <p className="text-xs text-amber-600 mt-0.5">
@@ -249,7 +249,7 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
       {form.products.length === 0 ? (
         <div className="border border-neutral-200 rounded-xl p-4 sm:p-6 lg:p-12 flex flex-col items-center gap-4">
           <div className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center">
-            <IconPackage className="w-8 h-8 text-neutral-600" />
+            <Package className="w-8 h-8 text-neutral-600" />
           </div>
           <div className="text-center">
             <p className="font-semibold text-neutral-800 text-[15px]">La recepción está vacía</p>
@@ -259,7 +259,7 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
           </div>
           <div className="flex flex-col items-center w-full sm:w-auto">
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <Button variant="primary" size="md" onClick={() => setShowModal(true)} iconLeft={<IconCirclePlus className="w-4 h-4" />} className="w-full sm:w-auto">
+              <Button variant="primary" size="md" onClick={() => setShowModal(true)} iconLeft={<CirclePlus className="w-4 h-4" />} className="w-full sm:w-auto">
                 Agregar productos
               </Button>
               <input
@@ -278,11 +278,11 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
                   e.target.value = "";
                 }}
               />
-              <Button variant="secondary" size="md" iconLeft={<IconUpload className="w-4 h-4" />} className="w-full sm:w-auto" onClick={() => csvInputRef.current?.click()}>
+              <Button variant="secondary" size="md" iconLeft={<Upload className="w-4 h-4" />} className="w-full sm:w-auto" onClick={() => csvInputRef.current?.click()}>
                 Importar planilla
               </Button>
             </div>
-            <Button variant="tertiary" size="sm" iconLeft={<IconFileSpreadsheet className="w-4 h-4" />} className="mt-4">
+            <Button variant="tertiary" size="sm" iconLeft={<FileSpreadsheet className="w-4 h-4" />} className="mt-4">
               Descargar plantilla
             </Button>
           </div>
@@ -301,7 +301,7 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
                   </div>
                   <button onClick={() => removeProduct(product.sku)}
                     className="p-1.5 hover:bg-red-50 rounded text-neutral-600 hover:text-red-500 flex-shrink-0">
-                    <IconTrash className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
                 <div className="flex items-center gap-2 mt-2.5">
@@ -354,7 +354,7 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
                   <td className="py-3 px-4">
                     <button onClick={() => removeProduct(product.sku)}
                       className="p-1.5 hover:bg-red-50 rounded text-neutral-600 hover:text-red-500">
-                      <IconTrash className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </td>
                 </tr>
@@ -372,7 +372,7 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
             <button onClick={() => setShowModal(true)}
               className="w-full flex items-center justify-center gap-2 py-3.5 text-[14px] text-neutral-600 hover:text-primary-500 hover:bg-primary-50/50 transition-colors duration-300 font-medium">
               <span className="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center flex-shrink-0">
-                <IconPlus className="w-3 h-3" />
+                <Plus className="w-3 h-3" />
               </span>
               Agregar más productos
             </button>
@@ -498,7 +498,7 @@ function Step3({ form, setForm, isReagendar }: { form: FormData; setForm: React.
 
       {/* ── Alert ────────────────────────────────────────────────────────── */}
       <div className="flex gap-3 bg-amber-50 border border-amber-200 rounded-lg p-4">
-        <IconAlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+        <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
         <div>
           <p className="text-sm font-semibold text-amber-800">La puntualidad es clave</p>
           <p className="text-xs text-amber-600 mt-0.5">
@@ -575,7 +575,7 @@ function Step3({ form, setForm, isReagendar }: { form: FormData; setForm: React.
                 }}
                 className="p-1 hover:bg-neutral-100 rounded text-neutral-500"
               >
-                <IconChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 onClick={() => {
@@ -584,7 +584,7 @@ function Step3({ form, setForm, isReagendar }: { form: FormData; setForm: React.
                 }}
                 className="p-1 hover:bg-neutral-100 rounded text-neutral-500"
               >
-                <IconChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -892,7 +892,7 @@ function CrearORPageInner() {
       {/* Breadcrumb */}
       <nav className="max-w-5xl mx-auto px-4 lg:px-6 pt-4 pb-1 flex items-center justify-center sm:justify-start gap-1.5 text-sm text-neutral-500">
         <Link href="/recepciones" className="hover:text-primary-500 transition-colors duration-300">Recepciones</Link>
-        <IconChevronRight className="w-3.5 h-3.5 text-neutral-300" />
+        <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
         <span className="text-neutral-700 font-medium">{pageTitle}</span>
       </nav>
 
@@ -910,7 +910,7 @@ function CrearORPageInner() {
               <div className="flex items-center justify-between mb-4">
                 <h1 className="text-xl font-bold text-neutral-900">Orden de Recepción</h1>
                 <button onClick={() => setShowInfo(false)} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">
-                  <IconX className="w-4 h-4 text-neutral-600" />
+                  <X className="w-4 h-4 text-neutral-600" />
                 </button>
               </div>
               <div className="space-y-3 text-sm text-neutral-600 leading-relaxed">
@@ -957,7 +957,7 @@ function CrearORPageInner() {
               size="lg"
               onClick={handleSubmitSinAgenda}
               disabled={!canContinue()}
-              iconLeft={<IconCheck className="w-4 h-4" />}
+              iconLeft={<Check className="w-4 h-4" />}
               className="w-full h-12 sm:h-auto sm:w-auto sm:flex-1 lg:flex-none"
             >
               Crear OR sin agenda
@@ -971,7 +971,7 @@ function CrearORPageInner() {
                 setMaxReached(m => Math.max(m, step + 1));
               }}
               disabled={!canContinue()}
-              iconRight={<IconArrowRight className="w-4 h-4" />}
+              iconRight={<ArrowRight className="w-4 h-4" />}
               className="w-full h-12 sm:h-auto sm:w-auto sm:flex-1 lg:flex-none"
             >
               Continuar
@@ -982,7 +982,7 @@ function CrearORPageInner() {
               size="lg"
               onClick={handleSubmit}
               disabled={!canContinue()}
-              iconLeft={<IconCheck className="w-4 h-4" />}
+              iconLeft={<Check className="w-4 h-4" />}
               className="w-full h-12 sm:h-auto sm:w-auto sm:flex-1 lg:flex-none"
             >
               {isCompletar ? "Completar Orden" : isReagendar ? "Guardar nueva fecha" : "Crear Orden de Recepción"}

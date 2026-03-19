@@ -6,7 +6,7 @@ import {
   ChartLegend, ChartLegendContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { CHANNELS, fmtShort } from "../_data";
+import { CHANNELS, fmtShort, fmtCLP } from "../_data";
 import ChartCard from "./ChartCard";
 
 const total = CHANNELS.reduce((s, c) => s + c.value, 0);

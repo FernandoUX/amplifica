@@ -2,36 +2,36 @@
 
 import StatsCard from "@/components/admin/StatsCard";
 import {
-  IconCurrencyDollar,
-  IconUsers,
-  IconCreditCard,
-  IconHeartbeat,
-} from "@tabler/icons-react";
+  DollarSign,
+  Users,
+  CreditCard,
+  Activity,
+} from "lucide-react";
 
 const STATS = [
   {
     title: "Ingresos totales",
     value: "$45.231,89",
     delta: { value: "+20,1%", label: "desde el mes pasado", color: "green" as const },
-    icon: <IconCurrencyDollar className="w-5 h-5" />,
+    icon: <DollarSign className="w-5 h-5" />,
   },
   {
     title: "Suscripciones",
     value: "+2.350",
     delta: { value: "+180,1%", label: "desde el mes pasado", color: "green" as const },
-    icon: <IconUsers className="w-5 h-5" />,
+    icon: <Users className="w-5 h-5" />,
   },
   {
     title: "Ventas",
     value: "+12.234",
     delta: { value: "+19%", label: "desde el mes pasado", color: "green" as const },
-    icon: <IconCreditCard className="w-5 h-5" />,
+    icon: <CreditCard className="w-5 h-5" />,
   },
   {
     title: "Activos ahora",
     value: "+573",
     delta: { value: "+201", label: "desde la última hora", color: "blue" as const },
-    icon: <IconHeartbeat className="w-5 h-5" />,
+    icon: <Activity className="w-5 h-5" />,
   },
 ];
 

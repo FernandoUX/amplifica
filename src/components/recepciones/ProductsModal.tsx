@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { IconSearch, IconX } from "@tabler/icons-react";
+import { Search, X } from "lucide-react";
 import Button from "@/components/ui/Button";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -108,14 +108,14 @@ export default function ProductsModal({ onClose, onAdd, initialSearch = "" }: Pr
             onClick={onClose}
             className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-500 transition-colors duration-300"
           >
-            <IconX className="w-4 h-4" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* ── Search ──────────────────────────────────────────────────────── */}
         <div className="px-5 pb-3 flex-shrink-0">
           <div className="relative">
-            <IconSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
             <input
               type="text"
               value={search}
