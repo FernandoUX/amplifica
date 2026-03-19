@@ -438,6 +438,7 @@ export default function ConfiguracionPage() {
     } catch { /* ignore */ }
     return [...ORDENES_SEED, ...created].filter(o =>
       o.fechaAgendada && o.fechaAgendada !== "—" &&
+      o.estado === "Programado" &&
       (o.sucursal ?? "").toLowerCase().replace(/\s/g, "-") === calSucursal
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -498,7 +499,7 @@ export default function ConfiguracionPage() {
         </div>
 
         {/* ── Tabs ── */}
-        <div className="flex border-b border-neutral-200 overflow-x-auto scrollbar-hide">
+        <div className="flex border-b border-neutral-200 overflow-x-auto overflow-y-hidden scrollbar-hide">
           {([
             { key: "sucursales",  label: "Sucursales",           shortLabel: "Sucursales",  icon: Building01 },
             { key: "feriados",    label: "Feriados y bloqueos",  shortLabel: "Feriados",    icon: CalendarDate },
@@ -1349,7 +1350,7 @@ export default function ConfiguracionPage() {
                     </div>
 
                     {/* Slots */}
-                    <div className="overflow-y-auto max-h-[400px] sm:max-h-[500px]">
+                    <div className="overflow-y-auto max-h-[400px] sm:max-h-[500px] scroll-minimal">
                       {slots.map(slot => (
                         <div
                           key={slot}
@@ -1374,22 +1375,24 @@ export default function ConfiguracionPage() {
                             const pct     = cap > 0 ? (occ / cap) * 100 : 0;
                             const isSelected = selectedSlot?.date === iso && selectedSlot?.hora === slot;
                             const cellColor =
-                              occ === 0        ? "hover:bg-green-50/50 cursor-default" :
-                              pct >= 100        ? "bg-red-50 hover:bg-red-100 cursor-pointer" :
-                              pct >= 70         ? "bg-amber-50 hover:bg-amber-100 cursor-pointer" :
-                                                 "bg-green-50/60 hover:bg-green-100 cursor-pointer";
+                              occ === 0        ? "hover:bg-neutral-50 cursor-default" :
+                              pct >= 100        ? "bg-red-50/80 hover:bg-red-50 cursor-pointer" :
+                              pct >= 70         ? "bg-amber-50/80 hover:bg-amber-50 cursor-pointer" :
+                                                 "bg-sky-50/60 hover:bg-sky-50 cursor-pointer";
                             return (
                               <div
                                 key={di}
                                 onClick={() => occ > 0 && setSelectedSlot(isSelected ? null : { date: iso, hora: slot })}
-                                className={`border-r border-neutral-100 last:border-0 py-1 px-1 sm:px-2 min-h-[40px] transition-colors duration-300 ${cellColor} ${isSelected ? "ring-2 ring-inset ring-primary-400" : ""}`}
+                                className={`border-r border-neutral-100 last:border-0 py-1.5 px-1.5 sm:px-2 min-h-[40px] transition-all duration-200 ${cellColor} ${isSelected ? "bg-primary-50 ring-1 ring-primary-300" : ""}`}
                               >
                                 {occ > 0 && (
-                                  <div className="flex items-center gap-1 flex-wrap">
-                                    <span className={`text-[11px] font-bold tabular-nums ${pct >= 100 ? "text-red-600" : pct >= 70 ? "text-amber-700" : "text-green-700"}`}>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className={`inline-flex items-center justify-center min-w-[20px] h-[18px] px-1 rounded text-[10px] font-semibold tabular-nums ${
+                                      pct >= 100 ? "bg-red-100 text-red-700" : pct >= 70 ? "bg-amber-100 text-amber-700" : "bg-sky-100 text-sky-700"
+                                    }`}>
                                       {occ}/{cap}
                                     </span>
-                                    <span className="hidden sm:inline text-[9px] text-neutral-500 truncate max-w-[60px]">{orsHere[0]?.seller ?? orsHere[0]?.id}</span>
+                                    <span className="hidden sm:inline text-[10px] text-neutral-600 truncate max-w-[60px] font-medium">{orsHere[0]?.seller ?? orsHere[0]?.id}</span>
                                   </div>
                                 )}
                               </div>
