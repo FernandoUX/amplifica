@@ -1394,12 +1394,12 @@ function OrdenesPageInner() {
                 {statusCounts[tab] > 0 && (() => {
                   const colors = TAB_BADGE_COLORS[tab] || TAB_BADGE_COLORS["Todas"];
                   const isActive = activeTab === tab;
-                  // "Todas" activo: primary bg con texto blanco
-                  const badgeCls = tab === "Todas" && isActive
-                    ? "bg-primary-500 text-white"
-                    : isActive
-                      ? colors.active
-                      : colors.inactive;
+                  const neutralCls = "bg-neutral-200/70 text-neutral-500";
+                  const badgeCls = !isActive
+                    ? neutralCls
+                    : tab === "Todas"
+                      ? "bg-primary-500 text-white"
+                      : colors.active;
                   return (
                     <span className={`ml-1.5 text-[10px] tabular-nums rounded-full min-w-[18px] h-[18px] inline-flex items-center justify-center px-1 font-medium ${badgeCls}`}>
                       {statusCounts[tab]}
