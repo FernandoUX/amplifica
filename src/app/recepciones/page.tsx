@@ -1315,7 +1315,7 @@ function OrdenesPageInner() {
         </div>
         <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
           <div>
-            <Button variant="ghost" size="md" className="h-9" iconLeft={<Download01 className="w-4 h-4" />}>
+            <Button variant="tertiary" size="md" className="h-9" iconLeft={<Download01 className="w-4 h-4" />}>
               Exportar
             </Button>
           </div>
