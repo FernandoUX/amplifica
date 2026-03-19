@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode, ComponentType } from "react";
-import { X } from "lucide-react";
+import { IconX } from "@tabler/icons-react";
 import Button from "./Button";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -91,7 +91,7 @@ export default function AlertModal({
             onClick={onClose}
             className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300"
           >
-            <X className="w-4 h-4" />
+            <IconX className="w-4 h-4" />
           </button>
         </div>
 

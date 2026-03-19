@@ -4,24 +4,24 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef, useMemo } from "react";
 import {
-  BarChart01,
-  ShoppingBag01,
-  RefreshCw01,
-  Package,
-  Cube01,
-  LayersThree01,
-  Settings01,
-  ChevronDown,
-  ChevronRight,
-  ChevronLeft,
-  ChevronUp,
-  ChevronSelectorVertical,
-  SearchLg,
-  Calendar,
-  LogOut01,
-  UserCircle,
-  XClose,
-} from "@untitled-ui/icons-react";
+  IconChartBar,
+  IconShoppingBag,
+  IconRefresh,
+  IconPackage,
+  IconBox,
+  IconStack2,
+  IconSettings,
+  IconChevronDown,
+  IconChevronRight,
+  IconChevronLeft,
+  IconChevronUp,
+  IconSelector,
+  IconSearch,
+  IconCalendar,
+  IconLogout,
+  IconUserCircle,
+  IconX,
+} from "@tabler/icons-react";
 import AmplificaLogo from "./AmplificaLogo";
 import { type Role, getAllowedSucursales, getAllowedSellers, can } from "@/lib/roles";
 
@@ -67,12 +67,12 @@ const DEMO_SELLERS = [
 ];
 
 const MENU: MenuItem[] = [
-  { label: "Dashboard",        icon: BarChart01,    href: "/dashboard" },
-  { label: "Pedidos",          icon: ShoppingBag01, href: "/pedidos",     hasChildren: true },
-  { label: "Devoluciones",     icon: RefreshCw01,   href: "/devoluciones", hasChildren: true },
-  { label: "Inventario",       icon: Package,       href: "/inventario",  hasChildren: true },
+  { label: "Dashboard",        icon: IconChartBar,    href: "/dashboard" },
+  { label: "Pedidos",          icon: IconShoppingBag, href: "/pedidos",     hasChildren: true },
+  { label: "Devoluciones",     icon: IconRefresh,   href: "/devoluciones", hasChildren: true },
+  { label: "Inventario",       icon: IconPackage,       href: "/inventario",  hasChildren: true },
   {
-    label: "Recepciones", icon: Cube01, href: "/recepciones",
+    label: "Recepciones", icon: IconBox, href: "/recepciones",
     hasChildren: true, badge: "BETA",
     children: [
       { label: "Órdenes de recepción", href: "/recepciones" },
@@ -80,8 +80,8 @@ const MENU: MenuItem[] = [
       { label: "Configuración",         href: "/recepciones/configuracion" },
     ],
   },
-  { label: "Productos",         icon: LayersThree01, href: "/productos",   hasChildren: true },
-  { label: "Conjunto de reglas", icon: LayersThree01, href: "/reglas",     hasChildren: true },
+  { label: "Productos",         icon: IconStack2, href: "/productos",   hasChildren: true },
+  { label: "Conjunto de reglas", icon: IconStack2, href: "/reglas",     hasChildren: true },
 ];
 
 type SidebarProps = {
@@ -245,7 +245,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
             onClick={onClose}
             className="text-white/40 hover:text-white p-1 rounded flex-shrink-0 lg:hidden"
           >
-            <XClose className="w-5 h-5" />
+            <IconX className="w-5 h-5" />
           </button>
         )}
         {/* Desktop collapse toggle */}
@@ -253,7 +253,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
           onClick={() => setCollapsed(c => !c)}
           className={`text-white/40 hover:text-white p-1 rounded flex-shrink-0 hidden lg:flex ${collapsed ? "" : "ml-auto"}`}
         >
-          <ChevronLeft
+          <IconChevronLeft
             className={`w-4 h-4 transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`}
           />
         </button>
@@ -275,7 +275,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
                 <p className="text-white font-medium">{selectedSucursal ?? "Todas"}</p>
               </div>
               {(canFilterSucursal || roleSucursales.length > 1) && (
-                <ChevronSelectorVertical className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
+                <IconSelector className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
               )}
             </button>
 
@@ -323,7 +323,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
                 <p className="text-white font-medium">{selectedSeller ?? "Todas"}</p>
               </div>
               {(canFilterSeller || baseSellers.length > 1) && (
-                <ChevronSelectorVertical className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
+                <IconSelector className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
               )}
             </button>
 
@@ -332,7 +332,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
                 {/* Search input */}
                 <div className="px-2 pt-2 pb-1.5">
                   <div className="flex items-center gap-1.5 bg-white/5 rounded-md px-2 py-1.5">
-                    <SearchLg className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />
+                    <IconSearch className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />
                     <input
                       autoFocus
                       value={sellerSearch}
@@ -397,10 +397,10 @@ export default function Sidebar({ onClose }: SidebarProps) {
                   onClick={e => { e.stopPropagation(); setDateRange(null, null); }}
                   className="text-white/40 hover:text-white cursor-pointer flex-shrink-0"
                 >
-                  <XClose className="w-3.5 h-3.5" />
+                  <IconX className="w-3.5 h-3.5" />
                 </span>
               ) : (
-                <ChevronSelectorVertical className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
+                <IconSelector className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
               )}
             </button>
 
@@ -425,11 +425,11 @@ export default function Sidebar({ onClose }: SidebarProps) {
                     <>
                       <div className="flex items-center justify-between mb-4">
                         <button onClick={() => setCalMonth(([yy,mm]) => mm === 0 ? [yy-1,11] : [yy,mm-1])} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-500">
-                          <ChevronLeft className="w-5 h-5" />
+                          <IconChevronLeft className="w-5 h-5" />
                         </button>
                         <span className="text-base font-semibold text-neutral-800">{MONTHS[m]} {y}</span>
                         <button onClick={() => setCalMonth(([yy,mm]) => mm === 11 ? [yy+1,0] : [yy,mm+1])} className="p-2 hover:bg-neutral-100 rounded-lg text-neutral-500">
-                          <ChevronRight className="w-5 h-5" />
+                          <IconChevronRight className="w-5 h-5" />
                         </button>
                       </div>
                       <div className="grid grid-cols-7 text-center text-xs text-neutral-400 mb-2">
@@ -498,13 +498,13 @@ export default function Sidebar({ onClose }: SidebarProps) {
                       <div className="flex items-center justify-between mb-3">
                         {offset === 0 ? (
                           <button onClick={() => setCalMonth(([yy,mm]) => mm === 0 ? [yy-1,11] : [yy,mm-1])} className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500">
-                            <ChevronLeft className="w-4 h-4" />
+                            <IconChevronLeft className="w-4 h-4" />
                           </button>
                         ) : <div className="w-6" />}
                         <span className="text-sm font-semibold text-neutral-800">{MONTHS[m]} {y}</span>
                         {offset === 1 ? (
                           <button onClick={() => setCalMonth(([yy,mm]) => mm === 11 ? [yy+1,0] : [yy,mm+1])} className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500">
-                            <ChevronRight className="w-4 h-4" />
+                            <IconChevronRight className="w-4 h-4" />
                           </button>
                         ) : <div className="w-6" />}
                       </div>
@@ -557,7 +557,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
       {!collapsed && (
         <div className="px-2.5 py-2 space-y-0.5 border-b border-white/10">
           <button className="w-full flex items-center gap-2.5 text-white/70 hover:text-white text-[14px] lg:text-[13px] px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors duration-300">
-            <SearchLg className="w-4 h-4 flex-shrink-0" />
+            <IconSearch className="w-4 h-4 flex-shrink-0" />
             <span>Buscar</span>
           </button>
         </div>
@@ -597,8 +597,8 @@ export default function Sidebar({ onClose }: SidebarProps) {
                             </span>
                           )}
                           {isOpen
-                            ? <ChevronUp className="w-3 h-3 text-white/30" />
-                            : <ChevronRight className="w-3 h-3 text-white/30" />}
+                            ? <IconChevronUp className="w-3 h-3 text-white/30" />
+                            : <IconChevronRight className="w-3 h-3 text-white/30" />}
                         </>
                       )}
                     </button>
@@ -654,7 +654,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
           title={collapsed ? "Configuración" : undefined}
           className={`flex items-center gap-2.5 px-2 py-2 rounded-lg text-[14px] lg:text-[13px] text-white/70 hover:text-white hover:bg-white/5 transition-colors duration-300 ${collapsed ? "justify-center" : ""}`}
         >
-          <Settings01 className="w-4 h-4 flex-shrink-0" />
+          <IconSettings className="w-4 h-4 flex-shrink-0" />
           {!collapsed && <span>Configuración</span>}
         </Link>
 
@@ -672,7 +672,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
                   <p className="text-white text-xs font-medium truncate">Fernando Roblero</p>
                   <p className="text-white/40 text-[10px] truncate">{currentRole}</p>
                 </div>
-                <ChevronSelectorVertical className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />
+                <IconSelector className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />
               </>
             )}
           </button>

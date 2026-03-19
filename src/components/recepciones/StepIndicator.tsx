@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { IconCheck } from "@tabler/icons-react";
 
 type Step = { label: string; number: number };
 const STEPS: Step[] = [
@@ -47,7 +47,7 @@ export default function StepIndicator({ current, maxReached, onStepClick, steps 
                     ${!done && !active && !reachable ? "bg-neutral-100 text-neutral-400"    : ""}
                   `}
                 >
-                  {done ? <Check className="w-4 h-4" /> : step.number}
+                  {done ? <IconCheck className="w-4 h-4" /> : step.number}
                 </div>
                 <span className={`text-sm font-medium whitespace-nowrap
                   ${done            ? "text-green-600"  : ""}
@@ -96,7 +96,7 @@ export default function StepIndicator({ current, maxReached, onStepClick, steps 
                       ${!done && !active && !reachable ? "bg-neutral-100 text-neutral-400"    : ""}
                     `}
                   >
-                    {done ? <Check className="w-3.5 h-3.5" /> : step.number}
+                    {done ? <IconCheck className="w-3.5 h-3.5" /> : step.number}
                   </div>
                 </button>
 

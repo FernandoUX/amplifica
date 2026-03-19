@@ -4,16 +4,14 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import React, { useState, useMemo, useRef, useEffect, useCallback, memo } from "react";
 import {
-  ChevronLeft, ChevronRight, Trash2, Scan, ScanBarcode, ImageOff, Image,
-  Clock, User, PlayCircle, StopCircle, Eye,
-  ChevronDown, ChevronUp, MoreHorizontal, Package,
-  X, Check, Upload, Search, HelpCircle, FileText,
-  Bell, PlusCircle, CalendarDays, CheckCircle2, Shield,
-  Download, Camera, MessageSquare, Warehouse,
-} from "lucide-react";
-import {
-  Plus, ClipboardCheck, LockUnlocked01, AlertTriangle,
-} from "@untitled-ui/icons-react";
+  IconChevronLeft, IconChevronRight, IconTrash, IconScan, IconBarcode, IconPhotoOff, IconPhoto,
+  IconClock, IconUser, IconPlayerPlay, IconPlayerStop, IconEye,
+  IconChevronDown, IconChevronUp, IconDots, IconPackage,
+  IconX, IconCheck, IconUpload, IconSearch, IconHelpCircle, IconFileText,
+  IconBell, IconCirclePlus, IconCalendarEvent, IconCircleCheck, IconShield,
+  IconDownload, IconCamera, IconMessage, IconBuildingWarehouse,
+  IconPlus, IconClipboardCheck, IconLockOpen, IconAlertTriangle,
+} from "@tabler/icons-react";
 import {
   QuarantineRecord, QuarantineStatus, QuarantineResolution, QuarantineCategory,
   QR_STORAGE_KEY, SEED_QUARANTINE, ORDENES_SEED,
@@ -670,16 +668,16 @@ function getAuditIcon(tipo: string) {
 
 function getAuditIconElement(tipo: string) {
   switch (tipo) {
-    case "OR_CREADA": return <PlusCircle className="w-3.5 h-3.5" />;
-    case "OR_AGENDADA": case "OR_REAGENDADA": return <CalendarDays className="w-3.5 h-3.5" />;
-    case "OR_RECEPCIONADA": return <Package className="w-3.5 h-3.5" />;
-    case "SESION_INICIADA": return <PlayCircle className="w-3.5 h-3.5" />;
-    case "SESION_FINALIZADA": return <CheckCircle2 className="w-3.5 h-3.5" />;
-    case "INCIDENCIA_REGISTRADA": return <AlertTriangle className="w-3.5 h-3.5" />;
-    case "OR_CERRADA": case "OR_APROBADA": return <Shield className="w-3.5 h-3.5" />;
-    case "OR_CANCELADA": return <X className="w-3.5 h-3.5" />;
-    case "QR_GENERADO": case "QR_ESCANEADO": return <Scan className="w-3.5 h-3.5" />;
-    default: return <Clock className="w-3.5 h-3.5" />;
+    case "OR_CREADA": return <IconCirclePlus className="w-3.5 h-3.5" />;
+    case "OR_AGENDADA": case "OR_REAGENDADA": return <IconCalendarEvent className="w-3.5 h-3.5" />;
+    case "OR_RECEPCIONADA": return <IconPackage className="w-3.5 h-3.5" />;
+    case "SESION_INICIADA": return <IconPlayerPlay className="w-3.5 h-3.5" />;
+    case "SESION_FINALIZADA": return <IconCircleCheck className="w-3.5 h-3.5" />;
+    case "INCIDENCIA_REGISTRADA": return <IconAlertTriangle className="w-3.5 h-3.5" />;
+    case "OR_CERRADA": case "OR_APROBADA": return <IconShield className="w-3.5 h-3.5" />;
+    case "OR_CANCELADA": return <IconX className="w-3.5 h-3.5" />;
+    case "QR_GENERADO": case "QR_ESCANEADO": return <IconScan className="w-3.5 h-3.5" />;
+    default: return <IconClock className="w-3.5 h-3.5" />;
   }
 }
 
@@ -725,7 +723,7 @@ function CategorizarBtn({ incidencias, onOpen, disabled }: {
       onClick={disabled ? undefined : onOpen}
       disabled={disabled}
       title={disabled ? "Inicia una sesión de conteo para registrar incidencias" : undefined}
-      iconLeft={!count ? <Plus className="w-4 h-4" /> : undefined}
+      iconLeft={!count ? <IconPlus className="w-4 h-4" /> : undefined}
       iconRight={
         count > 0 && !disabled ? (
           <span className="w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-bold leading-none">{count}</span>
@@ -745,7 +743,7 @@ function ConfirmRemoveModal({ nombre, onCancel, onConfirm }: {
     <AlertModal
       open
       onClose={onCancel}
-      icon={Trash2}
+      icon={IconTrash}
       variant="danger"
       title="Eliminar producto"
       subtitle="Esta acción no puede deshacerse"
@@ -773,11 +771,11 @@ function ConfirmCloseModal({ id, sesiones, totalContadas, totalEsperadas, hasInc
     <AlertModal
       open
       onClose={onCancel}
-      icon={ClipboardCheck}
+      icon={IconClipboardCheck}
       variant={hasIncidencias ? "warning" : "primary"}
       title={hasIncidencias ? "Enviar a aprobación" : "Completar OR"}
       subtitle="Esta acción es definitiva y no puede deshacerse"
-      confirm={{ label: hasIncidencias ? "Sí, enviar a aprobación" : "Sí, completar", icon: <Check className="w-4 h-4" />, onClick: () => onConfirm(outcome) }}
+      confirm={{ label: hasIncidencias ? "Sí, enviar a aprobación" : "Sí, completar", icon: <IconCheck className="w-4 h-4" />, onClick: () => onConfirm(outcome) }}
     >
       <p>
         ¿Confirmas {hasIncidencias ? "enviar a aprobación" : "completar"} la orden{" "}
@@ -898,7 +896,7 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
             ? <>
                 <img src={product.imagen!} alt={product.nombre} loading="lazy" onError={() => setImgError(true)} className="w-full h-full object-cover transition-transform duration-200 group-hover/img:scale-105" />
                 <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/20 transition-colors duration-200 flex items-center justify-center">
-                  <Eye className="w-5 h-5 text-white opacity-0 group-hover/img:opacity-100 transition-opacity duration-200 drop-shadow" />
+                  <IconEye className="w-5 h-5 text-white opacity-0 group-hover/img:opacity-100 transition-opacity duration-200 drop-shadow" />
                 </div>
               </>
             : <NoImagePlaceholder />}
@@ -916,7 +914,7 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
               title="Eliminar producto de esta OR"
               className="p-1.5 text-neutral-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors duration-300 flex-shrink-0"
             >
-              <Trash2 className="w-4 h-4" />
+              <IconTrash className="w-4 h-4" />
             </button>
           </div>
 
@@ -939,7 +937,7 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
             </button>
 
             <span className="flex items-center gap-1.5 text-sm text-neutral-500">
-              <Package className="w-4 h-4 text-neutral-600" />
+              <IconPackage className="w-4 h-4 text-neutral-600" />
               <span className="tabular-nums font-medium text-neutral-700">
                 {total.toLocaleString("es-CL")}/{product.esperadas.toLocaleString("es-CL")}
               </span>
@@ -1014,7 +1012,7 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
               onClick={() => setShowLightbox(false)}
               className="absolute -top-3 -right-3 z-10 w-8 h-8 rounded-full bg-white shadow-lg flex items-center justify-center text-neutral-500 hover:text-neutral-800 transition-colors"
             >
-              <X className="w-4 h-4" />
+              <IconX className="w-4 h-4" />
             </button>
             {hasValidImage ? (
               <img
@@ -1041,7 +1039,7 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
             <div className="flex items-center justify-between">
               <h1 className="text-xl font-bold text-neutral-900">Conteo manual</h1>
               <button onClick={() => setShowManualModal(false)} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">
-                <X className="w-4 h-4 text-neutral-600" />
+                <IconX className="w-4 h-4 text-neutral-600" />
               </button>
             </div>
 
@@ -1086,7 +1084,7 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
                     onClick={() => { setManualFoto(null); if (manualFotoPreview) URL.revokeObjectURL(manualFotoPreview); setManualFotoPreview(null); }}
                     className="absolute top-1.5 right-1.5 w-6 h-6 bg-white/90 rounded-full flex items-center justify-center text-neutral-500 hover:text-red-500 shadow-sm"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <IconX className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ) : (
@@ -1094,7 +1092,7 @@ const ProductCard = memo(function ProductCard({ product, acumulado, sesionActiva
                   onClick={() => manualFileRef.current?.click()}
                   className="w-full border-2 border-dashed border-neutral-200 rounded-lg py-6 flex flex-col items-center gap-1.5 text-neutral-600 hover:border-primary-300 hover:text-primary-500 transition-colors"
                 >
-                  <Camera className="w-6 h-6" />
+                  <IconCamera className="w-6 h-6" />
                   <span className="text-xs font-medium">Tomar o subir foto</span>
                 </button>
               )}
@@ -1155,19 +1153,19 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="text-[13px] font-bold text-primary-500 flex-shrink-0">{sesion.id}</span>
-            <User className="w-3 h-3 text-neutral-600 flex-shrink-0" />
+            <IconUser className="w-3 h-3 text-neutral-600 flex-shrink-0" />
             <span className="text-[13px] text-neutral-600 truncate">{sesion.operador}</span>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <span className="text-[13px] font-bold text-neutral-800 tabular-nums">{totalUds.toLocaleString("es-CL")} uds.</span>
-            {open ? <ChevronUp className="w-4 h-4 text-neutral-600" />
-                   : <ChevronDown className="w-4 h-4 text-neutral-600" />}
+            {open ? <IconChevronUp className="w-4 h-4 text-neutral-600" />
+                   : <IconChevronDown className="w-4 h-4 text-neutral-600" />}
           </div>
         </div>
         {/* Line 2: 🕐 inicio → fin · N SKUs */}
         <div className="flex items-center justify-between mt-1 text-[11px] text-neutral-600">
           <div className="flex items-center gap-1.5">
-            <Clock className="w-3 h-3 flex-shrink-0" />
+            <IconClock className="w-3 h-3 flex-shrink-0" />
             <span className="tabular-nums">{fmtDT(sesion.inicio)} → {fmtDT(sesion.fin)}</span>
           </div>
           <span className="tabular-nums flex-shrink-0">{sesion.items.length} SKU{sesion.items.length !== 1 ? "s" : ""}</span>
@@ -1179,11 +1177,11 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
         className="w-full hidden sm:flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-colors duration-300 text-left">
         <span className="text-sm font-bold text-primary-500 w-20 flex-shrink-0">{sesion.id}</span>
         <span className="flex items-center gap-1.5 text-sm text-neutral-600 flex-shrink-0">
-          <User className="w-3.5 h-3.5 text-neutral-600" />
+          <IconUser className="w-3.5 h-3.5 text-neutral-600" />
           {sesion.operador}
         </span>
         <span className="flex items-center gap-1.5 text-sm text-neutral-600 flex-1 min-w-0 truncate">
-          <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+          <IconClock className="w-3.5 h-3.5 flex-shrink-0" />
           {fmtDT(sesion.inicio)}
           <span className="text-neutral-300 mx-0.5">→</span>
           {fmtDT(sesion.fin)}
@@ -1194,8 +1192,8 @@ function SesionRow({ sesion, incidencias, products, acumulado }: {
         <span className="text-sm font-bold text-neutral-800 tabular-nums w-20 text-right flex-shrink-0 whitespace-nowrap">
           {totalUds.toLocaleString("es-CL")} uds
         </span>
-        {open ? <ChevronUp className="w-4 h-4 text-neutral-600 flex-shrink-0" />
-               : <ChevronDown className="w-4 h-4 text-neutral-600 flex-shrink-0" />}
+        {open ? <IconChevronUp className="w-4 h-4 text-neutral-600 flex-shrink-0" />
+               : <IconChevronDown className="w-4 h-4 text-neutral-600 flex-shrink-0" />}
       </button>
 
       {open && sesion.items.length > 0 && (
@@ -1352,7 +1350,7 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
         className="w-full flex items-center justify-between px-4 py-3 hover:bg-neutral-100/50 transition-colors duration-200 cursor-pointer"
       >
         <div className="flex items-center gap-2">
-          {collapsed ? <ChevronRight className="w-3.5 h-3.5 text-neutral-600" /> : <ChevronDown className="w-3.5 h-3.5 text-neutral-600" />}
+          {collapsed ? <IconChevronRight className="w-3.5 h-3.5 text-neutral-600" /> : <IconChevronDown className="w-3.5 h-3.5 text-neutral-600" />}
           <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Incidencia #{index + 1}</span>
           {collapsed && <span className="text-xs text-neutral-600">· {summary} · {row.cantidad} uds. · {row.imagenes.length} img</span>}
         </div>
@@ -1360,7 +1358,7 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
           onClick={e => { e.stopPropagation(); onRemove(row.rowId); }}
           className="p-1 text-neutral-300 hover:text-red-400 transition-colors duration-300 rounded"
         >
-          <Trash2 className="w-3.5 h-3.5" />
+          <IconTrash className="w-3.5 h-3.5" />
         </button>
       </div>
 
@@ -1425,7 +1423,7 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
                       onClick={() => onRemoveImage(row.rowId, i)}
                       className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white shadow"
                     >
-                      <X className="w-3 h-3" />
+                      <IconX className="w-3 h-3" />
                     </button>
                   </div>
                 ))}
@@ -1440,7 +1438,7 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
                 className="w-full flex flex-col items-center gap-3 px-4 py-6 bg-neutral-50 border border-dashed border-neutral-300 rounded-xl cursor-pointer hover:border-neutral-400 hover:bg-neutral-100/60 transition-colors duration-200"
               >
                 <span className="w-10 h-10 flex items-center justify-center bg-white rounded-lg border border-neutral-200 shadow-sm">
-                  <Camera className="w-5 h-5 text-neutral-600" />
+                  <IconCamera className="w-5 h-5 text-neutral-600" />
                 </span>
                 <div className="text-center">
                   <p className="text-sm text-neutral-500">
@@ -1461,7 +1459,7 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
                   onClick={() => fileRef.current?.click()}
                   className="flex items-center gap-1 text-xs text-primary-500 hover:text-primary-600 font-medium transition-colors duration-200"
                 >
-                  <Upload className="w-3.5 h-3.5" />
+                  <IconUpload className="w-3.5 h-3.5" />
                   Subir imagen
                 </button>
                 <p className="text-xs text-neutral-500">
@@ -1473,7 +1471,7 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
             {/* Validation message */}
             {row.imagenes.length === 0 && (
               <p className="text-xs text-red-400 mt-1 flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3" /> Requerida al menos 1 imagen
+                <IconAlertTriangle className="w-3 h-3" /> Requerida al menos 1 imagen
               </p>
             )}
           </div>
@@ -1560,14 +1558,14 @@ function IncidenciasSKUModal({ product, initialRows, onClose, onSave, onLiveUpda
           <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center flex-shrink-0">
             {product.imagen
               ? <img src={product.imagen} alt="" className="w-full h-full object-cover rounded-lg" />
-              : <ImageOff className="w-5 h-5 text-neutral-300" />}
+              : <IconPhotoOff className="w-5 h-5 text-neutral-300" />}
           </div>
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold text-neutral-900 truncate">{product.nombre}</h1>
             <p className="text-xs text-neutral-600 mt-0.5">SKU: {product.sku} · {product.esperadas} uds. declaradas</p>
           </div>
           <button onClick={onClose} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300 flex-shrink-0">
-            <X className="w-4 h-4 text-neutral-600" />
+            <IconX className="w-4 h-4 text-neutral-600" />
           </button>
         </div>
 
@@ -1576,7 +1574,7 @@ function IncidenciasSKUModal({ product, initialRows, onClose, onSave, onLiveUpda
           {rows.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-10 px-6 text-center">
               <div className="w-12 h-12 bg-neutral-100 rounded-xl flex items-center justify-center">
-                <ClipboardCheck className="w-6 h-6 text-neutral-300" />
+                <IconClipboardCheck className="w-6 h-6 text-neutral-300" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-neutral-700">Sin incidencias registradas</p>
@@ -1586,7 +1584,7 @@ function IncidenciasSKUModal({ product, initialRows, onClose, onSave, onLiveUpda
                 onClick={addRow}
                 className="flex items-center gap-1.5 px-4 py-2 border border-dashed border-neutral-300 rounded-lg text-sm text-neutral-500 hover:border-primary-400 hover:text-primary-500 hover:bg-primary-50 transition-colors duration-300 mt-1"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <IconPlus className="w-3.5 h-3.5" />
                 Agregar incidencia
               </button>
             </div>
@@ -1602,7 +1600,7 @@ function IncidenciasSKUModal({ product, initialRows, onClose, onSave, onLiveUpda
                 />
               ))}
               <div className="px-4 py-3 border-t border-dashed border-neutral-200">
-                <Button variant={rows.length > 0 ? "secondary" : "primary"} size="md" iconLeft={<Plus className="w-3.5 h-3.5" />} onClick={addRow} className="w-full">
+                <Button variant={rows.length > 0 ? "secondary" : "primary"} size="md" iconLeft={<IconPlus className="w-3.5 h-3.5" />} onClick={addRow} className="w-full">
                   Agregar otra incidencia
                 </Button>
               </div>
@@ -1618,7 +1616,7 @@ function IncidenciasSKUModal({ product, initialRows, onClose, onSave, onLiveUpda
             onClick={() => saveEnabled && onSave(rows)}
             disabled={!saveEnabled}
             className="w-full"
-            iconLeft={<Check className="w-4 h-4" />}
+            iconLeft={<IconCheck className="w-4 h-4" />}
           >
             Guardar
           </Button>
@@ -1669,7 +1667,7 @@ function AddProductModal({ onCancel, onConfirm, defaultCategoria }: {
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-neutral-100 flex-shrink-0">
           <h1 className="text-xl font-bold text-neutral-900">Añadir producto</h1>
           <button onClick={onCancel} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">
-            <X className="w-4 h-4 text-neutral-600" />
+            <IconX className="w-4 h-4 text-neutral-600" />
           </button>
         </div>
 
@@ -1745,7 +1743,7 @@ function AddProductModal({ onCancel, onConfirm, defaultCategoria }: {
                   <p className="text-xs text-neutral-600">{(form.imagen.size / 1024).toFixed(0)} KB</p>
                 </div>
                 <button onClick={() => setForm(f => ({ ...f, imagen: null }))} className="text-neutral-600 hover:text-red-400 p-1">
-                  <Trash2 className="w-4 h-4" />
+                  <IconTrash className="w-4 h-4" />
                 </button>
               </div>
             ) : (
@@ -1753,7 +1751,7 @@ function AddProductModal({ onCancel, onConfirm, defaultCategoria }: {
                 onClick={() => fileRef.current?.click()}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-red-200 rounded-xl text-sm text-neutral-600 hover:border-primary-300 hover:text-primary-500 hover:bg-primary-50/40 transition-colors duration-300"
               >
-                <Upload className="w-4 h-4" />
+                <IconUpload className="w-4 h-4" />
                 Subir o tomar foto
               </button>
             )}
@@ -1776,7 +1774,7 @@ function AddProductModal({ onCancel, onConfirm, defaultCategoria }: {
           <Button variant="secondary" size="lg" onClick={onCancel}>
             Cancelar
           </Button>
-          <Button variant="primary" size="lg" onClick={handleConfirm} disabled={!canConfirm} iconLeft={<Plus className="w-4 h-4" />}>
+          <Button variant="primary" size="lg" onClick={handleConfirm} disabled={!canConfirm} iconLeft={<IconPlus className="w-4 h-4" />}>
             Añadir producto
           </Button>
         </div>
@@ -1799,7 +1797,7 @@ function AddProductChoiceModal({ onRecognized, onUnrecognized, onCancel }: {
         <div className="flex items-start justify-between">
           <h1 className="text-xl font-bold text-neutral-900">Añadir producto</h1>
           <button onClick={onCancel} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">
-            <X className="w-4 h-4 text-neutral-600" />
+            <IconX className="w-4 h-4 text-neutral-600" />
           </button>
         </div>
 
@@ -1813,7 +1811,7 @@ function AddProductChoiceModal({ onRecognized, onUnrecognized, onCancel }: {
             className="w-full flex items-center gap-4 p-4 border border-neutral-200 rounded-xl hover:border-primary-300 hover:bg-primary-50/40 transition-colors duration-300 text-left group"
           >
             <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0 group-hover:bg-primary-100 transition-colors duration-300">
-              <Search className="w-5 h-5 text-primary-500" />
+              <IconSearch className="w-5 h-5 text-primary-500" />
             </div>
             <div>
               <p className="text-sm font-semibold text-neutral-900">Sí, lo reconozco</p>
@@ -1826,7 +1824,7 @@ function AddProductChoiceModal({ onRecognized, onUnrecognized, onCancel }: {
             className="w-full flex items-center gap-4 p-4 border border-neutral-200 rounded-xl hover:border-amber-300 hover:bg-amber-50/40 transition-colors duration-300 text-left group"
           >
             <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0 group-hover:bg-amber-100 transition-colors duration-300">
-              <HelpCircle className="w-5 h-5 text-amber-500" />
+              <IconHelpCircle className="w-5 h-5 text-amber-500" />
             </div>
             <div>
               <p className="text-sm font-semibold text-neutral-900">No, no lo reconozco</p>
@@ -1911,7 +1909,7 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
             <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-neutral-100 flex-shrink-0">
               <h1 className="text-xl font-bold text-neutral-900">Registrar decisión del seller</h1>
               <button onClick={() => setCatCModal(null)} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">
-                <X className="w-4 h-4 text-neutral-600" />
+                <IconX className="w-4 h-4 text-neutral-600" />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6">
@@ -1990,7 +1988,7 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
                           onClick={() => setSlideIdx(i => (i - 1 + total) % total)}
                           className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center transition-colors"
                         >
-                          <ChevronRight className="w-4 h-4 text-neutral-700 rotate-180" />
+                          <IconChevronRight className="w-4 h-4 text-neutral-700 rotate-180" />
                         </button>
                       )}
                       {total > 1 && (
@@ -1998,7 +1996,7 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
                           onClick={() => setSlideIdx(i => (i + 1) % total)}
                           className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center transition-colors"
                         >
-                          <ChevronRight className="w-4 h-4 text-neutral-700" />
+                          <IconChevronRight className="w-4 h-4 text-neutral-700" />
                         </button>
                       )}
                       <span className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[11px] font-semibold text-white bg-black/50 rounded-full px-2.5 py-0.5 tabular-nums">
@@ -2248,7 +2246,7 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
                   )}
                   {rec.estado === "resuelto" && (
                     <span className="text-[10px] text-neutral-600 flex items-center gap-1">
-                      <Check className="w-3 h-3 text-green-500" /> Resuelto
+                      <IconCheck className="w-3 h-3 text-green-500" /> Resuelto
                     </span>
                   )}
                 </div>
@@ -2340,7 +2338,7 @@ function GestionCuarentena({ records, onUpdate, incidencias }: {
                       )}
                       {rec.estado === "resuelto" && (
                         <span className="text-[10px] text-neutral-600 flex items-center gap-1">
-                          <Check className="w-3 h-3 text-green-500" /> Resuelto
+                          <IconCheck className="w-3 h-3 text-green-500" /> Resuelto
                         </span>
                       )}
                     </td>
@@ -2547,12 +2545,12 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                     <img src={imgUrls[safeIdx]} alt={`Evidencia ${safeIdx + 1}`} className="w-full h-full object-cover absolute inset-0" />
                     {total > 1 && (
                       <button onClick={() => setSlideIdx(i => (i - 1 + total) % total)} className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center transition-colors">
-                        <ChevronRight className="w-4 h-4 text-neutral-700 rotate-180" />
+                        <IconChevronRight className="w-4 h-4 text-neutral-700 rotate-180" />
                       </button>
                     )}
                     {total > 1 && (
                       <button onClick={() => setSlideIdx(i => (i + 1) % total)} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center transition-colors">
-                        <ChevronRight className="w-4 h-4 text-neutral-700" />
+                        <IconChevronRight className="w-4 h-4 text-neutral-700" />
                       </button>
                     )}
                     <span className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[11px] font-semibold text-white bg-black/50 rounded-full px-2.5 py-0.5 tabular-nums">{safeIdx + 1}/{total}</span>
@@ -2644,7 +2642,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                   Imagen {index + 1} de {images.length}
                 </p>
                 <button onClick={() => setImageSlider(null)} className="p-1 rounded-lg hover:bg-neutral-100 transition-colors">
-                  <X className="w-4 h-4 text-neutral-500" />
+                  <IconX className="w-4 h-4 text-neutral-500" />
                 </button>
               </div>
 
@@ -2661,13 +2659,13 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                       onClick={() => setImageSlider({ images, index: (index - 1 + images.length) % images.length })}
                       className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors"
                     >
-                      <ChevronLeft className="w-5 h-5" />
+                      <IconChevronLeft className="w-5 h-5" />
                     </button>
                     <button
                       onClick={() => setImageSlider({ images, index: (index + 1) % images.length })}
                       className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors"
                     >
-                      <ChevronRight className="w-5 h-5" />
+                      <IconChevronRight className="w-5 h-5" />
                     </button>
                   </>
                 )}
@@ -2718,7 +2716,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
             className="absolute top-4 right-4 p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors duration-300"
             onClick={e => { e.stopPropagation(); setLightbox(null); }}
           >
-            <X className="w-5 h-5" />
+            <IconX className="w-5 h-5" />
           </button>
           <img
             src={URL.createObjectURL(lightbox)} alt=""
@@ -2821,7 +2819,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                         onClick={() => openImageSlider(p, incRows)}
                         className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors duration-200"
                       >
-                        <Eye className="w-4 h-4" />
+                        <IconEye className="w-4 h-4" />
                         Ver evidencia
                       </button>
                     </div>
@@ -2902,7 +2900,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                               variant="secondary"
                               size="sm"
                               onClick={() => openImageSlider(p, incRows)}
-                              iconLeft={<Image className="w-3.5 h-3.5" />}
+                              iconLeft={<IconPhoto className="w-3.5 h-3.5" />}
                             >
                               Ver
                             </Button>
@@ -2924,10 +2922,10 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                 <div className="px-4 py-2.5 bg-primary-50/60 flex items-center gap-4 flex-wrap">
                   <span className="text-sm font-bold text-primary-500">{ses.id}</span>
                   <span className="flex items-center gap-1 text-xs text-neutral-500">
-                    <User className="w-3 h-3" />{ses.operador}
+                    <IconUser className="w-3 h-3" />{ses.operador}
                   </span>
                   <span className="flex items-center gap-1.5 text-xs text-neutral-600">
-                    <Clock className="w-3 h-3" />
+                    <IconClock className="w-3 h-3" />
                     {fmtDT(ses.inicio)} <span className="text-neutral-300">→</span> {fmtDT(ses.fin)}
                   </span>
                   <span className="ml-auto text-xs font-bold text-primary-500 font-sans tabular-nums">
@@ -3068,7 +3066,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                                 </div>
                                 {qrEstado && (
                                   <span className={`inline-flex items-center px-2 py-0.5 rounded-[6px] text-xs font-medium border whitespace-nowrap leading-none ${qrEstado.cls}`}>
-                                    {isResuelto && <Check className="w-3 h-3 mr-1 flex-shrink-0" />}
+                                    {isResuelto && <IconCheck className="w-3 h-3 mr-1 flex-shrink-0" />}
                                     {qrEstado.label}
                                   </span>
                                 )}
@@ -3083,13 +3081,13 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
 
                                 {row.nota && (
                                   <div className="flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2">
-                                    <MessageSquare className="w-3.5 h-3.5 text-neutral-600 flex-shrink-0 mt-0.5" />
+                                    <IconMessage className="w-3.5 h-3.5 text-neutral-600 flex-shrink-0 mt-0.5" />
                                     <p className="text-xs text-neutral-600">{row.nota}</p>
                                   </div>
                                 )}
                                 {row.tag === "no-en-sistema" && row.descripcion && (
                                   <div className="flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2">
-                                    <MessageSquare className="w-3.5 h-3.5 text-neutral-600 flex-shrink-0 mt-0.5" />
+                                    <IconMessage className="w-3.5 h-3.5 text-neutral-600 flex-shrink-0 mt-0.5" />
                                     <p className="text-xs text-neutral-600">{row.descripcion}</p>
                                   </div>
                                 )}
@@ -3101,7 +3099,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                                 )}
                                 {isResuelto && qr.decisionSeller && (
                                   <div className="flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2">
-                                    <MessageSquare className="w-3.5 h-3.5 text-neutral-600 flex-shrink-0 mt-0.5" />
+                                    <IconMessage className="w-3.5 h-3.5 text-neutral-600 flex-shrink-0 mt-0.5" />
                                     <p className="text-xs text-neutral-600">{qr.decisionSeller}</p>
                                   </div>
                                 )}
@@ -3144,7 +3142,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                                   // ── No quarantine yet (pre-completion) — show info actions ──
                                   (row.tag === "danio-total" || row.tag === "danio-parcial") && allImgs.length === 0 ? (
                                     <button className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors duration-200">
-                                      <Camera className="w-4 h-4" /> Adjuntar evidencia
+                                      <IconCamera className="w-4 h-4" /> Adjuntar evidencia
                                     </button>
                                   ) : <div className="flex-1" />
                                 ) : (
@@ -3155,7 +3153,7 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
                                   onClick={() => openImageSlider(product, [row])}
                                   className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors duration-200"
                                 >
-                                  <Eye className="w-4 h-4" />
+                                  <IconEye className="w-4 h-4" />
                                   Ver detalle
                                 </button>
                               </div>
@@ -3628,13 +3626,13 @@ export default function ConteoORPage() {
       <AlertModal
         open={confirmLiberar}
         onClose={() => setConfirmLiberar(false)}
-        icon={LockUnlocked01}
+        icon={IconLockOpen}
         variant="danger"
         title="¿Liberar sesión activa?"
         subtitle="Esta acción no se puede deshacer"
         confirm={{
           label: "Liberar y descartar",
-          icon: <LockUnlocked01 className="w-4 h-4" />,
+          icon: <IconLockOpen className="w-4 h-4" />,
           onClick: () => { liberarSesion(); setConfirmLiberar(false); },
         }}
       >
@@ -3648,13 +3646,13 @@ export default function ConteoORPage() {
       <AlertModal
         open={confirmFinalizar}
         onClose={() => setConfirmFinalizar(false)}
-        icon={StopCircle}
+        icon={IconPlayerStop}
         variant="warning"
         title="Finalizar sesión"
         subtitle="Esta acción finalizará la sesión activa"
         confirm={{
           label: "Sí, finalizar",
-          icon: <StopCircle className="w-4 h-4" />,
+          icon: <IconPlayerStop className="w-4 h-4" />,
           onClick: () => { setConfirmFinalizar(false); finalizarSesion(); },
         }}
       >
@@ -3681,12 +3679,12 @@ export default function ConteoORPage() {
             <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-neutral-100 flex-shrink-0">
               <h1 className="text-xl font-bold text-neutral-900">Guía de despacho</h1>
               <button onClick={() => setGuiaModal(false)} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300">
-                <X className="w-4 h-4 text-neutral-600" />
+                <IconX className="w-4 h-4 text-neutral-600" />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto min-h-0 p-5 flex flex-col items-center gap-4">
               <div className="w-20 h-20 bg-neutral-100 rounded-2xl flex items-center justify-center">
-                <FileText className="w-10 h-10 text-neutral-300" />
+                <IconFileText className="w-10 h-10 text-neutral-300" />
               </div>
               <div className="text-center">
                 <p className="text-sm font-semibold text-neutral-800">GD-{id.replace("RO-", "")}-{baseData.seller.replace(/\s/g, "")}.pdf</p>
@@ -3695,12 +3693,12 @@ export default function ConteoORPage() {
                 </span>
               </div>
               <div className="w-full bg-neutral-50 border border-neutral-200 rounded-xl p-6 flex flex-col items-center gap-2">
-                <FileText className="w-8 h-8 text-neutral-300" />
+                <IconFileText className="w-8 h-8 text-neutral-300" />
                 <p className="text-xs text-neutral-600 text-center">Vista previa no disponible en esta versión</p>
               </div>
             </div>
             <div className="flex-shrink-0 border-t border-neutral-100 px-5 pt-3 pb-8 sm:pb-5">
-              <Button variant="primary" size="lg" iconLeft={<Download className="w-4 h-4" />} className="w-full">
+              <Button variant="primary" size="lg" iconLeft={<IconDownload className="w-4 h-4" />} className="w-full">
                 Descargar guía
               </Button>
             </div>
@@ -3720,7 +3718,7 @@ export default function ConteoORPage() {
       {/* ── Breadcrumb ── */}
       <nav className="max-w-4xl mx-auto px-4 lg:px-6 pt-4 pb-1 flex items-center justify-center sm:justify-start gap-1.5 text-sm text-neutral-500">
         <Link href="/recepciones" className="hover:text-primary-500 transition-colors duration-300">Recepciones</Link>
-        <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
+        <IconChevronRight className="w-3.5 h-3.5 text-neutral-300" />
         <span className="text-neutral-700 font-medium">Orden de Recepción</span>
       </nav>
 
@@ -3757,7 +3755,7 @@ export default function ConteoORPage() {
                     onClick={() => setApproveModal(true)}
                     disabled={!approvalData.canApprove}
                     title={!approvalData.canApprove ? `Hay ${approvalData.pendientesQR} incidencia${approvalData.pendientesQR !== 1 ? "s" : ""} sin resolver` : undefined}
-                    iconLeft={<CheckCircle2 className="w-4 h-4" />}
+                    iconLeft={<IconCircleCheck className="w-4 h-4" />}
                   >
                     Aprobar OR
                   </Button>
@@ -3766,7 +3764,7 @@ export default function ConteoORPage() {
                   variant="secondary"
                   size="lg"
                   onClick={() => setGuiaModal(true)}
-                  iconLeft={<FileText className="w-4 h-4" />}
+                  iconLeft={<IconFileText className="w-4 h-4" />}
                   className="whitespace-nowrap"
                 >
                   Ver Guía de despacho
@@ -3777,7 +3775,7 @@ export default function ConteoORPage() {
                 variant="secondary"
                 size="lg"
                 onClick={() => setGuiaModal(true)}
-                iconLeft={<FileText className="w-4 h-4" />}
+                iconLeft={<IconFileText className="w-4 h-4" />}
                 className="whitespace-nowrap"
               >
                 Ver Guía de despacho
@@ -3787,34 +3785,34 @@ export default function ConteoORPage() {
                 variant="primary"
                 size="lg"
                 href={`/recepciones/crear?startStep=2&mode=completar&sucursal=${encodeURIComponent(baseData.sucursal)}&seller=${encodeURIComponent(baseData.seller)}&orId=${id}`}
-                iconLeft={<CheckCircle2 className="w-4 h-4" />}
+                iconLeft={<IconCircleCheck className="w-4 h-4" />}
               >
                 Completar
               </Button>
             ) : originalEstado === "Programado" && currentRole === "Super Admin" ? (
               <>
-                <Button variant="secondary" size="lg" iconLeft={<CalendarDays className="w-4 h-4" />}>
+                <Button variant="secondary" size="lg" iconLeft={<IconCalendarEvent className="w-4 h-4" />}>
                   Reagendar
                 </Button>
-                <Button variant="primary" size="lg" onClick={() => setQrScannerOpen(true)} iconLeft={<Warehouse className="w-4 h-4" />}>
+                <Button variant="primary" size="lg" onClick={() => setQrScannerOpen(true)} iconLeft={<IconBuildingWarehouse className="w-4 h-4" />}>
                   Recibir en bodega
                 </Button>
               </>
             ) : originalEstado === "Programado" && currentRole === "Operador" ? (
-              <Button variant="primary" size="lg" onClick={() => setQrScannerOpen(true)} iconLeft={<Warehouse className="w-4 h-4" />}>
+              <Button variant="primary" size="lg" onClick={() => setQrScannerOpen(true)} iconLeft={<IconBuildingWarehouse className="w-4 h-4" />}>
                 Recibir en bodega
               </Button>
             ) : originalEstado === "Programado" && (currentRole === "Seller" || currentRole === "KAM") ? (
-              <Button variant="primary" size="lg" iconLeft={<CalendarDays className="w-4 h-4" />}>
+              <Button variant="primary" size="lg" iconLeft={<IconCalendarEvent className="w-4 h-4" />}>
                 Reagendar
               </Button>
             ) : canStartSesion && (originalEstado === "En proceso de conteo" || originalEstado === "Recepcionado en bodega") ? (
               sesionActiva ? (
-                <Button variant="secondary" size="lg" onClick={() => setConfirmFinalizar(true)} iconLeft={<StopCircle className="w-4 h-4" />}>
+                <Button variant="secondary" size="lg" onClick={() => setConfirmFinalizar(true)} iconLeft={<IconPlayerStop className="w-4 h-4" />}>
                   Finalizar sesión
                 </Button>
               ) : (
-                <Button variant="primary" size="lg" onClick={iniciarSesion} iconLeft={<PlayCircle className="w-4 h-4" />}>
+                <Button variant="primary" size="lg" onClick={iniciarSesion} iconLeft={<IconPlayerPlay className="w-4 h-4" />}>
                   Iniciar sesión de conteo
                 </Button>
               )
@@ -3828,7 +3826,7 @@ export default function ConteoORPage() {
                 variant="secondary"
                 size="lg"
                 onClick={() => setGuiaModal(true)}
-                iconLeft={<FileText className="w-4 h-4" />}
+                iconLeft={<IconFileText className="w-4 h-4" />}
               >
                 Ver Guía de despacho
               </Button>
@@ -3901,7 +3899,7 @@ export default function ConteoORPage() {
                       <div className="mt-2.5 pt-2.5 border-t border-neutral-100 flex-1 flex flex-col">
                         <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">{label}</p>
                         <div className="mt-1.5 flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2.5 flex-1">
-                          <MessageSquare className={`w-3.5 h-3.5 flex-shrink-0 mt-0.5 ${comentario ? "text-neutral-600" : "text-neutral-400"}`} />
+                          <IconMessage className={`w-3.5 h-3.5 flex-shrink-0 mt-0.5 ${comentario ? "text-neutral-600" : "text-neutral-400"}`} />
                           {comentario
                             ? <p className="text-sm text-neutral-600 leading-relaxed">{comentario}</p>
                             : <p className="text-sm text-neutral-400 italic">Sin comentarios adicionales</p>
@@ -3967,12 +3965,12 @@ export default function ConteoORPage() {
                 <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-white/20 rounded-tr" />
                 <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-white/20 rounded-bl" />
                 <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-white/20 rounded-br" />
-                <ScanBarcode className="w-6 h-6 text-white/15" />
+                <IconBarcode className="w-6 h-6 text-white/15" />
                 <div className="absolute inset-x-2 h-0.5 bg-primary-400/40 top-1/2 animate-pulse rounded-full" />
               </div>
               {/* Input inside dark block */}
               <div className="relative">
-                <ScanBarcode className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${scanError ? "text-red-400" : scanSuccess ? "text-green-400" : "text-white/40"}`} />
+                <IconBarcode className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${scanError ? "text-red-400" : scanSuccess ? "text-green-400" : "text-white/40"}`} />
                 <input
                   ref={scannerInputRef}
                   type="text"
@@ -4009,7 +4007,7 @@ export default function ConteoORPage() {
             <div className="px-4 py-3 border-b border-neutral-100">
               <div className="flex flex-row gap-2">
                 <div className="relative flex-1">
-                  <Scan className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${scanError ? "text-red-400" : scanSuccess ? "text-green-500" : "text-neutral-600"}`} />
+                  <IconScan className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${scanError ? "text-red-400" : scanSuccess ? "text-green-500" : "text-neutral-600"}`} />
                   <input
                     type="text"
                     value={scanner}
@@ -4062,13 +4060,13 @@ export default function ConteoORPage() {
               <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                 {stats.sinDiferencias > 0 && (
                   <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full">
-                    <CheckCircle2 className="w-2.5 h-2.5" />
+                    <IconCircleCheck className="w-2.5 h-2.5" />
                     {stats.sinDiferencias} OK
                   </span>
                 )}
                 {stats.conDiferencias > 0 && (
                   <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-full">
-                    <AlertTriangle className="w-2.5 h-2.5" />
+                    <IconAlertTriangle className="w-2.5 h-2.5" />
                     {stats.conDiferencias} diferencias
                   </span>
                 )}
@@ -4124,13 +4122,13 @@ export default function ConteoORPage() {
           <div className="flex items-center gap-1.5 mt-2 flex-wrap">
             {stats.sinDiferencias > 0 && (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full">
-                <CheckCircle2 className="w-2.5 h-2.5" />
+                <IconCircleCheck className="w-2.5 h-2.5" />
                 {stats.sinDiferencias} OK
               </span>
             )}
             {stats.conDiferencias > 0 && (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-full">
-                <AlertTriangle className="w-2.5 h-2.5" />
+                <IconAlertTriangle className="w-2.5 h-2.5" />
                 {stats.conDiferencias} diferencias
               </span>
             )}
@@ -4265,7 +4263,7 @@ export default function ConteoORPage() {
                 className="w-full flex items-center justify-center gap-1 py-1.5 text-xs text-neutral-600 hover:text-neutral-600 transition-colors"
               >
                 {showProductTable ? "Ocultar detalle" : "Ver detalle de productos"}
-                {showProductTable ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                {showProductTable ? <IconChevronUp className="w-3 h-3" /> : <IconChevronDown className="w-3 h-3" />}
               </button>
             </div>
           )}
@@ -4384,7 +4382,7 @@ export default function ConteoORPage() {
                   <div className="col-span-2">
                     <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Comentarios del seller</p>
                     <div className="mt-1.5 flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2.5">
-                      <MessageSquare className="w-3.5 h-3.5 text-neutral-600 flex-shrink-0 mt-0.5" />
+                      <IconMessage className="w-3.5 h-3.5 text-neutral-600 flex-shrink-0 mt-0.5" />
                       <p className="text-sm text-neutral-600 leading-relaxed">{baseData.comentarios}</p>
                     </div>
                   </div>
@@ -4393,7 +4391,7 @@ export default function ConteoORPage() {
                   <div className="col-span-2">
                     <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Comentarios del operador</p>
                     <div className="mt-1.5 flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2.5">
-                      <MessageSquare className="w-3.5 h-3.5 text-neutral-600 flex-shrink-0 mt-0.5" />
+                      <IconMessage className="w-3.5 h-3.5 text-neutral-600 flex-shrink-0 mt-0.5" />
                       <p className="text-sm text-neutral-600 leading-relaxed">{baseData.comentarioRecepcion}</p>
                     </div>
                   </div>
@@ -4421,7 +4419,7 @@ export default function ConteoORPage() {
             {products.length === 0 ? (
               <div className="p-12 flex flex-col items-center gap-3 text-center">
                 <div className="w-14 h-14 bg-neutral-100 rounded-2xl flex items-center justify-center">
-                  <Package className="w-7 h-7 text-neutral-300" />
+                  <IconPackage className="w-7 h-7 text-neutral-300" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-neutral-700">Sin productos</p>
@@ -4453,7 +4451,7 @@ export default function ConteoORPage() {
               <div className="border-t border-dashed border-neutral-200">
                 <button onClick={() => setAddProductFlow("choice")} className="w-full flex items-center justify-center gap-2 py-3.5 text-sm text-neutral-600 hover:text-primary-500 hover:bg-primary-50/50 transition-colors duration-300 font-medium">
                   <span className="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center flex-shrink-0">
-                    <Plus className="w-3 h-3" />
+                    <IconPlus className="w-3 h-3" />
                   </span>
                   Añadir producto
                 </button>
@@ -4495,7 +4493,7 @@ export default function ConteoORPage() {
               destinatario: "Equipo de recepción",
               fecha: "07/03/2026 14:22",
               canal: "Email + Push",
-              icon: <PlusCircle className="w-4 h-4 text-primary-500" />,
+              icon: <IconCirclePlus className="w-4 h-4 text-primary-500" />,
               color: "primary",
             },
             {
@@ -4503,7 +4501,7 @@ export default function ConteoORPage() {
               destinatario: "Operador de andén",
               fecha: "07/03/2026 14:25",
               canal: "Push",
-              icon: <CalendarDays className="w-4 h-4 text-blue-500" />,
+              icon: <IconCalendarEvent className="w-4 h-4 text-blue-500" />,
               color: "blue",
             },
             {
@@ -4511,7 +4509,7 @@ export default function ConteoORPage() {
               destinatario: "Supervisor",
               fecha: "08/03/2026 16:35",
               canal: "Push",
-              icon: <PlayCircle className="w-4 h-4 text-green-500" />,
+              icon: <IconPlayerPlay className="w-4 h-4 text-green-500" />,
               color: "green",
             },
             {
@@ -4519,7 +4517,7 @@ export default function ConteoORPage() {
               destinatario: `${baseData.seller} (Seller) + Supervisor`,
               fecha: "08/03/2026 18:10",
               canal: "Email + Push",
-              icon: <CheckCircle2 className="w-4 h-4 text-green-600" />,
+              icon: <IconCircleCheck className="w-4 h-4 text-green-600" />,
               color: "green",
             },
           ];
@@ -4530,7 +4528,7 @@ export default function ConteoORPage() {
               destinatario: `${baseData.seller} (Seller)`,
               fecha: "08/03/2026 18:12",
               canal: "Email",
-              icon: <AlertTriangle className="w-4 h-4 text-amber-500" />,
+              icon: <IconAlertTriangle className="w-4 h-4 text-amber-500" />,
               color: "amber",
             });
           }
@@ -4541,7 +4539,7 @@ export default function ConteoORPage() {
               destinatario: "Equipo de calidad",
               fecha: "08/03/2026 18:15",
               canal: "Email + Push",
-              icon: <Shield className="w-4 h-4 text-red-500" />,
+              icon: <IconShield className="w-4 h-4 text-red-500" />,
               color: "red",
             });
           }
@@ -4556,7 +4554,7 @@ export default function ConteoORPage() {
                   <p className="text-xs text-neutral-600 mt-0.5">Comunicaciones automáticas del sistema</p>
                 </div>
                 <div className="flex items-center gap-1.5 text-sm text-neutral-600 tabular-nums flex-shrink-0">
-                  <Bell className="w-4 h-4" />
+                  <IconBell className="w-4 h-4" />
                   {notifs.length} enviadas
                 </div>
               </div>
@@ -4604,7 +4602,7 @@ export default function ConteoORPage() {
             <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
               <div className="px-5 pt-4 pb-3 border-b border-neutral-100">
                 <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-neutral-600" />
+                  <IconFileText className="w-4 h-4 text-neutral-600" />
                   <p className="text-base font-semibold text-neutral-900">Registros de auditoría</p>
                 </div>
                 <p className="text-xs text-neutral-600 mt-0.5">{auditEvents.length} evento{auditEvents.length !== 1 ? "s" : ""} registrado{auditEvents.length !== 1 ? "s" : ""} · Solo visible para Super Admin</p>
@@ -4664,7 +4662,7 @@ export default function ConteoORPage() {
           <AlertModal
             open={noUnitsAlert}
             onClose={() => setNoUnitsAlert(false)}
-            icon={AlertTriangle}
+            icon={IconAlertTriangle}
             variant="warning"
             title="No se puede completar la OR"
           >
@@ -4673,7 +4671,7 @@ export default function ConteoORPage() {
 
           {/* Desktop footer actions */}
           <div className="hidden lg:flex items-center justify-between pt-2 pb-8">
-            <Button variant="secondary" size="lg" onClick={() => setConfirmLiberar(true)} disabled={!sesionActiva} iconLeft={<LockUnlocked01 className="w-4 h-4" />}>
+            <Button variant="secondary" size="lg" onClick={() => setConfirmLiberar(true)} disabled={!sesionActiva} iconLeft={<IconLockOpen className="w-4 h-4" />}>
               Liberar
             </Button>
 
@@ -4691,7 +4689,7 @@ export default function ConteoORPage() {
                 sesiones.length === 0 ? "Registra al menos una sesión antes de completar" :
                 sesionActiva ? "Finaliza la sesión activa antes de completar" : undefined
               }
-              iconLeft={<ClipboardCheck className="w-4 h-4" />}
+              iconLeft={<IconClipboardCheck className="w-4 h-4" />}
             >
               Completar OR
             </Button>
@@ -4708,45 +4706,45 @@ export default function ConteoORPage() {
               variant="primary"
               size="lg"
               href={`/recepciones/crear?startStep=2&mode=completar&sucursal=${encodeURIComponent(baseData.sucursal)}&seller=${encodeURIComponent(baseData.seller)}&orId=${id}`}
-              iconLeft={<CheckCircle2 className="w-4 h-4" />}
+              iconLeft={<IconCircleCheck className="w-4 h-4" />}
               className="w-full"
             >
               Completar
             </Button>
           ) : originalEstado === "Programado" && currentRole === "Super Admin" ? (
             <div className="flex flex-col gap-2">
-              <Button variant="primary" size="lg" onClick={() => setQrScannerOpen(true)} iconLeft={<Warehouse className="w-4 h-4" />} className="w-full">
+              <Button variant="primary" size="lg" onClick={() => setQrScannerOpen(true)} iconLeft={<IconBuildingWarehouse className="w-4 h-4" />} className="w-full">
                 Recibir en bodega
               </Button>
-              <Button variant="secondary" size="lg" iconLeft={<CalendarDays className="w-4 h-4" />} className="w-full">
+              <Button variant="secondary" size="lg" iconLeft={<IconCalendarEvent className="w-4 h-4" />} className="w-full">
                 Reagendar
               </Button>
             </div>
           ) : originalEstado === "Programado" && currentRole === "Operador" ? (
-            <Button variant="primary" size="lg" onClick={() => setQrScannerOpen(true)} iconLeft={<Warehouse className="w-4 h-4" />} className="w-full">
+            <Button variant="primary" size="lg" onClick={() => setQrScannerOpen(true)} iconLeft={<IconBuildingWarehouse className="w-4 h-4" />} className="w-full">
               Recibir en bodega
             </Button>
           ) : originalEstado === "Programado" && (currentRole === "Seller" || currentRole === "KAM") ? (
-            <Button variant="primary" size="lg" iconLeft={<CalendarDays className="w-4 h-4" />} className="w-full">
+            <Button variant="primary" size="lg" iconLeft={<IconCalendarEvent className="w-4 h-4" />} className="w-full">
               Reagendar
             </Button>
           ) : canStartSesion && (originalEstado === "En proceso de conteo" || originalEstado === "Recepcionado en bodega") ? (
             sesionActiva ? (
               <div className="flex flex-col gap-1">
                 {canFinSesion && (
-                  <Button variant="primary" size="lg" onClick={() => setConfirmFinalizar(true)} iconLeft={<StopCircle className="w-4 h-4" />} className="w-full">
+                  <Button variant="primary" size="lg" onClick={() => setConfirmFinalizar(true)} iconLeft={<IconPlayerStop className="w-4 h-4" />} className="w-full">
                     Finalizar sesión
                   </Button>
                 )}
                 {canRelSesion && (
-                  <Button variant="tertiary" size="lg" onClick={() => setConfirmLiberar(true)} iconLeft={<LockUnlocked01 className="w-4 h-4" />} className="w-full !text-red-500 hover:!text-red-600">
+                  <Button variant="tertiary" size="lg" onClick={() => setConfirmLiberar(true)} iconLeft={<IconLockOpen className="w-4 h-4" />} className="w-full !text-red-500 hover:!text-red-600">
                     Liberar sesión
                   </Button>
                 )}
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                <Button variant="primary" size="lg" onClick={iniciarSesion} iconLeft={<PlayCircle className="w-4 h-4" />} className="w-full">
+                <Button variant="primary" size="lg" onClick={iniciarSesion} iconLeft={<IconPlayerPlay className="w-4 h-4" />} className="w-full">
                   Iniciar sesión de conteo
                 </Button>
                 {sesiones.length > 0 && (
@@ -4759,7 +4757,7 @@ export default function ConteoORPage() {
                       setConfirmClose(true);
                     }}
                     disabled={terminarDisabled}
-                    iconLeft={<ClipboardCheck className="w-4 h-4" />}
+                    iconLeft={<IconClipboardCheck className="w-4 h-4" />}
                     className="w-full"
                   >
                     Completar OR
@@ -4779,7 +4777,7 @@ export default function ConteoORPage() {
             size="lg"
             onClick={() => setApproveModal(true)}
             disabled={!approvalData.canApprove}
-            iconLeft={<CheckCircle2 className="w-4 h-4" />}
+            iconLeft={<IconCircleCheck className="w-4 h-4" />}
             className="w-full"
           >
             {!approvalData.canApprove
@@ -4793,13 +4791,13 @@ export default function ConteoORPage() {
       <AlertModal
         open={approveModal}
         onClose={() => setApproveModal(false)}
-        icon={CheckCircle2}
+        icon={IconCircleCheck}
         variant="warning"
         title="Aprobar orden de recepción"
         subtitle="Esta acción es definitiva y no puede deshacerse"
         confirm={{
           label: "Sí, aprobar OR",
-          icon: <CheckCircle2 className="w-4 h-4" />,
+          icon: <IconCircleCheck className="w-4 h-4" />,
           onClick: handleApproveOR,
         }}
       >

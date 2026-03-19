@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useId, type ReactNode } from "react";
-import { ChevronDown, HelpCircle } from "lucide-react";
+import { IconChevronDown, IconHelpCircle } from "@tabler/icons-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type BaseProps = {
@@ -167,7 +167,7 @@ export default function FormField(props: FormFieldProps) {
 
         {/* Chevron for selects */}
         {as === "select" && (
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+          <IconChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
         )}
 
         {/* Help / tooltip icon */}
@@ -178,7 +178,7 @@ export default function FormField(props: FormFieldProps) {
             onMouseEnter={() => setShowTooltip(true)}
             onMouseLeave={() => setShowTooltip(false)}
           >
-            <HelpCircle className="w-4 h-4 text-neutral-300 hover:text-neutral-500 transition-colors cursor-help" />
+            <IconHelpCircle className="w-4 h-4 text-neutral-300 hover:text-neutral-500 transition-colors cursor-help" />
             {showTooltip && (
               <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 px-3 py-2 bg-neutral-900 text-white text-xs rounded-lg shadow-lg leading-relaxed">
                 {tooltip}

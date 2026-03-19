@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useState, useEffect, useMemo } from "react";
-import { ChevronRight, ChevronDown, ChevronUp, Check, X, Search, SlidersHorizontal } from "lucide-react";
-import { AlertTriangle, Clock } from "@untitled-ui/icons-react";
+import {
+  IconChevronRight, IconChevronDown, IconChevronUp, IconCheck, IconX,
+  IconSearch, IconAdjustmentsHorizontal, IconAlertTriangle, IconClock,
+} from "@tabler/icons-react";
 import Button from "@/components/ui/Button";
 import {
   QuarantineRecord, QuarantineStatus, QuarantineResolution, QuarantineCategory,
@@ -162,7 +164,7 @@ export default function CuarentenaPage() {
                 </p>
               </div>
               <button onClick={() => setCatCModal(null)} className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition-colors duration-300 flex-shrink-0">
-                <X className="w-4 h-4 text-neutral-600" />
+                <IconX className="w-4 h-4 text-neutral-600" />
               </button>
             </div>
 
@@ -246,7 +248,7 @@ export default function CuarentenaPage() {
       <div className="bg-white border-b border-neutral-100">
         <nav className="max-w-6xl mx-auto px-6 py-3 flex items-center gap-1.5 text-sm text-neutral-500">
           <Link href="/recepciones" className="hover:text-primary-500 transition-colors duration-300">Recepciones</Link>
-          <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
+          <IconChevronRight className="w-3.5 h-3.5 text-neutral-300" />
           <span className="text-neutral-700 font-medium">Stock en cuarentena</span>
         </nav>
       </div>
@@ -280,7 +282,7 @@ export default function CuarentenaPage() {
         {/* ── Alerts ── */}
         {alertaPendiente48h.length > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3">
-            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <IconAlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-semibold text-amber-800">
                 {alertaPendiente48h.length} registro{alertaPendiente48h.length !== 1 ? "s" : ""} con más de 48h en estado pendiente
@@ -291,7 +293,7 @@ export default function CuarentenaPage() {
         )}
         {alertaGestion7d.length > 0 && (
           <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-3">
-            <Clock className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+            <IconClock className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-semibold text-red-800">
                 {alertaGestion7d.length} registro{alertaGestion7d.length !== 1 ? "s" : ""} con más de 7 días en gestión
@@ -306,7 +308,7 @@ export default function CuarentenaPage() {
           {/* Search + mobile filter toggle */}
           <div className="flex items-center gap-2">
             <div className="relative flex-1 min-w-0">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
+              <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
               <input
                 type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
                 placeholder="Buscar SKU, producto u OR..."
@@ -317,12 +319,12 @@ export default function CuarentenaPage() {
               onClick={() => setShowFilters(f => !f)}
               className="sm:hidden flex items-center gap-1.5 px-3 py-2 border border-neutral-200 rounded-lg text-sm text-neutral-600 hover:bg-neutral-50 transition-colors flex-shrink-0"
             >
-              <SlidersHorizontal className="w-4 h-4" />
+              <IconAdjustmentsHorizontal className="w-4 h-4" />
               Filtros
               {activeFilterCount > 0 && (
                 <span className="w-5 h-5 flex items-center justify-center bg-primary-500 text-white text-[10px] font-bold rounded-full">{activeFilterCount}</span>
               )}
-              {showFilters ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              {showFilters ? <IconChevronUp className="w-3.5 h-3.5" /> : <IconChevronDown className="w-3.5 h-3.5" />}
             </button>
           </div>
 
@@ -337,7 +339,7 @@ export default function CuarentenaPage() {
                 <option value="devolucion_seller">Devolución obligatoria a seller</option>
                 <option value="decision_seller">Decisión del seller</option>
               </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
+              <IconChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
             </div>
 
             {/* Estado */}
@@ -349,7 +351,7 @@ export default function CuarentenaPage() {
                 <option value="en_gestion">En gestión</option>
                 <option value="resuelto">Resuelto</option>
               </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
+              <IconChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
             </div>
 
             {/* Seller */}
@@ -359,7 +361,7 @@ export default function CuarentenaPage() {
                 <option value="">Todos los sellers</option>
                 {sellers.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
+              <IconChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
             </div>
 
             {/* Sucursal */}
@@ -369,7 +371,7 @@ export default function CuarentenaPage() {
                 <option value="">Todas las sucursales</option>
                 {sucursales.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
+              <IconChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
             </div>
           </div>
         </div>
@@ -443,7 +445,7 @@ export default function CuarentenaPage() {
                             {days}d
                           </span>
                           {(alert48 || alert7d) && (
-                            <AlertTriangle className={`w-3 h-3 ml-1 inline-block ${alert7d ? "text-red-500" : "text-amber-500"}`} />
+                            <IconAlertTriangle className={`w-3 h-3 ml-1 inline-block ${alert7d ? "text-red-500" : "text-amber-500"}`} />
                           )}
                         </td>
                         <td className="px-3 py-3 text-xs text-neutral-600 align-top">
@@ -478,7 +480,7 @@ export default function CuarentenaPage() {
                           )}
                           {rec.estado === "resuelto" && (
                             <span className="text-[10px] text-neutral-600 flex items-center gap-1">
-                              <Check className="w-3 h-3 text-green-500" /> Resuelto
+                              <IconCheck className="w-3 h-3 text-green-500" /> Resuelto
                             </span>
                           )}
                         </td>

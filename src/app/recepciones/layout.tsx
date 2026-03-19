@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Sidebar from "@/components/layout/Sidebar";
-import { Menu01, HelpCircle } from "@untitled-ui/icons-react";
+import { IconMenu2, IconHelpCircle } from "@tabler/icons-react";
 import AmplificaLogo from "@/components/layout/AmplificaLogo";
 
 export default function RecepcionesLayout({ children }: { children: React.ReactNode }) {
@@ -38,11 +38,11 @@ export default function RecepcionesLayout({ children }: { children: React.ReactN
           onClick={() => setSidebarOpen(true)}
           className="absolute left-4 text-white/70 hover:text-white p-1.5 -ml-1.5 rounded-lg transition-colors"
         >
-          <Menu01 className="w-5 h-5" />
+          <IconMenu2 className="w-5 h-5" />
         </button>
         <AmplificaLogo />
         <button className="absolute right-4 text-white/70 hover:text-white p-1.5 -mr-1.5 rounded-lg transition-colors">
-          <HelpCircle className="w-5 h-5" />
+          <IconHelpCircle className="w-5 h-5" />
         </button>
       </div>
 

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle } from "lucide-react";
+import { IconAlertTriangle } from "@tabler/icons-react";
 import Button from "@/components/ui/Button";
 
 export default function Error({
@@ -23,7 +23,7 @@ export default function Error({
       <div className="max-w-lg w-full text-center">
         {/* Icon */}
         <div className="mx-auto mb-6 w-16 h-16 rounded-full bg-primary-50 flex items-center justify-center">
-          <AlertTriangle className="w-8 h-8 text-primary-500" />
+          <IconAlertTriangle className="w-8 h-8 text-primary-500" />
         </div>
 
         {/* Error code */}

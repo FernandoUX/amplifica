@@ -1,12 +1,12 @@
 import {
-  Plus,
-  Calendar,
-  Warehouse,
-  Clock,
-  Ban,
-  ClipboardList,
-  Check,
-} from "lucide-react";
+  IconPlus,
+  IconCalendar,
+  IconBuildingWarehouse,
+  IconClock,
+  IconBan,
+  IconClipboardList,
+  IconCheck,
+} from "@tabler/icons-react";
 import type { ComponentType } from "react";
 
 // ─── Status type — single source of truth ─────────────────────────────────────
@@ -22,13 +22,13 @@ type Status =
 // ─── Icon lookup (tree-shaking safe) ──────────────────────────────────────────
 type StatusIconKey = "plus" | "calendar" | "warehouse" | "clipboard" | "clock" | "check" | "ban";
 const STATUS_ICON_MAP: Record<StatusIconKey, ComponentType<{ className?: string }>> = {
-  plus:      Plus,
-  calendar:  Calendar,
-  warehouse: Warehouse,
-  clipboard: ClipboardList,
-  clock:     Clock,
-  check:     Check,
-  ban:       Ban,
+  plus:      IconPlus,
+  calendar:  IconCalendar,
+  warehouse: IconBuildingWarehouse,
+  clipboard: IconClipboardList,
+  clock:     IconClock,
+  check:     IconCheck,
+  ban:       IconBan,
 };
 
 // ─── Config per status ─────────────────────────────────────────────────────────

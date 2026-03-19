@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { Download01, Printer } from "@untitled-ui/icons-react";
+import { IconDownload, IconPrinter } from "@tabler/icons-react";
 import {
   ensureQrSeeded, getActiveTokenForOR, getTokensForOR,
   type QrToken, type QrEstado,
@@ -79,7 +79,7 @@ export default function QrDisplaySection({ orId, seller, sucursal, bultos }: Pro
             iconLeft={
               downloadToast
                 ? <svg className="w-3.5 h-3.5 text-green-500" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                : <Download01 className="w-3.5 h-3.5" />
+                : <IconDownload className="w-3.5 h-3.5" />
             }
           >
             {downloadToast ? "Descargado" : "Descargar QR"}
@@ -89,7 +89,7 @@ export default function QrDisplaySection({ orId, seller, sucursal, bultos }: Pro
             size="sm"
             onClick={() => setShowLabels(true)}
             className="flex-1 lg:w-full justify-center"
-            iconLeft={<Printer className="w-3.5 h-3.5" />}
+            iconLeft={<IconPrinter className="w-3.5 h-3.5" />}
           >
             Etiquetas bultos
           </Button>

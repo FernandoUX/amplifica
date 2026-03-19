@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { InfoCircle, X, CheckCircle } from "@untitled-ui/icons-react";
+import { IconInfoCircle, IconX, IconCircleCheck } from "@tabler/icons-react";
 
 type PageInfoModalProps = {
   /** Page title shown in the modal header */
@@ -24,7 +24,7 @@ export default function PageInfoModal({ title, description, features, children }
         onClick={() => setOpen(true)}
         className="text-neutral-400 hover:text-neutral-600 transition-colors duration-300"
       >
-        <InfoCircle className="w-5 h-5" />
+        <IconInfoCircle className="w-5 h-5" />
       </button>
 
       {/* Modal */}
@@ -42,7 +42,7 @@ export default function PageInfoModal({ title, description, features, children }
             <div className="flex items-start justify-between gap-3 mb-3">
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 bg-primary-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <InfoCircle className="w-5 h-5 text-primary-500" />
+                  <IconInfoCircle className="w-5 h-5 text-primary-500" />
                 </div>
                 <h2 className="text-base font-semibold text-neutral-900">{title}</h2>
               </div>
@@ -50,7 +50,7 @@ export default function PageInfoModal({ title, description, features, children }
                 onClick={() => setOpen(false)}
                 className="text-neutral-400 hover:text-neutral-600 flex-shrink-0 mt-0.5"
               >
-                <X className="w-4 h-4" />
+                <IconX className="w-4 h-4" />
               </button>
             </div>
 
@@ -62,7 +62,7 @@ export default function PageInfoModal({ title, description, features, children }
               <ul className="mt-3 space-y-1.5 text-sm text-neutral-500">
                 {features.map((f, i) => (
                   <li key={i} className="flex items-center gap-2">
-                    <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                    <IconCircleCheck className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
                     {f}
                   </li>
                 ))}

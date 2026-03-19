@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Sidebar from "@/components/layout/Sidebar";
-import { Menu01, HelpCircle } from "@untitled-ui/icons-react";
+import { IconMenu2, IconHelpCircle } from "@tabler/icons-react";
 import AmplificaLogo from "@/components/layout/AmplificaLogo";
 
 export default function ConfiguracionLayout({ children }: { children: React.ReactNode }) {
@@ -28,11 +28,11 @@ export default function ConfiguracionLayout({ children }: { children: React.Reac
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: "#1D1D1F" }}>
       <div className="fixed top-0 left-0 right-0 h-14 flex items-center justify-center px-4 z-40 lg:hidden" style={{ backgroundColor: "#1D1D1F" }}>
         <button onClick={() => setSidebarOpen(true)} className="absolute left-4 text-white/70 hover:text-white p-1.5 -ml-1.5 rounded-lg transition-colors">
-          <Menu01 className="w-5 h-5" />
+          <IconMenu2 className="w-5 h-5" />
         </button>
         <AmplificaLogo />
         <button className="absolute right-4 text-white/70 hover:text-white p-1.5 -mr-1.5 rounded-lg transition-colors">
-          <HelpCircle className="w-5 h-5" />
+          <IconHelpCircle className="w-5 h-5" />
         </button>
       </div>
 

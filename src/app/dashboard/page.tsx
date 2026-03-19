@@ -1,12 +1,12 @@
 "use client";
 
-import { Calendar } from "lucide-react";
 import {
-  CurrencyDollar,
-  ShoppingCart01,
-  Receipt,
-  ShoppingBag02,
-} from "@untitled-ui/icons-react";
+  IconCalendar,
+  IconCurrencyDollar,
+  IconShoppingCart,
+  IconReceipt,
+  IconShoppingBag,
+} from "@tabler/icons-react";
 import KpiCard from "./_components/KpiCard";
 import SalesTrendChart from "./_components/SalesTrendChart";
 import SalesChannelChart from "./_components/SalesChannelChart";
@@ -32,7 +32,7 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <button className="flex items-center gap-2 px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-700 hover:bg-neutral-50 transition-colors">
-            <Calendar className="w-4 h-4 text-neutral-400" />
+            <IconCalendar className="w-4 h-4 text-neutral-400" />
             <span className="tabular-nums">18/02/2026 – 18/03/2026</span>
           </button>
         </div>
@@ -45,26 +45,26 @@ export default function DashboardPage() {
           prefix="$"
           value="3.395.491.104"
           delta={{ value: "+12,4%", label: "desde el mes pasado", color: "green" }}
-          icon={<CurrencyDollar className="w-5 h-5" />}
+          icon={<IconCurrencyDollar className="w-5 h-5" />}
         />
         <KpiCard
           title="Pedidos Totales"
           value="51.393"
           delta={{ value: "+8,2%", label: "desde el mes pasado", color: "green" }}
-          icon={<ShoppingCart01 className="w-5 h-5" />}
+          icon={<IconShoppingCart className="w-5 h-5" />}
         />
         <KpiCard
           title="Ticket Promedio"
           prefix="$"
           value="66.069"
           delta={{ value: "+3,8%", label: "desde el mes pasado", color: "green" }}
-          icon={<Receipt className="w-5 h-5" />}
+          icon={<IconReceipt className="w-5 h-5" />}
         />
         <KpiCard
           title="Canasta Promedio"
           value="3,2"
           delta={{ value: "-0,1", label: "desde el mes pasado", color: "red" }}
-          icon={<ShoppingBag02 className="w-5 h-5" />}
+          icon={<IconShoppingBag className="w-5 h-5" />}
         />
       </div>
 

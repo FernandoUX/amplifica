@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Check, RefreshCcw01 } from "@untitled-ui/icons-react";
+import { IconChevronLeft, IconChevronRight, IconCheck, IconRefresh } from "@tabler/icons-react";
 import {
   MOVABLE_COLS,
   DEFAULT_ORDER,
@@ -135,7 +135,7 @@ export default function ColumnEditorPage() {
       <div>
         <nav className="max-w-5xl mx-auto px-4 lg:px-6 py-3 flex items-center gap-1.5 text-sm text-neutral-500">
           <Link href="/recepciones" className="hover:text-primary-500 transition-colors duration-300">Órdenes de recepción</Link>
-          <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
+          <IconChevronRight className="w-3.5 h-3.5 text-neutral-300" />
           <span className="text-neutral-700 font-medium">Editor de columnas</span>
         </nav>
       </div>
@@ -149,7 +149,7 @@ export default function ColumnEditorPage() {
             href="/recepciones"
             className="flex items-center justify-center w-8 h-8 border border-neutral-200 rounded-lg text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700 transition-colors duration-300 flex-shrink-0"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <IconChevronLeft className="w-4 h-4" />
           </Link>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">Editor de columnas</h1>
@@ -160,10 +160,10 @@ export default function ColumnEditorPage() {
         </div>
         {/* Desktop buttons */}
         <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
-          <Button variant="tertiary" size="md" className="h-9" onClick={handleReset} iconLeft={<RefreshCcw01 className="w-4 h-4" />}>
+          <Button variant="tertiary" size="md" className="h-9" onClick={handleReset} iconLeft={<IconRefresh className="w-4 h-4" />}>
             Restablecer
           </Button>
-          <Button variant="primary" size="md" className="h-9" onClick={handleSave} iconLeft={<Check className="w-4 h-4" />}>
+          <Button variant="primary" size="md" className="h-9" onClick={handleSave} iconLeft={<IconCheck className="w-4 h-4" />}>
             Guardar cambios
           </Button>
         </div>
@@ -189,7 +189,7 @@ export default function ColumnEditorPage() {
           {/* Fixed: ID — always visible */}
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-100 bg-neutral-50 text-sm text-neutral-600 select-none w-full sm:w-auto">
             <span className="w-4 h-4 rounded border border-neutral-200 bg-neutral-100 flex items-center justify-center flex-shrink-0">
-              <Check className="w-2.5 h-2.5 text-neutral-600" />
+              <IconCheck className="w-2.5 h-2.5 text-neutral-600" />
             </span>
             ID
             <LockIcon />
@@ -213,7 +213,7 @@ export default function ColumnEditorPage() {
                     isVis ? "bg-primary-500 border-primary-500" : "border-neutral-300"
                   }`}
                 >
-                  {isVis && <Check className="w-2.5 h-2.5 text-white" />}
+                  {isVis && <IconCheck className="w-2.5 h-2.5 text-white" />}
                 </span>
                 {col.label}
               </button>
@@ -223,7 +223,7 @@ export default function ColumnEditorPage() {
           {/* Fixed: Acciones — always visible */}
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-100 bg-neutral-50 text-sm text-neutral-600 select-none w-full sm:w-auto">
             <span className="w-4 h-4 rounded border border-neutral-200 bg-neutral-100 flex items-center justify-center flex-shrink-0">
-              <Check className="w-2.5 h-2.5 text-neutral-600" />
+              <IconCheck className="w-2.5 h-2.5 text-neutral-600" />
             </span>
             Acciones
             <LockIcon />
@@ -317,7 +317,7 @@ export default function ColumnEditorPage() {
         <Button variant="secondary" size="lg" className="flex-1" onClick={handleReset}>
           Restablecer
         </Button>
-        <Button variant="primary" size="lg" className="flex-1" onClick={handleSave} iconLeft={<Check className="w-4 h-4" />}>
+        <Button variant="primary" size="lg" className="flex-1" onClick={handleSave} iconLeft={<IconCheck className="w-4 h-4" />}>
           Guardar cambios
         </Button>
       </div>
