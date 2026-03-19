@@ -1,12 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Geist_Mono, Atkinson_Hyperlegible, Geist } from "next/font/google";
+import { Inter, Geist_Mono, Atkinson_Hyperlegible } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
-
 const inter = Inter({
-  variable: "--font-inter",
+  variable: "--font-sans",
   subsets: ["latin"],
 });
 
@@ -39,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={cn("font-sans", geist.variable)}>
+    <html lang="es" className={cn("font-sans", inter.variable)}>
       <body className={`${inter.variable} ${geistMono.variable} ${atkinson.variable} antialiased`}>
         {children}
       </body>

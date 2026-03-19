@@ -19,7 +19,7 @@
   --color-primary-900: #141449;
 
   /* ── Fonts ──────────────────────────────────────────────────────────── */
-  --font-sans: var(--font-inter), "Inter", sans-serif;
+  --font-sans: "Inter", sans-serif;
   --font-mono: "Atkinson Hyperlegible", ui-monospace, monospace;
 
   /* ── Override text-sm: 14px → 13px on desktop ────────────────────────── */
