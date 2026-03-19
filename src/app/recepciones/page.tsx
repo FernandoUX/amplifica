@@ -1315,19 +1315,19 @@ function OrdenesPageInner() {
         </div>
         <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
           <div>
-            <Button variant="tertiary" size="md" className="h-9" iconLeft={<Download01 className="w-4 h-4" />}>
+            <Button variant="tertiary" iconLeft={<Download01 className="w-4 h-4" />}>
               Exportar
             </Button>
           </div>
           {canScanQr && (
             <div>
-              <Button variant="secondary" size="md" className="h-9" iconLeft={<QrCode02 className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
+              <Button variant="secondary" iconLeft={<QrCode02 className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
                 Escanear QR
               </Button>
             </div>
           )}
           {canCreate && (
-            <Button variant="primary" size="md" href="/recepciones/crear" iconLeft={<Plus className="w-4 h-4" />}>
+            <Button variant="primary" href="/recepciones/crear" iconLeft={<Plus className="w-4 h-4" />}>
               Crear recepción
             </Button>
           )}
@@ -1355,7 +1355,7 @@ function OrdenesPageInner() {
           {/* Desktop: pill tabs with horizontal scroll */}
           <div
             ref={tabsScrollRef}
-            className="hidden sm:flex tabs-scroll items-center gap-0.5 overflow-x-auto p-1 bg-neutral-100 rounded-xl select-none h-[44px]"
+            className="hidden sm:flex tabs-scroll items-center gap-0.5 overflow-x-auto p-0.5 bg-neutral-100 rounded-lg select-none"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
             onMouseDown={e => {
               const el = tabsScrollRef.current;
@@ -1374,7 +1374,7 @@ function OrdenesPageInner() {
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 style={NW}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 flex-shrink-0 flex items-center ${
+                className={`px-2.5 py-1 rounded-md text-[13px] leading-tight transition-all duration-200 flex-shrink-0 flex items-center h-[30px] ${
                   activeTab === tab ? "bg-white text-neutral-900 font-medium shadow-sm" : "text-neutral-500 hover:text-neutral-700"
                 }`}
               >
