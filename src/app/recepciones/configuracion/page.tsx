@@ -1280,38 +1280,7 @@ export default function ConfiguracionPage() {
               </div>
             </div>
 
-            {/* Tiempo anticipado + leyenda de estados (legend hidden on mobile) */}
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2 bg-white border border-neutral-200 rounded-lg px-3 py-2">
-                <Clock className="w-4 h-4 text-neutral-600" />
-                <span className="text-xs text-neutral-600 font-medium">Anticipación:</span>
-                <div className="relative">
-                  <select
-                    value={calCfg.tiempoAnticipado}
-                    onChange={e => {
-                      const next = { ...(configs[calSucursal] ?? DEFAULT_CONFIG), tiempoAnticipado: Number(e.target.value) };
-                      const nc = { ...configs, [calSucursal]: next };
-                      setConfigs(nc);
-                      try { localStorage.setItem(LS_CONFIG, JSON.stringify(nc)); } catch { /* ignore */ }
-                    }}
-                    className="appearance-none pl-2 pr-6 py-0.5 text-xs font-semibold text-primary-500 focus:outline-none bg-transparent"
-                  >
-                    {[6, 12, 24, 48, 72].map(h => <option key={h} value={h}>{h}h</option>)}
-                  </select>
-                  <ChevronDown className="absolute right-0.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-primary-400 pointer-events-none" />
-                </div>
-              </div>
-
-              {/* Leyenda de estados — hidden on mobile */}
-              <div className="hidden sm:flex items-center gap-3 text-xs text-neutral-500 flex-wrap">
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-sky-500 inline-block" /> Programado</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block" /> En bodega</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-primary-500 inline-block" /> En conteo</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block" /> Pendiente</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> Completada</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-neutral-400 inline-block" /> Cancelado</span>
-              </div>
-            </div>
+            {/* Anticipación + leyenda removed — calendar now only shows Programado */}
 
             {/* ── WEEK VIEW ── */}
             {calViewMode === "week" && (() => {
