@@ -6,20 +6,20 @@
 export type ChannelItem = { name: string; value: number; color: string };
 
 export const CHANNELS: ChannelItem[] = [
-  { name: "Cornershop",  value: 1_250_000_000, color: "#2F30FF" },
-  { name: "Rappi",       value: 820_000_000,   color: "#F59E0B" },
-  { name: "PedidosYa",   value: 480_000_000,   color: "#10B981" },
-  { name: "Justo",       value: 310_000_000,   color: "#EF4444" },
-  { name: "Web",         value: 215_000_000,   color: "#8B5CF6" },
+  { name: "Cornershop",  value: 1_250_000_000, color: "#5B5BFF" },
+  { name: "Rappi",       value: 820_000_000,   color: "#E84393" },
+  { name: "PedidosYa",   value: 480_000_000,   color: "#FEDE00" },
+  { name: "Justo",       value: 310_000_000,   color: "#3DDB85" },
+  { name: "Web",         value: 215_000_000,   color: "#5B5BFF80" },
   { name: "Otros",       value: 320_491_104,   color: "#D1D5DB" },
 ];
 
 // ─── Ventas por Sucursal ─────────────────────────────────────────────────────
 export const BRANCH_COLORS: Record<string, string> = {
-  "Lo Barnechea":   "#F59E0B",
-  "Centro":         "#10B981",
-  "La Reina":       "#3B82F6",
-  "Quilicura":      "#8B5CF6",
+  "Lo Barnechea":   "#5B5BFF",
+  "Centro":         "#E84393",
+  "La Reina":       "#FEDE00",
+  "Quilicura":      "#3DDB85",
 };
 
 export type BranchItem = { name: string; value: number };
