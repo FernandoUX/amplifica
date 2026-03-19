@@ -1602,10 +1602,10 @@ function OrdenesPageInner() {
                   return (
                     <div className="mt-2 space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className={`text-[11px] font-medium tabular-nums ${isComplete ? "text-green-600" : "text-neutral-500"}`}>
+                        <span className={`text-[11px] font-sans font-medium tabular-nums tracking-normal ${isComplete ? "text-green-600" : "text-neutral-500"}`}>
                           {orden.progreso.contadas.toLocaleString("es-CL")}/{orden.progreso.total.toLocaleString("es-CL")}
                         </span>
-                        <span className={`text-[11px] font-medium tabular-nums ${isComplete ? "text-green-600" : "text-neutral-500"}`}>
+                        <span className={`text-[11px] font-sans font-medium tabular-nums tracking-normal ${isComplete ? "text-green-600" : "text-neutral-500"}`}>
                           {pct}%
                         </span>
                       </div>
@@ -1717,7 +1717,7 @@ function OrdenesPageInner() {
             const el = e.currentTarget;
             el.classList.toggle("scrolled-end", el.scrollLeft + el.clientWidth >= el.scrollWidth - 2);
           }}>
-          <table className="w-full table-fixed text-sm border-collapse">
+          <table className="w-full table-fixed text-sm border-collapse font-sans tracking-normal">
 
             <thead className="sticky top-0 z-10">
               <tr className="border-b border-neutral-100 bg-neutral-50">
@@ -1788,7 +1788,7 @@ function OrdenesPageInner() {
                             <span className="text-neutral-300 text-sm select-none pl-1">└</span>
                             <Link
                               href={`/recepciones/${encodeURIComponent(orden.id)}`}
-                              className="inline-block bg-neutral-100 text-neutral-500 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 w-fit text-[11px] font-sans transition-colors"
+                              className="inline-block bg-neutral-100 text-neutral-500 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 w-fit text-[11px] font-mono transition-colors"
                             >
                               {orden.id}
                             </Link>
@@ -1796,7 +1796,7 @@ function OrdenesPageInner() {
                         ) : (
                           <Link
                             href={`/recepciones/${encodeURIComponent(orden.id)}`}
-                            className="inline-block bg-neutral-100 text-neutral-700 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 w-fit text-xs font-sans transition-colors"
+                            className="inline-block bg-neutral-100 text-neutral-700 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 w-fit text-xs font-mono transition-colors"
                           >
                             {orden.id}
                           </Link>
@@ -1854,7 +1854,7 @@ function OrdenesPageInner() {
                           );
                         case "skus":
                           return (
-                            <td key="skus" className="py-3 px-4 text-neutral-700 tabular-nums text-center" style={NW}>
+                            <td key="skus" className="py-3 px-4 text-neutral-700 font-mono tabular-nums text-center" style={NW}>
                               {orden.skus}
                             </td>
                           );
