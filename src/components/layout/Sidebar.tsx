@@ -587,7 +587,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
                         ${collapsed ? "justify-center" : ""}
                         ${isActive ? "text-white" : "text-white/70 hover:text-white hover:bg-white/5"}`}
                     >
-                      <Icon className="w-4 h-4 flex-shrink-0" />
+                      <Icon className="w-4 h-4 flex-shrink-0" {...(isActive ? { fill: "currentColor", strokeWidth: 1.5 } : {})} />
                       {!collapsed && (
                         <>
                           <span className="flex-1 text-left">{item.label}</span>
@@ -636,7 +636,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
                         : "text-white/70 hover:text-white hover:bg-white/5"
                     }`}
                   >
-                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    <Icon className="w-4 h-4 flex-shrink-0" {...(pathname === item.href ? { fill: "currentColor", strokeWidth: 1.5 } : {})} />
                     {!collapsed && <span>{item.label}</span>}
                   </Link>
                 )}
@@ -654,7 +654,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
           title={collapsed ? "Configuración" : undefined}
           className={`flex items-center gap-2.5 px-2 py-2 rounded-lg text-[14px] lg:text-[13px] text-white/70 hover:text-white hover:bg-white/5 transition-colors duration-300 ${collapsed ? "justify-center" : ""}`}
         >
-          <IconSettings className="w-4 h-4 flex-shrink-0" />
+          <IconSettings className="w-4 h-4 flex-shrink-0" {...(pathname === "/configuracion" ? { fill: "currentColor", strokeWidth: 1.5 } : {})} />
           {!collapsed && <span>Configuración</span>}
         </Link>
 
