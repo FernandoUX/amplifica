@@ -1355,7 +1355,7 @@ function OrdenesPageInner() {
           {/* Desktop: pill tabs with horizontal scroll */}
           <div
             ref={tabsScrollRef}
-            className="hidden sm:flex tabs-scroll items-center gap-0.5 overflow-x-auto p-1 bg-neutral-100 rounded-xl select-none"
+            className="hidden sm:flex tabs-scroll items-center gap-0.5 overflow-x-auto p-1 bg-neutral-100 rounded-xl select-none h-[44px]"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
             onMouseDown={e => {
               const el = tabsScrollRef.current;
@@ -1380,7 +1380,7 @@ function OrdenesPageInner() {
               >
                 {tab}
                 {statusCounts[tab] > 0 && (
-                  <span className={`ml-1.5 text-[10px] tabular-nums rounded-full px-1.5 py-0.5 font-medium ${
+                  <span className={`ml-1.5 text-[10px] tabular-nums rounded-full min-w-[18px] h-[18px] inline-flex items-center justify-center px-1 font-medium ${
                     activeTab === tab
                       ? "bg-primary-100 text-primary-700"
                       : "bg-neutral-200/70 text-neutral-500"
