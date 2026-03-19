@@ -1315,19 +1315,19 @@ function OrdenesPageInner() {
         </div>
         <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
           <div>
-            <Button variant="tertiary" size="md" className="h-9" iconLeft={<Download01 className="w-4 h-4" />}>
+            <Button variant="ghost" size="md" className="h-9" iconLeft={<Download01 className="w-4 h-4" />}>
               Exportar
             </Button>
           </div>
           {canScanQr && (
             <div>
-              <Button variant={canCreate ? "secondary" : "primary"} className="h-9" iconLeft={<QrCode02 className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
+              <Button variant="secondary" size="md" className="h-9" iconLeft={<QrCode02 className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
                 Escanear QR
               </Button>
             </div>
           )}
           {canCreate && (
-            <Button variant="primary" className="h-9" href="/recepciones/crear" iconLeft={<Plus className="w-4 h-4" />}>
+            <Button variant="primary" size="md" href="/recepciones/crear" iconLeft={<Plus className="w-4 h-4" />}>
               Crear recepción
             </Button>
           )}

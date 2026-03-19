@@ -1,59 +1,35 @@
 "use client";
 
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis,
-  CartesianGrid, Tooltip, Legend,
-} from "recharts";
+  ChartContainer, ChartTooltip, ChartTooltipContent,
+  ChartLegend, ChartLegendContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import { STORES, BRANCH_COLORS, fmtShort } from "../_data";
 import ChartCard from "./ChartCard";
 
-const BRANCHES = Object.keys(BRANCH_COLORS);
+const BRANCH_KEYS = Object.keys(BRANCH_COLORS);
+
+const chartConfig = Object.fromEntries(
+  BRANCH_KEYS.map(b => [b, { label: b, color: BRANCH_COLORS[b] }])
+) satisfies ChartConfig;
 
 export default function SalesStoreChart() {
   return (
     <ChartCard title="Ventas por tienda" subtitle="Desglose por sucursal">
-      <div className="h-[360px] -ml-2">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={STORES} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#F4F4F5" vertical={false} />
-            <XAxis
-              dataKey="tienda"
-              tick={{ fontSize: 11, fill: "#737378" }}
-              axisLine={{ stroke: "#E5E5E6" }}
-              tickLine={false}
-              interval={0}
-              angle={-30}
-              textAnchor="end"
-              height={60}
-            />
-            <YAxis
-              tickFormatter={fmtShort}
-              tick={{ fontSize: 11, fill: "#737378" }}
-              axisLine={false}
-              tickLine={false}
-              width={48}
-            />
-            <Tooltip
-              formatter={(v) => fmtShort(Number(v))}
-              contentStyle={{ borderRadius: 12, border: "1px solid #E5E5E6", fontSize: 12 }}
-            />
-            <Legend
-              iconType="circle"
-              iconSize={8}
-              wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
-            />
-            {BRANCHES.map(b => (
-              <Bar
-                key={b}
-                dataKey={b}
-                stackId="a"
-                fill={BRANCH_COLORS[b]}
-                radius={b === "Quilicura" ? [4, 4, 0, 0] : undefined}
-              />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      <ChartContainer config={chartConfig} className="h-[360px] w-full">
+        <BarChart accessibilityLayer data={STORES} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+          <CartesianGrid vertical={false} />
+          <XAxis dataKey="tienda" tickLine={false} axisLine={false} interval={0} angle={-30} textAnchor="end" height={60} tickMargin={8} />
+          <YAxis tickFormatter={fmtShort} tickLine={false} axisLine={false} width={48} />
+          <ChartTooltip content={<ChartTooltipContent />} />
+          <ChartLegend content={<ChartLegendContent />} />
+          {BRANCH_KEYS.map(b => (
+            <Bar key={b} dataKey={b} fill={BRANCH_COLORS[b]} radius={[4, 4, 0, 0]} />
+          ))}
+        </BarChart>
+      </ChartContainer>
     </ChartCard>
   );
 }

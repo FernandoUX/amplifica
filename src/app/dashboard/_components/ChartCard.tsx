@@ -12,7 +12,7 @@ type ChartCardProps = {
 
 export default function ChartCard({ title, subtitle, action, children, className = "" }: ChartCardProps) {
   return (
-    <div className={`bg-white border border-neutral-200 rounded-2xl p-5 ${className}`}>
+    <div className={`bg-white border border-neutral-200 rounded-2xl p-5 relative ${className}`}>
       <div className="flex items-start justify-between mb-4">
         <div>
           <h3 className="text-sm font-semibold text-neutral-800">{title}</h3>

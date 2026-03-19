@@ -1,41 +1,6 @@
 // ─── Mock Data: Dashboard C-Level ────────────────────────────────────────────
 
-export type KpiItem = {
-  title: string;
-  value: string;
-  prefix?: string;
-  delta: { value: string; label: string; color: "green" | "red" | "blue" | "amber" | "neutral" };
-  sparkData: number[];
-};
-
-export const KPIS: KpiItem[] = [
-  {
-    title: "Ventas Totales",
-    prefix: "$",
-    value: "3.395.491.104",
-    delta: { value: "+12,4%", label: "vs mes anterior", color: "green" },
-    sparkData: [180, 220, 195, 260, 240, 310, 290, 350, 320, 380, 410, 390, 450, 480],
-  },
-  {
-    title: "Pedidos Totales",
-    value: "51.393",
-    delta: { value: "+8,2%", label: "vs mes anterior", color: "green" },
-    sparkData: [320, 340, 310, 380, 360, 400, 390, 420, 410, 450, 440, 480, 470, 510],
-  },
-  {
-    title: "Ticket Promedio",
-    prefix: "$",
-    value: "66.069",
-    delta: { value: "+3,8%", label: "vs mes anterior", color: "green" },
-    sparkData: [580, 600, 610, 595, 620, 630, 640, 625, 650, 660, 645, 670, 680, 660],
-  },
-  {
-    title: "Canasta Promedio",
-    value: "3,2",
-    delta: { value: "-0,1", label: "vs mes anterior", color: "red" },
-    sparkData: [3.4, 3.3, 3.5, 3.2, 3.3, 3.1, 3.4, 3.2, 3.3, 3.1, 3.2, 3.0, 3.2, 3.2],
-  },
-];
+// KPIs are now defined inline in page.tsx with icons
 
 // ─── Ventas por Canal (simplificado: Top 5 + Otros) ─────────────────────────
 export type ChannelItem = { name: string; value: number; color: string };
