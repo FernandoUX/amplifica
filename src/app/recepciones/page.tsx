@@ -1377,7 +1377,7 @@ function OrdenesPageInner() {
           {/* Desktop: pill tabs with horizontal scroll */}
           <div
             ref={tabsScrollRef}
-            className="hidden sm:flex tabs-scroll items-center gap-0.5 overflow-x-auto p-0.5 bg-neutral-100 rounded-lg select-none"
+            className="hidden sm:flex tabs-scroll items-center gap-0.5 overflow-x-auto px-0.5 bg-neutral-100 rounded-lg select-none h-9"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
             onMouseDown={e => {
               const el = tabsScrollRef.current;
@@ -1396,7 +1396,7 @@ function OrdenesPageInner() {
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 style={NW}
-                className={`px-2.5 py-1 rounded-md text-[13px] leading-tight transition-all duration-200 flex-shrink-0 flex items-center h-[30px] ${
+                className={`px-2.5 rounded-md text-[13px] leading-tight transition-all duration-200 flex-shrink-0 flex items-center h-8 ${
                   activeTab === tab ? "bg-white text-neutral-900 font-medium shadow-sm" : "text-neutral-500 hover:text-neutral-700"
                 }`}
               >
@@ -1737,7 +1737,7 @@ function OrdenesPageInner() {
                 {/* Dynamic columns */}
                 {activeColumns.map(key => {
                   const COL_WIDTHS: Record<ColumnKey, string> = {
-                    creacion: "w-[110px]", fechaAgendada: "w-[150px]",
+                    creacion: "min-w-[110px] w-[110px]", fechaAgendada: "min-w-[160px] w-[160px]",
                     seller: "w-[110px]", sucursal: "w-[110px]", estado: "w-[210px]",
                     progreso: "w-[130px]", sesiones: "w-[75px]",
                     skus: "w-[60px]", uTotales: "w-[85px]", tags: "w-[130px]",
