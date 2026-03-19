@@ -234,7 +234,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
       style={{ backgroundColor: "#1D1D1F" }}
     >
       {/* ── Logo + collapse ────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-3 py-3.5 border-b border-white/10">
+      <div className={`px-3 py-3.5 border-b border-white/10 ${collapsed ? "flex flex-col items-center gap-2" : "flex items-center justify-between"}`}>
         <div className="hidden lg:block">
           {!collapsed && <AmplificaLogo />}
           {collapsed && <AmplificaLogo collapsed />}
@@ -248,10 +248,10 @@ export default function Sidebar({ onClose }: SidebarProps) {
             <XClose className="w-5 h-5" />
           </button>
         )}
-        {/* Desktop collapse toggle — icon only, right of logo */}
+        {/* Desktop collapse toggle */}
         <button
           onClick={() => setCollapsed(c => !c)}
-          className={`text-white/40 hover:text-white p-1 rounded flex-shrink-0 hidden lg:flex ${collapsed ? "mx-auto" : "ml-auto"}`}
+          className={`text-white/40 hover:text-white p-1 rounded flex-shrink-0 hidden lg:flex ${collapsed ? "" : "ml-auto"}`}
         >
           <ChevronLeft
             className={`w-4 h-4 transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`}
