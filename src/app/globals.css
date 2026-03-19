@@ -342,6 +342,10 @@ input[type="number"] {
   --text-xs--line-height: 1rem;
   --text-base: 0.875rem;
   --text-base--line-height: 1.25rem;
+  --btn-h-sm: 2rem;       /* 32px */
+  --btn-h-md: 2.5rem;     /* 40px */
+  --btn-h-lg: 2.75rem;    /* 44px */
+  --btn-h-xl: 3rem;       /* 48px */
 }
 
 /* Medium */
@@ -352,6 +356,10 @@ input[type="number"] {
   --text-xs--line-height: 1.125rem;
   --text-base: 1rem;
   --text-base--line-height: 1.5rem;
+  --btn-h-sm: 2.25rem;    /* 36px */
+  --btn-h-md: 2.75rem;    /* 44px */
+  --btn-h-lg: 3rem;       /* 48px */
+  --btn-h-xl: 3.25rem;    /* 52px */
 }
 
 /* Large */
@@ -362,4 +370,8 @@ input[type="number"] {
   --text-xs--line-height: 1.25rem;
   --text-base: 1.125rem;
   --text-base--line-height: 1.75rem;
+  --btn-h-sm: 2.5rem;     /* 40px */
+  --btn-h-md: 3rem;       /* 48px */
+  --btn-h-lg: 3.25rem;    /* 52px */
+  --btn-h-xl: 3.5rem;     /* 56px */
 }

@@ -1064,8 +1064,18 @@ function OrdenesPageInner() {
     }
     if (sortField) {
       rows.sort((a, b) => {
-        const da = parseDate(sortField === "creacion" ? a.creacion : a.fechaAgendada);
-        const db = parseDate(sortField === "creacion" ? b.creacion : b.fechaAgendada);
+        const fieldA = sortField === "creacion" ? a.creacion : a.fechaAgendada;
+        const fieldB = sortField === "creacion" ? b.creacion : b.fechaAgendada;
+        // "Sin agendar" (—) always goes to the end regardless of sort direction
+        if (sortField === "fechaAgendada") {
+          const aEmpty = fieldA === "—" || fieldA === "Sin agendar";
+          const bEmpty = fieldB === "—" || fieldB === "Sin agendar";
+          if (aEmpty && !bEmpty) return 1;
+          if (!aEmpty && bEmpty) return -1;
+          if (aEmpty && bEmpty) return 0;
+        }
+        const da = parseDate(fieldA);
+        const db = parseDate(fieldB);
         return sortDir === "asc" ? da - db : db - da;
       });
     }

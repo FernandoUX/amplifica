@@ -26,10 +26,17 @@ type ButtonProps = ButtonAsButton | ButtonAsLink;
 
 // ─── Size tokens ──────────────────────────────────────────────────────────────
 const sizeClasses: Record<Size, string> = {
-  sm: "h-8 px-3 text-xs gap-1.5 rounded-lg",
-  md: "h-10 px-4 text-sm gap-2 rounded-lg",
-  lg: "h-11 px-5 text-sm gap-2 rounded-lg",
-  xl: "h-12 px-6 text-base gap-2.5 rounded-lg",
+  sm: "px-3 text-xs gap-1.5 rounded-lg",
+  md: "px-4 text-sm gap-2 rounded-lg",
+  lg: "px-5 text-sm gap-2 rounded-lg",
+  xl: "px-6 text-base gap-2.5 rounded-lg",
+};
+
+const sizeHeightVar: Record<Size, string> = {
+  sm: "var(--btn-h-sm, 2rem)",
+  md: "var(--btn-h-md, 2.5rem)",
+  lg: "var(--btn-h-lg, 2.75rem)",
+  xl: "var(--btn-h-xl, 3rem)",
 };
 
 const iconSizeClasses: Record<Size, string> = {
@@ -90,6 +97,8 @@ export default function Button(props: ButtonProps) {
     ${className}
   `;
 
+  const heightStyle = { height: sizeHeightVar[size] } as React.CSSProperties;
+
   const content = loading ? (
     <>
       <Loader2 className={`${iconSizeClasses[size]} animate-spin`} />
@@ -104,11 +113,11 @@ export default function Button(props: ButtonProps) {
   );
 
   if (href) {
-    return <Link href={href} className={cls}>{content}</Link>;
+    return <Link href={href} className={cls} style={heightStyle}>{content}</Link>;
   }
 
   return (
-    <button disabled={isDisabled} className={cls} {...(rest as Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className">)}>
+    <button disabled={isDisabled} className={cls} style={heightStyle} {...(rest as Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className">)}>
       {content}
     </button>
   );
