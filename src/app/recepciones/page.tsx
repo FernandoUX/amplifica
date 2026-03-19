@@ -1738,9 +1738,9 @@ function OrdenesPageInner() {
                 {activeColumns.map(key => {
                   const COL_WIDTHS: Record<ColumnKey, string> = {
                     creacion: "min-w-[110px] w-[110px]", fechaAgendada: "min-w-[160px] w-[160px]",
-                    seller: "w-[110px]", sucursal: "w-[110px]", estado: "w-[210px]",
+                    seller: "w-[110px]", sucursal: "w-[110px]", estado: "min-w-[210px] w-[210px]",
                     progreso: "w-[130px]", sesiones: "w-[75px]",
-                    skus: "w-[60px]", uTotales: "w-[85px]", tags: "w-[130px]",
+                    skus: "w-[60px]", uTotales: "w-[85px]", tags: "min-w-[180px] w-[180px]",
                   };
                   const w = COL_WIDTHS[key];
                   if (key === "creacion") return (
