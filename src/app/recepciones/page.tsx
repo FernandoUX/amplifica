@@ -1722,7 +1722,7 @@ function OrdenesPageInner() {
             <thead className="sticky top-0 z-10">
               <tr className="border-b border-neutral-100 bg-neutral-50">
                 {/* Fixed: ID */}
-                <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-500 w-[130px]" style={NW}>ID</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 w-[130px]" style={NW}>ID</th>
 
                 {/* Dynamic columns */}
                 {activeColumns.map(key => {
@@ -1734,12 +1734,12 @@ function OrdenesPageInner() {
                   };
                   const w = COL_WIDTHS[key];
                   if (key === "creacion") return (
-                    <th key="creacion" className={`text-left py-3 px-4 text-xs font-semibold text-neutral-500 cursor-pointer hover:text-neutral-700 select-none ${w}`} style={NW} onClick={() => toggleSort("creacion")}>
+                    <th key="creacion" className={`text-left py-3 px-4 text-xs font-semibold text-neutral-700 cursor-pointer hover:text-neutral-900 select-none ${w}`} style={NW} onClick={() => toggleSort("creacion")}>
                       Creación <SortIcon field="creacion" sortField={sortField} sortDir={sortDir} />
                     </th>
                   );
                   if (key === "fechaAgendada") return (
-                    <th key="fechaAgendada" className={`text-left py-3 px-4 text-xs font-semibold text-neutral-500 cursor-pointer hover:text-neutral-700 select-none ${w}`} style={NW} onClick={() => toggleSort("fechaAgendada")}>
+                    <th key="fechaAgendada" className={`text-left py-3 px-4 text-xs font-semibold text-neutral-700 cursor-pointer hover:text-neutral-900 select-none ${w}`} style={NW} onClick={() => toggleSort("fechaAgendada")}>
                       F. agendada <SortIcon field="fechaAgendada" sortField={sortField} sortDir={sortDir} />
                     </th>
                   );
@@ -1752,14 +1752,14 @@ function OrdenesPageInner() {
                   const CENTER_COLS: ColumnKey[] = ["sesiones", "skus"];
                   const align = CENTER_COLS.includes(key) ? "text-center" : "text-left";
                   return (
-                    <th key={key} className={`${align} py-3 px-4 text-xs font-semibold text-neutral-500 ${w}`} style={NW}>
+                    <th key={key} className={`${align} py-3 px-4 text-xs font-semibold text-neutral-700 ${w}`} style={NW}>
                       {LABELS[key]}
                     </th>
                   );
                 })}
 
                 {/* Fixed: Acciones */}
-                <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-500 bg-neutral-50 w-[100px]" style={{ ...NW, ...stickyRight }}>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 bg-neutral-50 w-[100px]" style={{ ...NW, ...stickyRight }}>
                   Acciones
                 </th>
               </tr>
