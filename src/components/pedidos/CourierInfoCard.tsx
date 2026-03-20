@@ -66,15 +66,23 @@ export default function CourierInfoCard({
         <CardTitle className="text-sm">Información del Courier</CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Courier header */}
+        {/* Courier header + dimensions */}
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
             <Truck className="w-5 h-5 text-primary-500" />
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-neutral-800">{courier}</p>
             <p className="text-xs text-primary-500">{servicio}</p>
           </div>
+          {dimensiones && (
+            <div className="text-right flex-shrink-0">
+              <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">Dimensiones</p>
+              <p className="text-xs font-medium text-neutral-700">
+                {dimensiones.largo}×{dimensiones.ancho}×{dimensiones.alto}cm ({dimensiones.peso}kg)
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Data rows */}
@@ -122,16 +130,6 @@ export default function CourierInfoCard({
                 </div>
               )}
             </>
-          )}
-
-          {/* Dimensions */}
-          {dimensiones && (
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-neutral-500">Dimensiones</span>
-              <span className="font-medium text-neutral-700">
-                {dimensiones.largo}×{dimensiones.ancho}×{dimensiones.alto}cm ({dimensiones.peso}kg)
-              </span>
-            </div>
           )}
         </div>
 
