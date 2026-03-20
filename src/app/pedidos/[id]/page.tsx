@@ -366,7 +366,7 @@ function PedidoDetalleContent() {
 
             {/* Timeline — full width */}
             <Card size="sm">
-              <CardContent className="pt-4">
+              <CardContent className="pt-4 !px-4">
                 <PedidoTimeline steps={timelineSteps} />
               </CardContent>
             </Card>
