@@ -819,6 +819,21 @@ function CrearORPageInner() {
     }
   }, [isCompletar, completarSucursal, completarSeller]);
 
+  // Sync form with sidebar filter changes in real-time
+  useEffect(() => {
+    if (isCompletar) return;
+    function handleFilterChange() {
+      const suc = localStorage.getItem("amplifica_filter_sucursal");
+      const sel = localStorage.getItem("amplifica_filter_seller");
+      if (suc) { setForm(f => ({ ...f, sucursal: suc })); setLockedSucursal(true); }
+      else      { setLockedSucursal(false); }
+      if (sel) { setForm(f => ({ ...f, tienda: sel }));   setLockedSeller(true);   }
+      else      { setLockedSeller(false); }
+    }
+    window.addEventListener("amplifica-filter-change", handleFilterChange);
+    return () => window.removeEventListener("amplifica-filter-change", handleFilterChange);
+  }, [isCompletar]);
+
   const canContinue = () => {
     if (step === 1) return form.sucursal && form.tienda && (form.desconoceFormato || (form.pallets && form.bultos));
     if (step === 2) return form.products.length > 0;
