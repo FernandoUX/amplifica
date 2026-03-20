@@ -88,7 +88,7 @@ export const TABS_PEDIDOS = [
 ] as const;
 
 export const TAB_BADGE_COLORS: Record<string, { active: string; inactive: string }> = {
-  "Todos":             { active: "bg-primary-100 text-primary-700", inactive: "bg-neutral-200/70 text-neutral-500" },
+  "Todos":             { active: "bg-primary-500 text-white", inactive: "bg-neutral-200/70 text-neutral-500" },
   "Pendiente":         { active: "bg-neutral-200 text-neutral-700", inactive: "bg-neutral-200/70 text-neutral-500" },
   "Validado":          { active: "bg-sky-100 text-sky-700",         inactive: "bg-sky-100/60 text-sky-600/70" },
   "En preparación":    { active: "bg-primary-100 text-primary-700", inactive: "bg-primary-100/60 text-primary-600/70" },
