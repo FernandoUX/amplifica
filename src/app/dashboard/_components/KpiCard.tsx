@@ -54,7 +54,7 @@ export default function KpiCard({ title, value, prefix, delta, icon, sparkline, 
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
                 <defs>
-                  <linearGradient id={`spark-${title.replace(/\s/g, "")}`} x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id={`spark-${title.replace(/[^a-zA-Z0-9]/g, "")}`} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={chartColor} stopOpacity={0.2} />
                     <stop offset="100%" stopColor={chartColor} stopOpacity={0} />
                   </linearGradient>
@@ -64,7 +64,7 @@ export default function KpiCard({ title, value, prefix, delta, icon, sparkline, 
                   dataKey="v"
                   stroke={chartColor}
                   strokeWidth={1.5}
-                  fill={`url(#spark-${title.replace(/\s/g, "")})`}
+                  fill={`url(#spark-${title.replace(/[^a-zA-Z0-9]/g, "")})`}
                   dot={false}
                   isAnimationActive={false}
                 />

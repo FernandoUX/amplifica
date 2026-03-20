@@ -565,7 +565,7 @@ function PedidosPageInner() {
                           )}
                         </td>
                       ))}
-                      <td className="py-3 px-4 bg-white group-hover:bg-neutral-50/60" style={{ ...NW, ...stickyRight }}>
+                      <td className="py-3 px-4 bg-white group-hover:bg-neutral-50/60 transition-colors duration-300" style={{ ...NW, ...stickyRight }}>
                         <div className="flex items-center gap-0.5">
                           {[Eye, FileText, Truck, Share2, Trash2, Printer].map((Icon, i) => (
                             <button key={i} className="p-1.5 rounded hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600 transition-colors">
@@ -710,11 +710,11 @@ function PedidosPageInner() {
             <div className="hidden sm:flex items-center gap-2 flex-1 min-w-0 relative">
               {showLeftArrow && (
                 <button onClick={() => tabsRef.current?.scrollBy({ left: -200, behavior: "smooth" })}
-                  className="absolute left-0 z-10 h-full px-1 bg-gradient-to-r from-white via-white/90 to-transparent">
+                  className="absolute left-0 z-10 h-full px-1 bg-gradient-to-r from-neutral-100 via-neutral-100/90 to-transparent rounded-l-xl">
                   <ChevronLeft className="w-4 h-4 text-neutral-400" />
                 </button>
               )}
-              <div ref={tabsRef} className="flex items-center gap-1 overflow-x-auto tabs-scroll" style={{ scrollbarWidth: "none" }}>
+              <div ref={tabsRef} className="flex items-center gap-1 overflow-x-auto tabs-scroll bg-neutral-100 rounded-xl p-1" style={{ scrollbarWidth: "none" }}>
                 {TABS_PEDIDOS.map(tab => {
                   const isActive = activeTab === tab;
                   const count = statusCounts[tab] ?? 0;
@@ -727,7 +727,7 @@ function PedidosPageInner() {
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all duration-200 flex-shrink-0 ${
                         isActive
                           ? "bg-white text-neutral-900 font-medium shadow-sm"
-                          : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50"
+                          : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50/60"
                       }`}
                     >
                       {tab}
@@ -740,7 +740,7 @@ function PedidosPageInner() {
               </div>
               {showRightArrow && (
                 <button onClick={() => tabsRef.current?.scrollBy({ left: 200, behavior: "smooth" })}
-                  className="absolute right-0 z-10 h-full px-1 bg-gradient-to-l from-white via-white/90 to-transparent">
+                  className="absolute right-0 z-10 h-full px-1 bg-gradient-to-l from-neutral-100 via-neutral-100/90 to-transparent rounded-r-xl">
                   <ChevronRight className="w-4 h-4 text-neutral-400" />
                 </button>
               )}
@@ -850,7 +850,7 @@ function PedidosPageInner() {
                           )}
                         </td>
                       ))}
-                      <td className="py-3 px-4 bg-white group-hover:bg-neutral-50/60" style={{ ...NW, ...stickyRight }}>
+                      <td className="py-3 px-4 bg-white group-hover:bg-neutral-50/60 transition-colors duration-300" style={{ ...NW, ...stickyRight }}>
                         <MejoradaActionsCell pedido={p} />
                       </td>
                     </tr>
