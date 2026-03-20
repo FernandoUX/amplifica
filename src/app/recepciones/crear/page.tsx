@@ -809,13 +809,13 @@ function CrearORPageInner() {
   useEffect(() => {
     if (isCompletar) {
       // Lock sucursal/seller in completar mode (they came from the existing OR)
-      if (completarSucursal) setLockedSucursal(true);
-      if (completarSeller)   setLockedSeller(true);
+      if (completarSucursal) { setLockedSucursal(true); setForm(f => ({ ...f, sucursal: completarSucursal })); }
+      if (completarSeller)   { setLockedSeller(true);   setForm(f => ({ ...f, tienda: completarSeller })); }
     } else {
       const suc = localStorage.getItem("amplifica_filter_sucursal");
       const sel = localStorage.getItem("amplifica_filter_seller");
-      if (suc) setLockedSucursal(true);
-      if (sel) setLockedSeller(true);
+      if (suc) { setForm(f => ({ ...f, sucursal: suc })); setLockedSucursal(true); }
+      if (sel) { setForm(f => ({ ...f, tienda: sel }));   setLockedSeller(true);   }
     }
   }, [isCompletar, completarSucursal, completarSeller]);
 

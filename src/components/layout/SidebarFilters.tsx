@@ -84,17 +84,22 @@ export default function SidebarFilters({ currentRole }: SidebarFiltersProps) {
     } catch { /* ignore */ }
   }, []);
 
-  // Auto-set filters when role has restricted access
+  // Restore saved selections from localStorage on mount (without overwriting them)
+  useEffect(() => {
+    const savedSuc = localStorage.getItem("amplifica_filter_sucursal");
+    const savedSel = localStorage.getItem("amplifica_filter_seller");
+    if (savedSuc) _setSelectedSucursal(savedSuc);
+    if (savedSel) _setSelectedSeller(savedSel);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-set filters when role has restricted access (don't clear for "all" — preserves user selection)
   useEffect(() => {
     if (allowedSucursales !== "all" && allowedSucursales.length === 1) {
       setSelectedSucursal(allowedSucursales[0]);
-    } else if (allowedSucursales === "all") {
-      setSelectedSucursal(null);
     }
     if (allowedSellers !== "all" && allowedSellers.length === 1) {
       setSelectedSeller(allowedSellers[0]);
-    } else if (allowedSellers === "all") {
-      setSelectedSeller(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentRole]);
