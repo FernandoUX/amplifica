@@ -28,7 +28,13 @@ type MenuItem = {
 
 const MENU: MenuItem[] = [
   { label: "Dashboard",        icon: ChartLine,   href: "/dashboard" },
-  { label: "Pedidos",          icon: ShoppingBag,  href: "/pedidos",      hasChildren: true },
+  {
+    label: "Pedidos", icon: ShoppingBag, href: "/pedidos",
+    hasChildren: true,
+    children: [
+      { label: "Lista de pedidos", href: "/pedidos" },
+    ],
+  },
   { label: "Devoluciones",     icon: RefreshCw,    href: "/devoluciones", hasChildren: true },
   { label: "Inventario",       icon: Package,      href: "/inventario",   hasChildren: true },
   {
