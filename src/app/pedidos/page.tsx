@@ -163,7 +163,7 @@ type MenuItem = { label: string; icon?: React.ComponentType<{ className?: string
 type PrimaryAction = { tooltip: string; icon: React.ComponentType<{ className?: string }> };
 type ActionConfig = { primary?: PrimaryAction; menu: MenuItem[] };
 
-// Acciones disponibles para todos los pedidos
+// Acciones para vista actual (sin navegación dinámica — iconos-only)
 const PEDIDO_ACTIONS: MenuItem[] = [
   { label: "Ver detalle", icon: Eye },
   { label: "Ver comanda", icon: FileText },
@@ -173,14 +173,27 @@ const PEDIDO_ACTIONS: MenuItem[] = [
   { label: "Eliminar pedido", icon: Trash2, danger: true },
 ];
 
-function getPedidoActions(_estado: PedidoStatus): ActionConfig {
+// Acciones para vista mejorada (con navegación)
+function buildPedidoMenu(pedidoId: number, push: (url: string) => void): MenuItem[] {
+  return [
+    { label: "Ver detalle", icon: Eye, onClick: () => push(`/pedidos/${pedidoId}`) },
+    { label: "Ver comanda", icon: FileText },
+    { label: "Cotizar", icon: Receipt },
+    { label: "Subir etiqueta de envío", icon: Upload },
+    { label: "Reimprimir etiqueta de envío", icon: Printer },
+    { label: "Eliminar pedido", icon: Trash2, danger: true },
+  ];
+}
+
+function getPedidoActions(pedidoId: number, push: (url: string) => void): ActionConfig {
   return {
     primary: { tooltip: "Ver detalle", icon: Eye },
-    menu: PEDIDO_ACTIONS,
+    menu: buildPedidoMenu(pedidoId, push),
   };
 }
 
 function MejoradaActionsCell({ pedido, hidePrimary }: { pedido: Pedido; hidePrimary?: boolean }) {
+  const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
   const [showTooltip, setShowTooltip] = useState(false);
@@ -190,7 +203,7 @@ function MejoradaActionsCell({ pedido, hidePrimary }: { pedido: Pedido; hidePrim
   const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
   useEffect(() => { setMounted(true); }, []);
 
-  const { primary, menu } = getPedidoActions(pedido.estadoPreparacion);
+  const { primary, menu } = getPedidoActions(pedido.id, router.push);
 
   const openMenu = useCallback(() => {
     if (!dotsRef.current) return;
@@ -238,6 +251,7 @@ function MejoradaActionsCell({ pedido, hidePrimary }: { pedido: Pedido; hidePrim
         <div className="relative">
           <button
             ref={btnRef}
+            onClick={() => router.push(`/pedidos/${pedido.id}`)}
             onMouseEnter={() => setShowTooltip(true)}
             onMouseLeave={() => setShowTooltip(false)}
             className="p-1.5 rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors duration-200"
@@ -935,7 +949,7 @@ function PedidosPageInner() {
         <>
           {/* ── KPI Cards ──────────────────────────────────────────────────── */}
           <div className="rounded-2xl bg-[#111759] overflow-x-auto overflow-y-visible table-scroll mb-5">
-            <div className="flex sm:grid sm:grid-cols-3 lg:grid-cols-6 divide-x divide-white/10">
+            <div className="flex divide-x divide-white/10">
               {KPIS_MEJORADA.map(kpi => {
                 const iconNode = kpi.title.includes("atraso")
                   ? <AlertTriangle className="w-4 h-4" />
@@ -958,7 +972,7 @@ function PedidosPageInner() {
                       ? "bg-amber-500/15 text-amber-400"
                       : "bg-neutral-500/15 text-neutral-400";
                 return (
-                  <div key={kpi.title} className="min-w-[65vw] sm:min-w-0 px-5 py-5 flex flex-col gap-0.5 flex-1 flex-shrink-0 sm:flex-shrink">
+                  <div key={kpi.title} className="min-w-[65vw] sm:min-w-[200px] px-5 py-5 flex flex-col gap-0.5 flex-1 flex-shrink-0">
                     <div className="flex items-center gap-1.5">
                       <span className="text-neutral-300">{iconNode}</span>
                       <span className="text-xs font-semibold text-neutral-300">{kpi.title}</span>
@@ -1279,7 +1293,7 @@ function PedidosPageInner() {
                   </div>
                 )}
                 <div className="flex items-center gap-2 mt-3 pt-3 border-t border-neutral-100">
-                  <Button variant="secondary" size="sm" iconLeft={<Eye className="w-4 h-4" />} className="flex-1">
+                  <Button variant="secondary" size="sm" iconLeft={<Eye className="w-4 h-4" />} className="flex-1" href={`/pedidos/${p.id}`}>
                     Ver detalle
                   </Button>
                   <MejoradaActionsCell pedido={p} hidePrimary />
