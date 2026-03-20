@@ -218,4 +218,91 @@ export const PEDIDOS: Pedido[] = [
   { id: 1196778, fechaCreacion: "Ayer a las 15:30", fechaValidacion: "Ayer a las 15:40", idAmplifica: "W-OKWU109830", seller: "Okwu", sucursal: "Providencia", canalVenta: "Woocommerce", metodoEntrega: "Amplifica Priority", estadoPreparacion: "Listo para retiro", estadoEnvio: "Por retirar", preparacion: [], entrega: [sla("Próximo: 10h", "blue")], tags: [] },
   { id: 1196777, fechaCreacion: "17/03/2026 10:00", fechaValidacion: "17/03/2026 10:10", idAmplifica: "S-MANA813595", seller: "Manabu", sucursal: "Quilicura", canalVenta: "Shopify", metodoEntrega: "Blue Express", estadoPreparacion: "En preparación", estadoEnvio: "Pendiente", preparacion: [sla("Próximo: 10h", "blue")], entrega: [sla("Próximo: 18h", "blue")], tags: [] },
   { id: 1196776, fechaCreacion: "17/03/2026 09:30", fechaValidacion: "17/03/2026 09:40", idAmplifica: "F-ERGO922205", seller: "Ergopouch", sucursal: "La Reina", canalVenta: "Falabella", metodoEntrega: "Retiro en tienda", estadoPreparacion: "Por empacar", estadoEnvio: "Pendiente", preparacion: [sla("Próximo: 12h", "blue")], entrega: [sla("Próximo: 2d", "blue")], tags: [] },
+
+  // ─── Generados programáticamente (70 pedidos adicionales) ──────────────────
+  ...generateExtraPedidos(),
 ];
+
+function generateExtraPedidos(): Pedido[] {
+  const sellers = ["Basics", "Manabu", "Ergopouch", "Okwu", "La Cocinería", "MamáMía", "Saint Venik", "NutriPro", "VitaFit", "BioNature"];
+  const sucursales = ["Quilicura", "Centro", "La Reina", "Providencia", "Las Condes", "Lo Barnechea", "Santiago Centro"];
+  const canales = ["Shopify", "MercadoLibre", "Falabella", "Woocommerce", "Paris"];
+  const metodos = ["Blue Express", "Fazt", "Amplifica Priority", "Retiro en tienda", "Chilexpress"];
+  const prefixMap: Record<string, string> = { Shopify: "S", MercadoLibre: "M", Falabella: "F", Woocommerce: "W", Paris: "P" };
+
+  const estados: { estado: PedidoStatus; envio: string; weight: number }[] = [
+    { estado: "Pendiente", envio: "Pendiente", weight: 12 },
+    { estado: "Validado", envio: "Pendiente", weight: 10 },
+    { estado: "En preparación", envio: "Pendiente", weight: 10 },
+    { estado: "Por empacar", envio: "Pendiente", weight: 8 },
+    { estado: "Empacado", envio: "En tránsito", weight: 10 },
+    { estado: "Listo para retiro", envio: "Por retirar", weight: 8 },
+    { estado: "Entregado", envio: "Entregado", weight: 6 },
+    { estado: "Cancelado", envio: "Cancelado", weight: 4 },
+  ];
+
+  const pick = <T,>(arr: T[], seed: number): T => arr[seed % arr.length];
+  const hrs = (seed: number) => (8 + (seed % 14)).toString().padStart(2, "0");
+  const mins = (seed: number) => ((seed * 7) % 60).toString().padStart(2, "0");
+
+  const result: Pedido[] = [];
+  let idCounter = 1196750;
+
+  for (let i = 0; i < 70; i++) {
+    const seed = i * 17 + 3;
+    const seller = pick(sellers, seed);
+    const sucursal = pick(sucursales, seed + 5);
+    const canal = pick(canales, seed + 2);
+    const metodo = pick(metodos, seed + 7);
+    const prefix = prefixMap[canal] || "S";
+    const sellerCode = seller.replace(/[^A-Z]/gi, "").toUpperCase().slice(0, 4);
+    const idAmplifica = `${prefix}-${sellerCode}${100000 + idCounter % 100000}`;
+
+    // Pick estado weighted
+    const totalWeight = estados.reduce((s, e) => s + e.weight, 0);
+    let w = (seed * 13) % totalWeight;
+    let estadoInfo = estados[0];
+    for (const e of estados) { w -= e.weight; if (w < 0) { estadoInfo = e; break; } }
+
+    const day = 1 + (i % 18);
+    const month = day <= 18 ? "03" : "02";
+    const fecha = `${day.toString().padStart(2, "0")}/${month}/2026 ${hrs(seed)}:${mins(seed)}`;
+    const fechaVal = estadoInfo.estado === "Pendiente" && i % 3 === 0 ? "-" : fecha;
+
+    const conAtraso = i % 9 === 0 && estadoInfo.estado !== "Entregado" && estadoInfo.estado !== "Cancelado";
+
+    let prep: SLABadge[] = [];
+    let entr: SLABadge[] = [];
+    if (conAtraso) {
+      const h = 1 + (i % 24);
+      prep = [sla(`Atrasado: ${h}h`, "red")];
+      entr = [sla(`Atrasado: ${h + 4}h`, "red")];
+    } else if (estadoInfo.estado !== "Entregado" && estadoInfo.estado !== "Cancelado") {
+      const h = 4 + (i % 36);
+      if (estadoInfo.estado !== "Listo para retiro") prep = [sla(`Próximo: ${h}h`, h > 20 ? "amber" : "blue")];
+      entr = [sla(`Próximo: ${h + 8}h`, h + 8 > 30 ? "amber" : "blue")];
+    }
+
+    const tags: string[] = estadoInfo.estado === "Entregado" ? [i % 2 === 0 ? "a tiempo" : "con retraso"] : [];
+
+    result.push({
+      id: idCounter,
+      fechaCreacion: fecha,
+      fechaValidacion: fechaVal,
+      idAmplifica,
+      seller,
+      sucursal,
+      canalVenta: canal,
+      metodoEntrega: metodo,
+      estadoPreparacion: estadoInfo.estado,
+      estadoEnvio: estadoInfo.envio,
+      preparacion: prep,
+      entrega: entr,
+      tags,
+      conAtraso: conAtraso || undefined,
+    });
+
+    idCounter--;
+  }
+  return result;
+}
