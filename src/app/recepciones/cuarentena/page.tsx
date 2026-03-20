@@ -361,7 +361,7 @@ export default function CuarentenaPage() {
 
         {/* ── Alerts ── */}
         {alertaPendiente48h.length > 0 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3">
+          <div className="bg-amber-50 rounded-xl px-4 py-3 flex items-start gap-3">
             <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-semibold text-amber-800">
@@ -372,7 +372,7 @@ export default function CuarentenaPage() {
           </div>
         )}
         {alertaGestion7d.length > 0 && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-3">
+          <div className="bg-red-50 rounded-xl px-4 py-3 flex items-start gap-3">
             <Clock className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-semibold text-red-800">
@@ -691,13 +691,13 @@ export default function CuarentenaPage() {
                           )}
                           {rec.estado === "en_gestion" && rec.categoria === "interna" && (
                             <button onClick={() => updateRecord(rec.id, { estado: "resuelto", resolucion: "stock_disponible", resueltoen: new Date().toISOString() })}
-                              className="text-xs font-medium px-2.5 py-1.5 border border-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors duration-300 whitespace-nowrap">
+                              className="text-xs font-medium px-2.5 py-1.5 bg-neutral-100 text-neutral-800 hover:bg-neutral-200 active:bg-neutral-300 rounded-lg transition-colors duration-100 whitespace-nowrap">
                               Re-etiquetado OK
                             </button>
                           )}
                           {rec.estado === "en_gestion" && rec.categoria === "devolucion_seller" && (
                             <button onClick={() => updateRecord(rec.id, { estado: "resuelto", resolucion: "devolucion", resueltoen: new Date().toISOString() })}
-                              className="text-xs font-medium px-2.5 py-1.5 border border-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors duration-300 whitespace-nowrap">
+                              className="text-xs font-medium px-2.5 py-1.5 bg-neutral-100 text-neutral-800 hover:bg-neutral-200 active:bg-neutral-300 rounded-lg transition-colors duration-100 whitespace-nowrap">
                               Confirmar retiro
                             </button>
                           )}
@@ -708,8 +708,8 @@ export default function CuarentenaPage() {
                             </button>
                           )}
                           {rec.estado === "resuelto" && (
-                            <span className="text-xs text-neutral-600 flex items-center gap-1">
-                              <Check className="w-3 h-3 text-green-500" /> Resuelto
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 rounded-full text-xs font-medium whitespace-nowrap">
+                              <Check className="w-3 h-3" /> Resuelto
                             </span>
                           )}
                         </td>
@@ -830,13 +830,13 @@ export default function CuarentenaPage() {
                     )}
                     {rec.estado === "en_gestion" && rec.categoria === "interna" && (
                       <button onClick={() => updateRecord(rec.id, { estado: "resuelto", resolucion: "stock_disponible", resueltoen: new Date().toISOString() })}
-                        className="w-full text-xs font-medium px-3 py-2 border border-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors duration-300">
+                        className="w-full text-xs font-medium px-3 py-2 bg-neutral-100 text-neutral-800 hover:bg-neutral-200 active:bg-neutral-300 rounded-lg transition-colors duration-100">
                         Re-etiquetado OK
                       </button>
                     )}
                     {rec.estado === "en_gestion" && rec.categoria === "devolucion_seller" && (
                       <button onClick={() => updateRecord(rec.id, { estado: "resuelto", resolucion: "devolucion", resueltoen: new Date().toISOString() })}
-                        className="w-full text-xs font-medium px-3 py-2 border border-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors duration-300">
+                        className="w-full text-xs font-medium px-3 py-2 bg-neutral-100 text-neutral-800 hover:bg-neutral-200 active:bg-neutral-300 rounded-lg transition-colors duration-100">
                         Confirmar retiro
                       </button>
                     )}
@@ -847,8 +847,8 @@ export default function CuarentenaPage() {
                       </button>
                     )}
                     {rec.estado === "resuelto" && (
-                      <span className="text-xs text-neutral-600 flex items-center gap-1">
-                        <Check className="w-3 h-3 text-green-500" /> Resuelto
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 rounded-full text-xs font-medium whitespace-nowrap">
+                        <Check className="w-3 h-3" /> Resuelto
                       </span>
                     )}
                   </div>
