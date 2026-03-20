@@ -11,6 +11,7 @@ import {
   ArrowUpDown, ArrowUp, ArrowDown, Plus, Minus, ChevronDown, ChevronLeft, ChevronRight,
   CalendarPlus, Package, Play, ClipboardCheck, SkipForward,
   Eye, Pencil, CircleOff, LockOpen,
+  Calendar, Warehouse, Clock, Ban, Check, ClipboardList,
 } from "lucide-react";
 import StatusBadge, { Status } from "@/components/recepciones/StatusBadge";
 import { OR_STATS } from "./_data";
@@ -97,68 +98,109 @@ const TAG_FILTER_OPTIONS: {
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const ORDENES: Orden[] = [
-  // ─── Creado — sin fecha agendada aún ─────────────────────────────────────────
-  { id: "RO-BARRA-191", creacion: "01/03/2026", fechaAgendada: "—", seller: "Extra Life", sucursal: "Quilicura", estado: "Creado", skus: 5, uTotales: "100" },
-  { id: "RO-BARRA-192", creacion: "08/03/2026", fechaAgendada: "—", seller: "NutriPro", sucursal: "Providencia", estado: "Creado", skus: 12, uTotales: "640" },
-  { id: "RO-BARRA-193", creacion: "09/03/2026", fechaAgendada: "—", seller: "BioNature", sucursal: "Las Condes", estado: "Creado", skus: 8, uTotales: "380", comentarios: "Primer envío del seller, coordinar recepción con KAM Carolina." },
-  { id: "RO-BARRA-210", creacion: "10/03/2026", fechaAgendada: "—", seller: "Gohard", sucursal: "Lo Barnechea", estado: "Creado", skus: 3, uTotales: "150" },
+  // ─── Creado — sin fecha agendada aún (10) ──────────────────────────────────
+  { id: "RO-BARRA-301", creacion: "10/03/2026", fechaAgendada: "—", seller: "Extra Life", sucursal: "Quilicura", estado: "Creado", skus: 8, uTotales: "320" },
+  { id: "RO-BARRA-302", creacion: "11/03/2026", fechaAgendada: "—", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Creado", skus: 5, uTotales: "180" },
+  { id: "RO-BARRA-303", creacion: "12/03/2026", fechaAgendada: "—", seller: "GoHard", sucursal: "La Reina", estado: "Creado", skus: 14, uTotales: "1.050", comentarios: "Primer envío del seller, coordinar recepción con KAM Carolina." },
+  { id: "RO-BARRA-304", creacion: "13/03/2026", fechaAgendada: "—", seller: "Bekoko", sucursal: "Providencia", estado: "Creado", skus: 3, uTotales: "90" },
+  { id: "RO-BARRA-305", creacion: "14/03/2026", fechaAgendada: "—", seller: "Mundo Fungi", sucursal: "Las Condes", estado: "Creado", skus: 7, uTotales: "420" },
+  { id: "RO-BARRA-306", creacion: "15/03/2026", fechaAgendada: "—", seller: "Xclusive", sucursal: "Lo Barnechea", estado: "Creado", skus: 12, uTotales: "640" },
+  { id: "RO-BARRA-307", creacion: "16/03/2026", fechaAgendada: "—", seller: "Boqa", sucursal: "Quilicura", estado: "Creado", skus: 4, uTotales: "150" },
+  { id: "RO-BARRA-308", creacion: "17/03/2026", fechaAgendada: "—", seller: "Mind Nutrition", sucursal: "Santiago Centro", estado: "Creado", skus: 18, uTotales: "1.200", comentarios: "Seller solicita recepción urgente esta semana." },
+  { id: "RO-BARRA-309", creacion: "18/03/2026", fechaAgendada: "—", seller: "Basics", sucursal: "La Reina", estado: "Creado", skus: 6, uTotales: "280" },
+  { id: "RO-BARRA-310", creacion: "19/03/2026", fechaAgendada: "—", seller: "Your Goal", sucursal: "Providencia", estado: "Creado", skus: 10, uTotales: "520" },
 
-  // ─── Programado ──────────────────────────────────────────────────────────────
-  { id: "RO-BARRA-183", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "Extra Life", sucursal: "Quilicura", estado: "Programado", skus: 320, uTotales: "2.550", pallets: 10, bultos: 32, comentarios: "Llegará en un camión blanco patente XXNN33, preguntar por Carlos." },
-  { id: "RO-BARRA-182", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", fechaExtra: "Expirado hace 4 horas", seller: "Extra Life", sucursal: "La Reina", estado: "Programado", skus: 320, uTotales: "2.550", pallets: 8, bultos: 28, guiaDespacho: "GD-2026-004821" },
-  { id: "RO-BARRA-190", creacion: "17/02/2026", fechaAgendada: "21/02/2026 09:00", fechaExtra: "Expira en 28 minutos", seller: "Le Vice", sucursal: "Lo Barnechea", estado: "Programado", skus: 15, uTotales: "450", pallets: 3, bultos: 15, comentarios: "Entrega parcial, solo 2 pallets llegarán hoy. El resto el miércoles.", guiaDespacho: "GD-2026-005130" },
-  { id: "RO-BARRA-194", creacion: "07/03/2026", fechaAgendada: "11/03/2026 10:00", seller: "VitaFit", sucursal: "Quilicura", estado: "Programado", skus: 24, uTotales: "1.800", pallets: 6, bultos: 18, comentarios: "Incluye 4 pallets de colágeno que requieren temperatura controlada.", guiaDespacho: "GD-2026-007845" },
-  { id: "RO-BARRA-195", creacion: "06/03/2026", fechaAgendada: "12/03/2026 14:30", seller: "NutriPro", sucursal: "La Reina", estado: "Programado", skus: 18, uTotales: "960", pallets: 4, bultos: 12, guiaDespacho: "GD-2026-008102" },
-  { id: "RO-BARRA-211", creacion: "09/03/2026", fechaAgendada: "13/03/2026 11:00", seller: "BioNature", sucursal: "Santiago Centro", estado: "Programado", skus: 9, uTotales: "420", pallets: 2, bultos: 6, guiaDespacho: "GD-2026-008390" },
-  { id: "RO-BARRA-226", creacion: "10/03/2026", fechaAgendada: "14/03/2026 09:00", seller: "Gohard", sucursal: "Las Condes", estado: "Programado", skus: 2, uTotales: "780", pallets: 3, bultos: 10, guiaDespacho: "GD-2026-008501" },
-  { id: "RO-BARRA-227", creacion: "10/03/2026", fechaAgendada: "15/03/2026 08:30", seller: "Le Vice", sucursal: "Providencia", estado: "Programado", skus: 2, uTotales: "1.640", pallets: 5, bultos: 16, comentarios: "Carga incluye productos de temporada, priorizar descarga.", guiaDespacho: "GD-2026-008612" },
-  { id: "RO-BARRA-228", creacion: "11/03/2026", fechaAgendada: "15/03/2026 14:00", seller: "VitaFit", sucursal: "Quilicura", estado: "Programado", skus: 2, uTotales: "2.100", pallets: 8, bultos: 24, guiaDespacho: "GD-2026-008720" },
-  { id: "RO-BARRA-229", creacion: "11/03/2026", fechaAgendada: "16/03/2026 10:00", seller: "NutriPro", sucursal: "Lo Barnechea", estado: "Programado", skus: 2, uTotales: "540", pallets: 2, bultos: 8, comentarios: "Segundo envío del mes, verificar contra OC anterior.", guiaDespacho: "GD-2026-008835" },
-  { id: "RO-BARRA-230", creacion: "11/03/2026", fechaAgendada: "17/03/2026 11:30", seller: "Extra Life", sucursal: "La Reina", estado: "Programado", skus: 2, uTotales: "1.200", pallets: 4, bultos: 14, guiaDespacho: "GD-2026-008940" },
+  // ─── Programado (10) ───────────────────────────────────────────────────────
+  { id: "RO-BARRA-311", creacion: "05/03/2026", fechaAgendada: "10/03/2026 09:00", seller: "Extra Life", sucursal: "La Reina", estado: "Programado", skus: 22, uTotales: "1.800", pallets: 6, bultos: 20, comentarios: "Llegará en camión blanco patente XXNN33, preguntar por Carlos.", guiaDespacho: "GD-2026-009101" },
+  { id: "RO-BARRA-312", creacion: "06/03/2026", fechaAgendada: "11/03/2026 14:30", fechaExtra: "Expirado hace 4 horas", seller: "Le Vice", sucursal: "Lo Barnechea", estado: "Programado", skus: 15, uTotales: "450", pallets: 3, bultos: 12, guiaDespacho: "GD-2026-009205" },
+  { id: "RO-BARRA-313", creacion: "07/03/2026", fechaAgendada: "12/03/2026 08:00", seller: "Saint Venik", sucursal: "Quilicura", estado: "Programado", skus: 9, uTotales: "380", pallets: 2, bultos: 8, guiaDespacho: "GD-2026-009312" },
+  { id: "RO-BARRA-314", creacion: "08/03/2026", fechaAgendada: "13/03/2026 10:00", fechaExtra: "Expira en 28 minutos", seller: "GoHard", sucursal: "Santiago Centro", estado: "Programado", skus: 28, uTotales: "2.400", pallets: 8, bultos: 30, comentarios: "Incluye 4 pallets de proteína que requieren temperatura controlada.", guiaDespacho: "GD-2026-009418" },
+  { id: "RO-BARRA-315", creacion: "09/03/2026", fechaAgendada: "14/03/2026 16:00", seller: "MamáMía", sucursal: "Providencia", estado: "Programado", skus: 5, uTotales: "200", pallets: 1, bultos: 4, guiaDespacho: "GD-2026-009520" },
+  { id: "RO-BARRA-316", creacion: "10/03/2026", fechaAgendada: "15/03/2026 09:30", seller: "Teregott", sucursal: "Las Condes", estado: "Programado", skus: 11, uTotales: "680", pallets: 3, bultos: 10, guiaDespacho: "GD-2026-009630" },
+  { id: "RO-BARRA-317", creacion: "11/03/2026", fechaAgendada: "16/03/2026 11:00", seller: "Xclusive", sucursal: "Lo Barnechea", estado: "Programado", skus: 42, uTotales: "3.200", pallets: 12, bultos: 40, comentarios: "Carga incluye mochilas de temporada, priorizar descarga.", guiaDespacho: "GD-2026-009745" },
+  { id: "RO-BARRA-318", creacion: "12/03/2026", fechaAgendada: "17/03/2026 08:30", seller: "Boqa", sucursal: "Quilicura", estado: "Programado", skus: 7, uTotales: "540", pallets: 2, bultos: 8, guiaDespacho: "GD-2026-009851" },
+  { id: "RO-BARRA-319", creacion: "13/03/2026", fechaAgendada: "18/03/2026 15:00", seller: "Mind Nutrition", sucursal: "Santiago Centro", estado: "Programado", skus: 18, uTotales: "1.400", pallets: 5, bultos: 18, comentarios: "Segundo envío del mes, verificar contra OC anterior.", guiaDespacho: "GD-2026-009960" },
+  { id: "RO-BARRA-320", creacion: "14/03/2026", fechaAgendada: "19/03/2026 10:00", seller: "Your Goal", sucursal: "La Reina", estado: "Programado", skus: 24, uTotales: "1.950", pallets: 7, bultos: 22, guiaDespacho: "GD-2026-010074" },
 
-  // ─── Recepcionado en bodega ──────────────────────────────────────────────────
-  { id: "RO-BARRA-180", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Recepcionado en bodega", skus: 2, uTotales: "250", pallets: 2, bultos: 4, comentarios: "Mercancía frágil, manipular con cuidado. Entregar en andén 3." },
-  { id: "RO-BARRA-196", creacion: "05/03/2026", fechaAgendada: "09/03/2026 09:00", seller: "BioNature", sucursal: "Lo Barnechea", estado: "Recepcionado en bodega", skus: 10, uTotales: "520", pallets: 3, bultos: 10 },
-  { id: "RO-BARRA-197", creacion: "04/03/2026", fechaAgendada: "08/03/2026 11:00", seller: "Extra Life", sucursal: "Providencia", estado: "Recepcionado en bodega", skus: 6, uTotales: "310", pallets: 1, bultos: 6, comentarios: "Entregar a operador Juan Pérez en andén 2." },
+  // ─── Recepcionado en bodega (10) ───────────────────────────────────────────
+  { id: "RO-BARRA-321", creacion: "24/02/2026", fechaAgendada: "28/02/2026 09:00", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Recepcionado en bodega", skus: 10, uTotales: "520", pallets: 3, bultos: 10, comentarios: "Mercancía frágil, manipular con cuidado. Entregar en andén 3." },
+  { id: "RO-BARRA-322", creacion: "25/02/2026", fechaAgendada: "01/03/2026 14:00", seller: "Bekoko", sucursal: "Providencia", estado: "Recepcionado en bodega", skus: 6, uTotales: "240", pallets: 1, bultos: 5 },
+  { id: "RO-BARRA-323", creacion: "26/02/2026", fechaAgendada: "02/03/2026 10:30", seller: "Mundo Fungi", sucursal: "La Reina", estado: "Recepcionado en bodega", skus: 8, uTotales: "380", pallets: 2, bultos: 8 },
+  { id: "RO-BARRA-324", creacion: "27/02/2026", fechaAgendada: "03/03/2026 08:00", seller: "Extra Life", sucursal: "Las Condes", estado: "Recepcionado en bodega", skus: 16, uTotales: "1.100", pallets: 4, bultos: 14, comentarios: "Entregar a operador Juan Pérez en andén 2." },
+  { id: "RO-BARRA-325", creacion: "28/02/2026", fechaAgendada: "04/03/2026 11:30", seller: "Teregott", sucursal: "Lo Barnechea", estado: "Recepcionado en bodega", skus: 4, uTotales: "160", pallets: 1, bultos: 4 },
+  { id: "RO-BARRA-326", creacion: "01/03/2026", fechaAgendada: "05/03/2026 09:00", seller: "Basics", sucursal: "Quilicura", estado: "Recepcionado en bodega", skus: 20, uTotales: "1.600", pallets: 6, bultos: 18 },
+  { id: "RO-BARRA-327", creacion: "02/03/2026", fechaAgendada: "06/03/2026 15:00", seller: "GoHard", sucursal: "Santiago Centro", estado: "Recepcionado en bodega", skus: 12, uTotales: "850", pallets: 3, bultos: 10 },
+  { id: "RO-BARRA-328", creacion: "03/03/2026", fechaAgendada: "07/03/2026 10:00", seller: "Xclusive", sucursal: "Providencia", estado: "Recepcionado en bodega", skus: 9, uTotales: "430", pallets: 2, bultos: 7, comentarios: "Productos frágiles, manipular con cuidado." },
+  { id: "RO-BARRA-329", creacion: "04/03/2026", fechaAgendada: "08/03/2026 08:30", seller: "Your Goal", sucursal: "La Reina", estado: "Recepcionado en bodega", skus: 14, uTotales: "980", pallets: 4, bultos: 12 },
+  { id: "RO-BARRA-330", creacion: "05/03/2026", fechaAgendada: "09/03/2026 14:00", seller: "MamáMía", sucursal: "Las Condes", estado: "Recepcionado en bodega", skus: 3, uTotales: "120", pallets: 1, bultos: 4 },
 
-  // ─── En proceso de conteo ────────────────────────────────────────────────────
-  { id: "RO-BARRA-184", creacion: "15/02/2026", fechaAgendada: "19/02/2026 10:00", seller: "Extra Life", sucursal: "Quilicura", estado: "En proceso de conteo", skus: 2, uTotales: "250" },
-  { id: "RO-BARRA-179", creacion: "14/02/2026", fechaAgendada: "18/02/2026 09:00", seller: "Gohard", sucursal: "La Reina", estado: "En proceso de conteo", skus: 2, uTotales: "140" },
-  { id: "RO-BARRA-185", creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "Gohard", sucursal: "Lo Barnechea", estado: "En proceso de conteo", skus: 2, uTotales: "105" },
-  { id: "RO-BARRA-198", creacion: "03/03/2026", fechaAgendada: "07/03/2026 08:30", seller: "VitaFit", sucursal: "Santiago Centro", estado: "En proceso de conteo", skus: 2, uTotales: "1.120" },
+  // ─── En proceso de conteo (10) ─────────────────────────────────────────────
+  { id: "RO-BARRA-331", creacion: "18/02/2026", fechaAgendada: "22/02/2026 09:00", seller: "Extra Life", sucursal: "Quilicura", estado: "En proceso de conteo", skus: 8, uTotales: "600" },
+  { id: "RO-BARRA-332", creacion: "19/02/2026", fechaAgendada: "23/02/2026 10:00", seller: "Le Vice", sucursal: "La Reina", estado: "En proceso de conteo", skus: 5, uTotales: "350" },
+  { id: "RO-BARRA-333", creacion: "20/02/2026", fechaAgendada: "24/02/2026 14:00", seller: "GoHard", sucursal: "Santiago Centro", estado: "En proceso de conteo", skus: 12, uTotales: "1.200" },
+  { id: "RO-BARRA-334", creacion: "21/02/2026", fechaAgendada: "25/02/2026 08:30", seller: "Bekoko", sucursal: "Lo Barnechea", estado: "En proceso de conteo", skus: 4, uTotales: "180" },
+  { id: "RO-BARRA-335", creacion: "22/02/2026", fechaAgendada: "26/02/2026 11:00", seller: "Mundo Fungi", sucursal: "Providencia", estado: "En proceso de conteo", skus: 6, uTotales: "480", comentarios: "Conteo parcial, faltan 4 SKUs por verificar." },
+  { id: "RO-BARRA-336", creacion: "23/02/2026", fechaAgendada: "27/02/2026 09:30", seller: "Mind Nutrition", sucursal: "Las Condes", estado: "En proceso de conteo", skus: 15, uTotales: "1.050" },
+  { id: "RO-BARRA-337", creacion: "24/02/2026", fechaAgendada: "28/02/2026 15:00", seller: "Basics", sucursal: "Quilicura", estado: "En proceso de conteo", skus: 10, uTotales: "780" },
+  { id: "RO-BARRA-338", creacion: "25/02/2026", fechaAgendada: "01/03/2026 10:00", seller: "Your Goal", sucursal: "Santiago Centro", estado: "En proceso de conteo", skus: 20, uTotales: "1.500" },
+  { id: "RO-BARRA-339", creacion: "26/02/2026", fechaAgendada: "02/03/2026 08:00", seller: "Saint Venik", sucursal: "La Reina", estado: "En proceso de conteo", skus: 3, uTotales: "140" },
+  { id: "RO-BARRA-340", creacion: "27/02/2026", fechaAgendada: "03/03/2026 14:30", seller: "Teregott", sucursal: "Providencia", estado: "En proceso de conteo", skus: 7, uTotales: "320" },
 
-  // ─── Pendiente de aprobación — esperando supervisor ──────────────────────────
-  { id: "RO-BARRA-187", creacion: "10/02/2026", fechaAgendada: "14/02/2026 13:00", seller: "Le Vice", sucursal: "La Reina", estado: "Pendiente de aprobación", skus: 3, uTotales: "2.550",
+  // ─── Pendiente de aprobación (10) ──────────────────────────────────────────
+  { id: "RO-BARRA-341", creacion: "10/02/2026", fechaAgendada: "14/02/2026 09:00", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Pendiente de aprobación", skus: 8, uTotales: "1.200",
     tags: makeTags({ conDiferencias: 20 }) },
-  { id: "RO-BARRA-199", creacion: "02/03/2026", fechaAgendada: "06/03/2026 10:00", seller: "NutriPro", sucursal: "Las Condes", estado: "Pendiente de aprobación", skus: 2, uTotales: "780",
+  { id: "RO-BARRA-342", creacion: "11/02/2026", fechaAgendada: "15/02/2026 10:30", seller: "GoHard", sucursal: "La Reina", estado: "Pendiente de aprobación", skus: 12, uTotales: "2.400",
     tags: makeTags({ conDiferencias: 45, noPickeables: 12 }) },
-  { id: "RO-BARRA-212", creacion: "08/03/2026", fechaAgendada: "10/03/2026 09:30", seller: "Gohard", sucursal: "Providencia", estado: "Pendiente de aprobación", skus: 2, uTotales: "1.340",
-    tags: makeTags({ conDiferencias: 8, noPickeables: 3 }) },
-
-  // ─── Cancelado ───────────────────────────────────────────────────────────────
-  { id: "RO-BARRA-188", creacion: "12/02/2026", fechaAgendada: "16/02/2026 11:30", seller: "Extra Life", sucursal: "Santiago Centro", estado: "Cancelado", skus: 8, uTotales: "420" },
-  { id: "RO-BARRA-213", creacion: "20/02/2026", fechaAgendada: "24/02/2026 10:00", seller: "Le Vice", sucursal: "Providencia", estado: "Cancelado", skus: 7, uTotales: "280", comentarios: "Seller canceló envío por falta de stock." },
-
-  // ─── Completada ─────────────────────────────────────────────────────────────
-  { id: "RO-BARRA-189", creacion: "09/02/2026", fechaAgendada: "13/02/2026 15:30", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Completada", skus: 2, uTotales: "750", pallets: 2, bultos: 6,
-    tags: makeTags({ sinDiferencias: 750 }) },
-  { id: "RO-BARRA-200", creacion: "28/02/2026", fechaAgendada: "04/03/2026 15:00", seller: "BioNature", sucursal: "Quilicura", estado: "Completada", skus: 2, uTotales: "800", pallets: 4, bultos: 10,
-    tags: makeTags({ sinDiferencias: 800 }) },
-  { id: "RO-BARRA-215", creacion: "22/02/2026", fechaAgendada: "26/02/2026 08:30", seller: "Gohard", sucursal: "Las Condes", estado: "Completada", skus: 2, uTotales: "2.100",
-    tags: makeTags({ sinDiferencias: 2100 }) },
-
-  // ─── Adicionales ────────────────────────────────────────────────────────────
-  { id: "RO-BARRA-216", creacion: "05/03/2026", fechaAgendada: "—", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Creado", skus: 14, uTotales: "720", comentarios: "Seller solicita recepción urgente esta semana." },
-  { id: "RO-BARRA-217", creacion: "02/03/2026", fechaAgendada: "10/03/2026 08:00", seller: "Extra Life", sucursal: "Lo Barnechea", estado: "Programado", skus: 42, uTotales: "3.200", pallets: 12, bultos: 40, comentarios: "Camión refrigerado, requiere andén 3." },
-  { id: "RO-BARRA-218", creacion: "01/03/2026", fechaAgendada: "06/03/2026 15:00", seller: "VitaFit", sucursal: "Las Condes", estado: "Recepcionado en bodega", skus: 19, uTotales: "1.450", pallets: 5, bultos: 14 },
-  { id: "RO-BARRA-219", creacion: "27/02/2026", fechaAgendada: "03/03/2026 10:30", seller: "NutriPro", sucursal: "Quilicura", estado: "En proceso de conteo", skus: 2, uTotales: "2.840", comentarios: "Conteo parcial, faltan 8 SKUs por verificar." },
-  { id: "RO-BARRA-220", creacion: "26/02/2026", fechaAgendada: "02/03/2026 09:00", seller: "BioNature", sucursal: "La Reina", estado: "Pendiente de aprobación", skus: 2, uTotales: "610",
+  { id: "RO-BARRA-343", creacion: "12/02/2026", fechaAgendada: "16/02/2026 14:00", seller: "Bekoko", sucursal: "Providencia", estado: "Pendiente de aprobación", skus: 4, uTotales: "180",
+    tags: makeTags({ conDiferencias: 8 }) },
+  { id: "RO-BARRA-344", creacion: "13/02/2026", fechaAgendada: "17/02/2026 08:00", seller: "Extra Life", sucursal: "Quilicura", estado: "Pendiente de aprobación", skus: 18, uTotales: "1.500",
+    tags: makeTags({ conDiferencias: 30, noPickeables: 5 }) },
+  { id: "RO-BARRA-345", creacion: "14/02/2026", fechaAgendada: "18/02/2026 11:00", seller: "Xclusive", sucursal: "Las Condes", estado: "Pendiente de aprobación", skus: 6, uTotales: "340",
+    tags: makeTags({ conDiferencias: 12 }) },
+  { id: "RO-BARRA-346", creacion: "15/02/2026", fechaAgendada: "19/02/2026 09:30", seller: "Boqa", sucursal: "Lo Barnechea", estado: "Pendiente de aprobación", skus: 3, uTotales: "150",
+    tags: makeTags({ conDiferencias: 6, noPickeables: 2 }) },
+  { id: "RO-BARRA-347", creacion: "16/02/2026", fechaAgendada: "20/02/2026 15:00", seller: "Mundo Fungi", sucursal: "Santiago Centro", estado: "Pendiente de aprobación", skus: 10, uTotales: "680",
     tags: makeTags({ conDiferencias: 15 }) },
-  { id: "RO-BARRA-221", creacion: "24/02/2026", fechaAgendada: "28/02/2026 14:00", seller: "Gohard", sucursal: "Providencia", estado: "Cancelado", skus: 5, uTotales: "200", comentarios: "Proveedor no se presentó en la fecha acordada." },
-  { id: "RO-BARRA-223", creacion: "21/02/2026", fechaAgendada: "25/02/2026 16:00", seller: "Extra Life", sucursal: "Las Condes", estado: "Completada", skus: 2, uTotales: "1.360",
+  { id: "RO-BARRA-348", creacion: "17/02/2026", fechaAgendada: "21/02/2026 10:00", seller: "Mind Nutrition", sucursal: "Quilicura", estado: "Pendiente de aprobación", skus: 14, uTotales: "1.050",
+    tags: makeTags({ conDiferencias: 22, noPickeables: 8 }) },
+  { id: "RO-BARRA-349", creacion: "18/02/2026", fechaAgendada: "22/02/2026 08:30", seller: "Basics", sucursal: "La Reina", estado: "Pendiente de aprobación", skus: 7, uTotales: "480",
+    tags: makeTags({ conDiferencias: 10 }) },
+  { id: "RO-BARRA-350", creacion: "19/02/2026", fechaAgendada: "23/02/2026 14:00", seller: "Your Goal", sucursal: "Providencia", estado: "Pendiente de aprobación", skus: 16, uTotales: "1.300",
+    tags: makeTags({ conDiferencias: 35, noPickeables: 10 }) },
+
+  // ─── Completada (10) ───────────────────────────────────────────────────────
+  { id: "RO-BARRA-351", creacion: "05/01/2026", fechaAgendada: "09/01/2026 09:00", seller: "Extra Life", sucursal: "Las Condes", estado: "Completada", skus: 10, uTotales: "750", pallets: 3, bultos: 10,
+    tags: makeTags({ sinDiferencias: 750 }) },
+  { id: "RO-BARRA-352", creacion: "08/01/2026", fechaAgendada: "12/01/2026 10:30", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Completada", skus: 6, uTotales: "480", pallets: 2, bultos: 6,
+    tags: makeTags({ sinDiferencias: 480 }) },
+  { id: "RO-BARRA-353", creacion: "12/01/2026", fechaAgendada: "16/01/2026 14:00", seller: "GoHard", sucursal: "Quilicura", estado: "Completada", skus: 20, uTotales: "2.100", pallets: 7, bultos: 24,
+    tags: makeTags({ conDiferencias: 35, noPickeables: 8 }) },
+  { id: "RO-BARRA-354", creacion: "15/01/2026", fechaAgendada: "19/01/2026 08:00", seller: "Bekoko", sucursal: "Providencia", estado: "Completada", skus: 3, uTotales: "120", pallets: 1, bultos: 4,
+    tags: makeTags({ sinDiferencias: 120 }) },
+  { id: "RO-BARRA-355", creacion: "20/01/2026", fechaAgendada: "24/01/2026 11:30", seller: "MamáMía", sucursal: "Lo Barnechea", estado: "Completada", skus: 4, uTotales: "200", pallets: 1, bultos: 5,
+    tags: makeTags({ sinDiferencias: 200 }) },
+  { id: "RO-BARRA-356", creacion: "25/01/2026", fechaAgendada: "29/01/2026 09:00", seller: "Teregott", sucursal: "La Reina", estado: "Completada", skus: 8, uTotales: "560", pallets: 2, bultos: 8,
+    tags: makeTags({ conDiferencias: 18 }) },
+  { id: "RO-BARRA-357", creacion: "28/01/2026", fechaAgendada: "01/02/2026 15:00", seller: "Xclusive", sucursal: "Santiago Centro", estado: "Completada", skus: 15, uTotales: "1.360", pallets: 5, bultos: 16,
     tags: makeTags({ sinDiferencias: 1360 }) },
-  { id: "RO-BARRA-224", creacion: "04/03/2026", fechaAgendada: "09/03/2026 12:00", seller: "VitaFit", sucursal: "Providencia", estado: "Recepcionado en bodega", skus: 8, uTotales: "480", pallets: 2, bultos: 5, comentarios: "Productos frágiles, manipular con cuidado." },
-  { id: "RO-BARRA-225", creacion: "07/03/2026", fechaAgendada: "—", seller: "NutriPro", sucursal: "La Reina", estado: "Creado", skus: 21, uTotales: "1.580" },
+  { id: "RO-BARRA-358", creacion: "02/02/2026", fechaAgendada: "06/02/2026 10:00", seller: "Boqa", sucursal: "Quilicura", estado: "Completada", skus: 5, uTotales: "300", pallets: 1, bultos: 5,
+    tags: makeTags({ sinDiferencias: 300 }) },
+  { id: "RO-BARRA-359", creacion: "05/02/2026", fechaAgendada: "09/02/2026 08:30", seller: "Mind Nutrition", sucursal: "Las Condes", estado: "Completada", skus: 12, uTotales: "980", pallets: 4, bultos: 12,
+    tags: makeTags({ conDiferencias: 25, noPickeables: 6 }) },
+  { id: "RO-BARRA-360", creacion: "08/02/2026", fechaAgendada: "12/02/2026 14:00", seller: "Your Goal", sucursal: "Providencia", estado: "Completada", skus: 18, uTotales: "1.500", pallets: 5, bultos: 18,
+    tags: makeTags({ sinDiferencias: 1500 }) },
+
+  // ─── Cancelado (10) ────────────────────────────────────────────────────────
+  { id: "RO-BARRA-361", creacion: "03/01/2026", fechaAgendada: "07/01/2026 09:00", seller: "Saint Venik", sucursal: "Quilicura", estado: "Cancelado", skus: 5, uTotales: "200", comentarios: "Seller canceló envío por falta de stock." },
+  { id: "RO-BARRA-362", creacion: "10/01/2026", fechaAgendada: "14/01/2026 14:00", seller: "Le Vice", sucursal: "La Reina", estado: "Cancelado", skus: 7, uTotales: "350" },
+  { id: "RO-BARRA-363", creacion: "15/01/2026", fechaAgendada: "19/01/2026 10:30", seller: "Bekoko", sucursal: "Santiago Centro", estado: "Cancelado", skus: 4, uTotales: "160", comentarios: "Proveedor no se presentó en la fecha acordada." },
+  { id: "RO-BARRA-364", creacion: "20/01/2026", fechaAgendada: "24/01/2026 08:00", seller: "MamáMía", sucursal: "Providencia", estado: "Cancelado", skus: 3, uTotales: "100" },
+  { id: "RO-BARRA-365", creacion: "25/01/2026", fechaAgendada: "29/01/2026 11:00", seller: "Teregott", sucursal: "Las Condes", estado: "Cancelado", skus: 6, uTotales: "280", comentarios: "Productos dañados en tránsito, seller prefirió cancelar." },
+  { id: "RO-BARRA-366", creacion: "28/01/2026", fechaAgendada: "01/02/2026 09:30", seller: "Extra Life", sucursal: "Lo Barnechea", estado: "Cancelado", skus: 10, uTotales: "620" },
+  { id: "RO-BARRA-367", creacion: "02/02/2026", fechaAgendada: "06/02/2026 14:00", seller: "GoHard", sucursal: "Quilicura", estado: "Cancelado", skus: 8, uTotales: "450", comentarios: "Error en orden de compra, se generará nueva OR." },
+  { id: "RO-BARRA-368", creacion: "06/02/2026", fechaAgendada: "10/02/2026 10:00", seller: "Xclusive", sucursal: "Santiago Centro", estado: "Cancelado", skus: 12, uTotales: "800" },
+  { id: "RO-BARRA-369", creacion: "10/02/2026", fechaAgendada: "14/02/2026 15:00", seller: "Basics", sucursal: "La Reina", estado: "Cancelado", skus: 9, uTotales: "540", comentarios: "Seller solicitó reprogramación, se canceló esta OR." },
+  { id: "RO-BARRA-370", creacion: "14/02/2026", fechaAgendada: "18/02/2026 08:30", seller: "Your Goal", sucursal: "Providencia", estado: "Cancelado", skus: 14, uTotales: "920" },
 ];
 
 // ─── Tabs — alineados con estados del Notion spec ─────────────────────────────
@@ -188,12 +230,33 @@ const TAB_STATUS: Record<string, Status | null> = {
 const TAB_BADGE_COLORS: Record<string, { active: string; inactive: string }> = {
   "Todas":                   { active: "bg-primary-100 text-primary-700", inactive: "bg-neutral-200/70 text-neutral-500" },
   "Creado":                  { active: "bg-neutral-200 text-neutral-700", inactive: "bg-neutral-200/70 text-neutral-500" },
-  "Programado":              { active: "bg-sky-100 text-sky-700",         inactive: "bg-sky-100/60 text-sky-600/70" },
-  "Recepción en bodega":     { active: "bg-indigo-100 text-indigo-700",   inactive: "bg-indigo-100/60 text-indigo-600/70" },
-  "En proceso de conteo":    { active: "bg-primary-100 text-primary-700", inactive: "bg-primary-100/60 text-primary-600/70" },
-  "Pendiente de aprobación": { active: "bg-orange-100 text-orange-700",   inactive: "bg-orange-100/60 text-orange-600/70" },
-  "Completada":              { active: "bg-green-100 text-green-700",     inactive: "bg-green-100/60 text-green-600/70" },
+  "Programado":              { active: "bg-sky-100 text-sky-700",         inactive: "bg-neutral-200/70 text-neutral-500" },
+  "Recepción en bodega":     { active: "bg-indigo-100 text-indigo-700",   inactive: "bg-neutral-200/70 text-neutral-500" },
+  "En proceso de conteo":    { active: "bg-primary-100 text-primary-700", inactive: "bg-neutral-200/70 text-neutral-500" },
+  "Pendiente de aprobación": { active: "bg-orange-100 text-orange-700",   inactive: "bg-neutral-200/70 text-neutral-500" },
+  "Completada":              { active: "bg-green-100 text-green-700",     inactive: "bg-neutral-200/70 text-neutral-500" },
   "Cancelada":               { active: "bg-neutral-200 text-neutral-700", inactive: "bg-neutral-200/70 text-neutral-500" },
+};
+
+// ─── Tab icon mapping ────────────────────────────────────────────────────────
+const TAB_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  "Creado":                  Plus,
+  "Programado":              Calendar,
+  "Recepción en bodega":     Warehouse,
+  "En proceso de conteo":    ClipboardList,
+  "Pendiente de aprobación": Clock,
+  "Completada":              Check,
+  "Cancelada":               Ban,
+};
+
+const TAB_ICON_ACTIVE_CLASS: Record<string, string> = {
+  "Creado":                  "text-neutral-600",
+  "Programado":              "text-sky-500",
+  "Recepción en bodega":     "text-indigo-500",
+  "En proceso de conteo":    "text-primary-500",
+  "Pendiente de aprobación": "text-orange-500",
+  "Completada":              "text-green-600",
+  "Cancelada":               "text-neutral-500",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -270,8 +333,8 @@ function getActions(estado: Status, id: string, orden?: Orden, onCancel?: (id: s
     }
     case "Programado": {
       const menu: MenuItem[] = [
-        { label: "Ver",       icon: Eye },
-        { label: "Editar",    icon: Pencil },
+        { label: "Ver",       icon: Eye,    href: `/recepciones/${encodeURIComponent(id)}` },
+        { label: "Editar",    icon: Pencil, href: `/recepciones/${encodeURIComponent(id)}` },
       ];
       if (can(r, "or:complete")) menu.push({ label: "Reagendar", icon: CalendarPlus, href: "/recepciones/crear?startStep=3&mode=reagendar" });
       if (canCancelRole) menu.push(cancelItem);
@@ -283,7 +346,6 @@ function getActions(estado: Status, id: string, orden?: Orden, onCancel?: (id: s
     case "Recepcionado en bodega": {
       const menu: MenuItem[] = [
         { label: "Ver",      icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
-        { label: "Editar",   icon: Pencil },
       ];
       if (canCancelRole) menu.push(cancelItem);
       return {
@@ -1343,7 +1405,7 @@ function OrdenesPageInner() {
           </div>
           {canScanQr && (
             <div>
-              <Button variant="secondary" iconLeft={<QrCode className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
+              <Button variant={canCreate ? "secondary" : "primary"} iconLeft={<QrCode className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
                 Escanear QR
               </Button>
             </div>
@@ -1391,33 +1453,37 @@ function OrdenesPageInner() {
               }
             }}
           >
-            {TABS.map(tab => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                style={NW}
-                className={`px-2.5 rounded-md text-[13px] leading-tight transition-all duration-200 flex-shrink-0 flex items-center h-8 ${
-                  activeTab === tab ? "bg-white text-neutral-900 font-medium shadow-sm" : "text-neutral-500 hover:text-neutral-700"
-                }`}
-              >
-                {tab}
-                {statusCounts[tab] > 0 && (() => {
-                  const colors = TAB_BADGE_COLORS[tab] || TAB_BADGE_COLORS["Todas"];
-                  const isActive = activeTab === tab;
-                  const neutralCls = "bg-neutral-200/70 text-neutral-500";
-                  const badgeCls = !isActive
-                    ? neutralCls
-                    : tab === "Todas"
-                      ? "bg-primary-500 text-white"
-                      : colors.active;
-                  return (
-                    <span className={`ml-1.5 text-[10px] tabular-nums rounded-full min-w-[18px] h-[18px] inline-flex items-center justify-center px-1 font-medium ${badgeCls}`}>
-                      {statusCounts[tab]}
-                    </span>
-                  );
-                })()}
-              </button>
-            ))}
+            {TABS.map(tab => {
+              const isActive = activeTab === tab;
+              const TabIcon = TAB_ICON_MAP[tab];
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  style={{ whiteSpace: "nowrap", letterSpacing: "-0.02em" }}
+                  className={`px-2.5 gap-1.5 rounded-md text-[13px] leading-tight transition-all duration-200 flex-shrink-0 flex items-center h-8 ${
+                    isActive ? "bg-white text-neutral-900 font-medium shadow-sm" : "text-neutral-500 hover:text-neutral-700"
+                  }`}
+                >
+                  {TabIcon && <TabIcon className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? (TAB_ICON_ACTIVE_CLASS[tab] ?? "text-neutral-500") : "text-neutral-400"}`} />}
+                  {tab}
+                  {statusCounts[tab] > 0 && (() => {
+                    const colors = TAB_BADGE_COLORS[tab] || TAB_BADGE_COLORS["Todas"];
+                    const neutralCls = "bg-neutral-200/70 text-neutral-500";
+                    const badgeCls = !isActive
+                      ? neutralCls
+                      : tab === "Todas"
+                        ? "bg-primary-500 text-white"
+                        : colors.active;
+                    return (
+                      <span className={`ml-0.5 text-[10px] tabular-nums rounded-full min-w-[18px] h-[18px] inline-flex items-center justify-center px-1 font-medium font-sans ${badgeCls}`}>
+                        {statusCounts[tab]}
+                      </span>
+                    );
+                  })()}
+                </button>
+              );
+            })}
           </div>
           {/* Left arrow */}
           {showLeftArrow && (
@@ -1469,14 +1535,6 @@ function OrdenesPageInner() {
             )}
           </button>
 
-          <Link
-            href="/recepciones/columnas"
-            className="hidden sm:flex h-9 w-9 bg-neutral-100 rounded-lg hover:bg-neutral-200 items-center justify-center transition-colors duration-300"
-            title="Editor de columnas"
-          >
-            <Columns3 className="w-4 h-4 text-neutral-500" />
-          </Link>
-
           <div className="hidden sm:block relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
             <input
@@ -1492,6 +1550,14 @@ function OrdenesPageInner() {
               </button>
             )}
           </div>
+
+          <Link
+            href="/recepciones/columnas"
+            className="hidden sm:flex h-9 w-9 bg-neutral-100 rounded-lg hover:bg-neutral-200 items-center justify-center transition-colors duration-300"
+            title="Editor de columnas"
+          >
+            <Columns3 className="w-4 h-4 text-neutral-500" />
+          </Link>
         </div>
       </div>
 

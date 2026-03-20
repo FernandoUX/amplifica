@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 type OrderEconomyCardProps = {
   subtotal: number;
@@ -23,12 +23,10 @@ export default function OrderEconomyCard({
 }: OrderEconomyCardProps) {
   return (
     <Card size="sm">
-      <CardContent className="pt-4">
-        {/* Title */}
-        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider mb-3">
-          Desglose Económico
-        </p>
-
+      <CardHeader>
+        <CardTitle className="text-sm">Desglose Económico</CardTitle>
+      </CardHeader>
+      <CardContent>
         {/* Line items */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">

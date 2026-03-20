@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Truck, Copy, Check, Printer } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import Button from "@/components/ui/Button";
 
 type CourierInfoCardProps = {
@@ -62,12 +62,10 @@ export default function CourierInfoCard({
 
   return (
     <Card size="sm">
-      <CardContent className="pt-4">
-        {/* Title */}
-        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider mb-3">
-          Información del Courier
-        </p>
-
+      <CardHeader>
+        <CardTitle className="text-sm">Información del Courier</CardTitle>
+      </CardHeader>
+      <CardContent>
         {/* Courier header */}
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">

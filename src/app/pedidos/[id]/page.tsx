@@ -563,10 +563,11 @@ function PedidoDetalleContent() {
                       Dirección del Destinatario
                     </CardTitle>
                     {!editingAddress && (
-                      <button onClick={startEditAddress} className="text-primary-500 hover:text-primary-600 transition-colors text-sm flex items-center gap-1">
-                        <Pencil className="w-3.5 h-3.5" />
-                        Editar todo
-                      </button>
+                      <CardAction>
+                        <Button variant="secondary" size="sm" iconLeft={<Pencil className="w-3.5 h-3.5" />} onClick={startEditAddress}>
+                          Editar
+                        </Button>
+                      </CardAction>
                     )}
                   </CardHeader>
                   <CardContent>
