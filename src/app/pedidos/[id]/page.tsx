@@ -375,11 +375,11 @@ function PedidoDetalleContent() {
             <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-5">
               {/* LEFT COLUMN */}
               <div className="space-y-5">
-                {/* Info card — badges + data grid */}
+                {/* Info card — badges + data grid in 2 columns */}
                 <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
                   <div className="px-4 py-3">
-                    {/* Data grid — label above value, badges inline */}
-                    <div className="flex items-start gap-x-5 gap-y-3 flex-wrap">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                      {/* Row 1 */}
                       <div>
                         <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider mb-1">Preparación</p>
                         <PedidoStatusBadge status={pedido.estadoPreparacion} />
@@ -388,6 +388,7 @@ function PedidoDetalleContent() {
                         <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider mb-1">Envío</p>
                         <EnvioStatusBadge status={pedido.estadoEnvio} />
                       </div>
+                      {/* Row 2 */}
                       {pedido.preparacion.length > 0 && (
                         <div>
                           <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider mb-1">Próx. Preparación</p>
@@ -422,26 +423,36 @@ function PedidoDetalleContent() {
                           </div>
                         </div>
                       )}
+                      {/* Row 3 */}
                       <div>
                         <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Fecha Creación</p>
                         <p className="text-sm font-medium text-neutral-700 mt-0.5">{fmtDate(pedido.fechaCreacion)}</p>
                       </div>
-                      {pedido.fechaEnvio && (
+                      {pedido.fechaEnvio ? (
                         <div>
                           <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Fecha Envío</p>
                           <p className="text-sm font-medium text-neutral-700 mt-0.5">{fmtDate(pedido.fechaEnvio)}</p>
                         </div>
+                      ) : (
+                        <div>
+                          <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">ID Amplifica</p>
+                          <p className="text-sm font-semibold text-neutral-800 mt-0.5 font-sans">{pedido.idAmplifica}</p>
+                        </div>
                       )}
-                      <div>
-                        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">ID Amplifica</p>
-                        <p className="text-sm font-semibold text-neutral-800 mt-0.5 font-sans">{pedido.idAmplifica}</p>
-                      </div>
+                      {/* Row 4 */}
+                      {pedido.fechaEnvio && (
+                        <div>
+                          <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">ID Amplifica</p>
+                          <p className="text-sm font-semibold text-neutral-800 mt-0.5 font-sans">{pedido.idAmplifica}</p>
+                        </div>
+                      )}
                       {pedido.idExterno && (
                         <div>
                           <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">ID Externo</p>
                           <p className="text-sm font-medium text-neutral-700 mt-0.5 font-mono">{pedido.idExterno}</p>
                         </div>
                       )}
+                      {/* Row 5 */}
                       <div>
                         <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Seller</p>
                         <p className="text-sm font-medium text-neutral-700 mt-0.5">{pedido.seller}</p>
