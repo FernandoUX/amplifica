@@ -28,6 +28,7 @@ import CourierInfoCard from "@/components/pedidos/CourierInfoCard";
 import AlertModal from "@/components/ui/AlertModal";
 import Button from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent, CardAction } from "@/components/ui/card";
+import CollapsibleCard from "@/components/ui/CollapsibleCard";
 
 // ─── Tabs ────────────────────────────────────────────────────────────────────
 const TABS = [
@@ -375,12 +376,8 @@ function PedidoDetalleContent() {
             <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-5">
               {/* LEFT COLUMN */}
               <div className="space-y-5">
-                {/* Info card — badges + data grid in 2 columns */}
-                <Card size="sm">
-                  <CardHeader>
-                    <CardTitle className="text-sm">Datos del Pedido</CardTitle>
-                  </CardHeader>
-                  <CardContent>
+                {/* Info card — badges + data grid in 3 columns */}
+                <CollapsibleCard title="Datos del Pedido">
                     <div className="grid grid-cols-3 gap-x-6 gap-y-3">
                       {/* Row 1: Estados */}
                       <div>
@@ -457,20 +454,17 @@ function PedidoDetalleContent() {
                         <p className="text-sm font-medium text-neutral-700 mt-0.5">{pedido.sucursal}</p>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+                </CollapsibleCard>
 
                 {/* Products preview */}
-                <Card size="sm">
-                  <CardHeader>
-                    <CardTitle className="text-sm">Productos ({pedido.productos.length})</CardTitle>
-                    <CardAction>
-                      <span className="text-xs bg-primary-50 text-primary-700 rounded-full px-2.5 py-1 font-semibold">
-                        {pedido.productos.reduce((s, p) => s + p.cantidad, 0)} unidades en total
-                      </span>
-                    </CardAction>
-                  </CardHeader>
-                  <CardContent>
+                <CollapsibleCard
+                  title={`Productos (${pedido.productos.length})`}
+                  action={
+                    <span className="text-xs bg-primary-50 text-primary-700 rounded-full px-2.5 py-1 font-semibold">
+                      {pedido.productos.reduce((s, p) => s + p.cantidad, 0)} unidades en total
+                    </span>
+                  }
+                >
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
@@ -512,8 +506,7 @@ function PedidoDetalleContent() {
                         </tfoot>
                       </table>
                     </div>
-                  </CardContent>
-                </Card>
+                </CollapsibleCard>
               </div>
 
               {/* RIGHT COLUMN (Sidebar) */}
@@ -1023,11 +1016,7 @@ function PedidoDetalleContent() {
 
                 {/* Actores Involucrados */}
                 {pedido.actoresInvolucrados && pedido.actoresInvolucrados.length > 0 && (
-                  <Card size="sm">
-                    <CardContent className="pt-4">
-                      <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider mb-3">
-                        Actores Involucrados
-                      </p>
+                  <CollapsibleCard title="Actores Involucrados">
                       <div className="space-y-3">
                         {pedido.actoresInvolucrados.map((actor, i) => (
                           <div key={i} className="flex items-center gap-3">
@@ -1041,8 +1030,7 @@ function PedidoDetalleContent() {
                           </div>
                         ))}
                       </div>
-                    </CardContent>
-                  </Card>
+                  </CollapsibleCard>
                 )}
 
                 {/* Eficiencia de Ciclo */}

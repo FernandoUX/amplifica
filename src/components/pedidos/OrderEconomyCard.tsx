@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import CollapsibleCard from "@/components/ui/CollapsibleCard";
 
 type OrderEconomyCardProps = {
   subtotal: number;
@@ -22,11 +22,7 @@ export default function OrderEconomyCard({
   montoTotal,
 }: OrderEconomyCardProps) {
   return (
-    <Card size="sm">
-      <CardHeader>
-        <CardTitle className="text-sm">Desglose Económico</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <CollapsibleCard title="Desglose Económico">
         {/* Line items */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
@@ -59,7 +55,6 @@ export default function OrderEconomyCard({
           </p>
           <p className="text-2xl font-bold text-primary-600">{fmt(montoTotal)}</p>
         </div>
-      </CardContent>
-    </Card>
+    </CollapsibleCard>
   );
 }

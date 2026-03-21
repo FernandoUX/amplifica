@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Truck, Copy, Check, Printer } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import CollapsibleCard from "@/components/ui/CollapsibleCard";
 import Button from "@/components/ui/Button";
 
 type CourierInfoCardProps = {
@@ -61,11 +61,7 @@ export default function CourierInfoCard({
   const estadoColor = estado === "vigente" ? "bg-green-50 text-green-700" : estado === "expirada" ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700";
 
   return (
-    <Card size="sm">
-      <CardHeader>
-        <CardTitle className="text-sm">Información del Courier</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <CollapsibleCard title="Información del Courier">
         {/* Courier header + dimensions */}
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
@@ -154,7 +150,6 @@ export default function CourierInfoCard({
             )}
           </div>
         )}
-      </CardContent>
-    </Card>
+    </CollapsibleCard>
   );
 }
