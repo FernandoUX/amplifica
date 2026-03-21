@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import React, { useState, useMemo, useRef, useEffect, useCallback, memo } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import React, { Suspense, useState, useMemo, useRef, useEffect, useCallback, memo } from "react";
 import {
   ChevronLeft, ChevronRight, Trash2, ScanLine, Barcode, ImageOff, Image,
-  Clock, User, Play, CircleStop, Eye,
+  Clock, User, Play, CircleStop, Eye, LayoutDashboard,
   ChevronDown, ChevronUp, MoreHorizontal, Package,
   X, Check, Upload, Search, HelpCircle, FileText,
   Bell, CirclePlus, CalendarDays, CheckCircle2, Shield,
@@ -3184,9 +3184,26 @@ function ResumenOR({ id, baseData, orEstado, sesiones, products, incidencias, ac
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Tabs ────────────────────────────────────────────────────────────────────
+const OR_TABS = [
+  { key: "resumen",    label: "Resumen",    icon: LayoutDashboard },
+  { key: "productos",  label: "Productos",  icon: Package },
+  { key: "historial",  label: "Historial",  icon: Clock },
+] as const;
+type ORTabKey = typeof OR_TABS[number]["key"];
+
 export default function ConteoORPage() {
+  return (
+    <Suspense fallback={<div className="animate-pulse p-8 text-center text-neutral-400">Cargando recepción...</div>}>
+      <ConteoORContent />
+    </Suspense>
+  );
+}
+
+function ConteoORContent() {
   const params   = useParams();
   const router   = useRouter();
+  const searchParams = useSearchParams();
   const rawId    = Array.isArray(params.id) ? params.id[0] : (params.id ?? "");
   const id       = decodeURIComponent(rawId);
   const baseData = MOCK_ORDENES[id] ?? getFallbackOrden(id);
@@ -3236,6 +3253,16 @@ export default function ConteoORPage() {
   const scanFlashTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scanErrorTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scanSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Tabs ──
+  const initialTab = (searchParams.get("tab") as ORTabKey) || "resumen";
+  const [activeTab, setActiveTab] = useState<ORTabKey>(initialTab);
+  const switchTab = useCallback((tab: ORTabKey) => {
+    setActiveTab(tab);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", tab);
+    window.history.replaceState({}, "", url.toString());
+  }, []);
 
   // ── Role (initialise with SSR-safe default, sync from localStorage on mount) ──
   const [currentRole, setCurrentRole] = useState<Role>("Super Admin");
@@ -3845,8 +3872,30 @@ export default function ConteoORPage() {
           )}
         </div>
 
-        {/* ── Resumen unificado de la OR (estado + datos + QR) ── */}
-        {!orCerrada && (() => {
+        {/* ── Tabs ── */}
+        <div className="flex border-b border-neutral-200 overflow-x-auto">
+          {OR_TABS.map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => switchTab(tab.key)}
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors ${
+                  isActive
+                    ? "border-primary-500 text-primary-600"
+                    : "border-transparent text-neutral-400 hover:text-neutral-600 hover:border-neutral-200"
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── Resumen unificado de la OR (estado + datos + QR) ── (TAB: RESUMEN) */}
+        {activeTab === "resumen" && !orCerrada && (() => {
           const showQr = !sesionActiva && sesiones.length === 0;
           const displayEstado: Status =
             sesionActiva || sesiones.length > 0
@@ -3941,8 +3990,8 @@ export default function ConteoORPage() {
           );
         })()}
 
-        {/* ── Active session: mobile compact card ── */}
-        {sesionActiva && (
+        {/* ── Active session: mobile compact card ── (TAB: CONTEO) */}
+        {activeTab === "resumen" && sesionActiva && (
           <div className="sm:hidden rounded-xl px-3 py-2.5 space-y-2 bg-primary-50">
             {/* Session ID + progress bar inline */}
             <div className="flex items-center gap-2">
@@ -4013,8 +4062,8 @@ export default function ConteoORPage() {
           </div>
         )}
 
-        {/* ── Desktop combined: session + scanner + progress (single card) ── */}
-        {sesionActiva && (
+        {/* ── Desktop combined: session + scanner + progress (single card) ── (TAB: RESUMEN) */}
+        {activeTab === "resumen" && sesionActiva && (
           <div className="hidden sm:block bg-white border border-neutral-200 rounded-xl overflow-hidden">
             {/* Session header bar */}
             <div className="bg-primary-50 border-b border-primary-200 px-4 py-2.5 flex items-center gap-3">
@@ -4119,8 +4168,8 @@ export default function ConteoORPage() {
           </div>
         )}
 
-        {/* ── Progreso de conteo (visible solo después de al menos una sesión finalizada) ── */}
-        {!orCerrada && !sesionActiva && sesiones.length > 0 && (
+        {/* ── Progreso de conteo (visible solo después de al menos una sesión finalizada) ── (TAB: RESUMEN) */}
+        {activeTab === "resumen" && !orCerrada && !sesionActiva && sesiones.length > 0 && (
         <div className="bg-white border border-neutral-200 rounded-xl px-4 py-3">
           {/* Row: porcentaje + barra + conteo */}
           <div className="flex items-center gap-3">
@@ -4306,8 +4355,8 @@ export default function ConteoORPage() {
         </div>
         )}
 
-        {/* ── Stats resumen dark bar (OR cerrada) — estado incluido ── */}
-        {orCerrada && (() => {
+        {/* ── Stats resumen dark bar (OR cerrada) — estado incluido ── (TAB: RESUMEN) */}
+        {activeTab === "resumen" && orCerrada && (() => {
           const totalEsperadas = products.reduce((s, p) => s + p.esperadas, 0);
           const totalRecibidas = products.reduce((s, p) => {
             const acc = acumulado[p.id] ?? 0;
@@ -4370,8 +4419,8 @@ export default function ConteoORPage() {
           );
         })()}
 
-        {/* ── Información de la OR (datos del Seller) ── */}
-        {orCerrada && (
+        {/* ── Información de la OR (datos del Seller) ── (TAB: RESUMEN) */}
+        {activeTab === "resumen" && orCerrada && (
           <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
             <div className="px-4 py-3.5 border-b border-neutral-100">
               <div className="flex items-center gap-2.5">
@@ -4437,8 +4486,8 @@ export default function ConteoORPage() {
           </div>
         )}
 
-        {/* ── Resumen de recepción (OR cerrada) ── */}
-        {orCerrada && (
+        {/* ── Resumen de recepción (OR cerrada) ── (TAB: PRODUCTOS) */}
+        {activeTab === "productos" && orCerrada && (
           <ResumenOR
             id={id} baseData={baseData} orEstado={orEstado}
             sesiones={sesiones} products={products}
@@ -4449,8 +4498,8 @@ export default function ConteoORPage() {
           />
         )}
 
-        {/* ── Products container (hidden when OR closed — ResumenOR has details) ── */}
-        {!orCerrada && (
+        {/* ── Products container (hidden when OR closed — ResumenOR has details) ── (TAB: CONTEO) */}
+        {activeTab === "resumen" && !orCerrada && (
           <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
             {products.length === 0 ? (
               <div className="p-12 flex flex-col items-center gap-3 text-center">
@@ -4496,8 +4545,8 @@ export default function ConteoORPage() {
           </div>
         )}
 
-        {/* ── Session history ── */}
-        {sesiones.length > 0 && (
+        {/* ── Session history ── (TAB: HISTORIAL) */}
+        {activeTab === "historial" && sesiones.length > 0 && (
           <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
             <div className="px-4 py-3.5 border-b border-neutral-100 flex items-center justify-between">
               <span className="text-base font-semibold text-neutral-800">Historial de sesiones</span>
@@ -4517,8 +4566,8 @@ export default function ConteoORPage() {
           </div>
         )}
 
-        {/* ── Notificaciones enviadas (OR cerrada) ── */}
-        {orCerrada && (() => {
+        {/* ── Notificaciones enviadas (OR cerrada) ── (TAB: HISTORIAL) */}
+        {activeTab === "historial" && orCerrada && (() => {
           const hasInc = Object.values(incidencias).some(rows => rows.some(r => r.tag !== ""));
           const hasQuar = quarantineRecs.length > 0;
 
@@ -4630,8 +4679,8 @@ export default function ConteoORPage() {
           );
         })()}
 
-        {/* ── Registros de auditoría (solo Super Admin) ── */}
-        {can(currentRole, "audit:view") && (() => {
+        {/* ── Registros de auditoría (solo Super Admin) ── (TAB: HISTORIAL) */}
+        {activeTab === "historial" && can(currentRole, "audit:view") && (() => {
           const auditEvents = SEED_AUDIT[id] ?? [];
           if (auditEvents.length === 0) return null;
           return (
@@ -4692,8 +4741,8 @@ export default function ConteoORPage() {
           );
         })()}
 
-        {/* ── Footer: Liberar + Completar OR (always visible when OR open, hidden for Creado) ── */}
-        {!orCerrada && (originalEstado === "En proceso de conteo" || originalEstado === "Recepcionado en bodega") && (<>
+        {/* ── Footer: Liberar + Completar OR ── (TAB: CONTEO) */}
+        {activeTab === "resumen" && !orCerrada && (originalEstado === "En proceso de conteo" || originalEstado === "Recepcionado en bodega") && (<>
           {/* No-units alert modal */}
           <AlertModal
             open={noUnitsAlert}
