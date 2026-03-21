@@ -707,9 +707,9 @@ function PedidosPageInner() {
                   {paginatedRows.map(p => (
                     <tr key={p.id} className="hover:bg-neutral-50/60 transition-colors duration-300 group">
                       <td className="py-3 px-4">
-                        <span className="inline-block bg-neutral-100 text-neutral-700 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 text-xs font-mono cursor-pointer" onClick={() => router.push(`/pedidos/${p.id}`)}>
+                        <Link href={`/pedidos/${p.id}`} className="inline-block bg-neutral-100 text-neutral-700 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 text-xs font-mono cursor-pointer">
                           {p.id}
-                        </span>
+                        </Link>
                       </td>
                       {COLS_ACTUAL.map(key => (
                         <td key={key} className="py-3 px-4 text-neutral-600" style={NW}>
@@ -1184,9 +1184,9 @@ function PedidosPageInner() {
                         />
                       </td>
                       <td className="py-3 px-4">
-                        <span className="inline-block bg-neutral-100 text-neutral-700 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 text-xs font-mono cursor-pointer" onClick={() => router.push(`/pedidos/${p.id}`)}>
+                        <Link href={`/pedidos/${p.id}`} className="inline-block bg-neutral-100 text-neutral-700 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 text-xs font-mono cursor-pointer">
                           {p.id}
-                        </span>
+                        </Link>
                       </td>
                       {mejCols.map(key => (
                         <td key={key} className="py-3 px-4 text-neutral-600" style={key === "estadoPreparacion" || key === "estadoEnvio" || key === "entrega" ? undefined : NW}>
