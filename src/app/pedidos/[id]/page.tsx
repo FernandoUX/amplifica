@@ -372,7 +372,7 @@ function PedidoDetalleContent() {
             </Card>
 
             {/* ── Two-column layout ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-5">
+            <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-5">
               {/* LEFT COLUMN */}
               <div className="space-y-5">
                 {/* Info card — badges + data grid in 2 columns */}
@@ -563,7 +563,7 @@ function PedidoDetalleContent() {
             )}
 
             {/* ── Two-column layout ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-5">
+            <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-5">
               {/* LEFT COLUMN */}
               <div className="space-y-5">
                 {/* Address */}
@@ -884,7 +884,7 @@ function PedidoDetalleContent() {
         {activeTab === "historial" && (
           <div className="space-y-5">
             {/* ── Two-column layout ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-5">
+            <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-5">
               {/* LEFT COLUMN */}
               <div className="space-y-5">
                 {/* Cronología Textual */}
