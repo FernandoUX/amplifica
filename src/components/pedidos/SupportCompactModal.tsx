@@ -88,9 +88,15 @@ export default function SupportCompactModal({ open, onClose, pedido }: SupportCo
 
         {/* Estado badges */}
         <div className="px-5 py-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <PedidoStatusBadge status={pedido.estadoPreparacion} />
-            <EnvioStatusBadge status={pedido.estadoEnvio} />
+          <div className="flex items-center gap-4">
+            <div>
+              <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">Preparación</p>
+              <PedidoStatusBadge status={pedido.estadoPreparacion} />
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">Envío</p>
+              <EnvioStatusBadge status={pedido.estadoEnvio} />
+            </div>
           </div>
         </div>
 
