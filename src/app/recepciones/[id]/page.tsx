@@ -10,7 +10,7 @@ import {
   X, Check, Upload, Search, HelpCircle, FileText,
   Bell, CirclePlus, CalendarDays, CheckCircle2, Shield,
   Download, Camera, MessageSquare, Warehouse,
-  Plus, ClipboardCheck, LockOpen, AlertTriangle,
+  Plus, ClipboardCheck, LockOpen, AlertTriangle, Sparkles,
 } from "lucide-react";
 import {
   QuarantineRecord, QuarantineStatus, QuarantineResolution, QuarantineCategory,
@@ -24,6 +24,8 @@ import StatusBadge, { type Status } from "@/components/recepciones/StatusBadge";
 import { playScanSuccessSound, playScanErrorSound } from "@/lib/scan-sounds";
 import Button from "@/components/ui/Button";
 import AlertModal from "@/components/ui/AlertModal";
+import CollapsibleCard from "@/components/ui/CollapsibleCard";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { type Role, getRole, can } from "@/lib/roles";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -706,6 +708,15 @@ function tagColorCls(tag: IncidenciaTagKey) {
   if (tag === "sin-nutricional" || tag === "sin-vencimiento")
     return "bg-red-50 text-red-700 border-red-200";               // devolución obligatoria
   return "bg-amber-50 text-amber-700 border-amber-200";           // decisión del seller
+}
+
+// Mejorada: severidad visual
+function tagColorClsMejorada(tag: IncidenciaTagKey) {
+  if (tag === "danio-total" || tag === "no-en-sistema")
+    return "bg-red-50 text-red-700 border-red-200";               // crítico
+  if (tag === "codigo-incorrecto" || tag === "danio-parcial")
+    return "bg-amber-50 text-amber-700 border-amber-200";         // warning
+  return "bg-neutral-100 text-neutral-700 border-neutral-200";    // info
 }
 
 // ─── Categorizar button (per-SKU, opens IncidenciasSKUModal) ─────────────────
@@ -3257,6 +3268,9 @@ function ConteoORContent() {
   // ── Tabs ──
   const initialTab = (searchParams.get("tab") as ORTabKey) || "resumen";
   const [activeTab, setActiveTab] = useState<ORTabKey>(initialTab);
+  const [uiVersion, setUiVersion] = useState<"actual" | "mejorada">("actual");
+  const [productFilter, setProductFilter] = useState<"todos" | "pendientes" | "completos" | "diferencia">("todos");
+  const [sessionToast, setSessionToast] = useState<{ show: boolean; message: string }>({ show: false, message: "" });
   const switchTab = useCallback((tab: ORTabKey) => {
     setActiveTab(tab);
     const url = new URL(window.location.href);
@@ -3414,6 +3428,18 @@ function ConteoORContent() {
     return { totalEsperadas, totalContadas, totalSesionAct, totalIncidencias, pct, sinDiferencias, conDiferencias, pendientes };
   }, [products, acumulado, totalPP, incidencias]);
 
+  // ── Filtered products (mejorada version) ────────────────────────────────
+  const filteredProducts = useMemo(() => {
+    if (uiVersion !== "mejorada" || productFilter === "todos") return products;
+    return products.filter(p => {
+      const s = getProductStatus(totalPP[p.id] ?? 0, p.esperadas);
+      if (productFilter === "pendientes") return s === "pendiente";
+      if (productFilter === "completos") return s === "completo";
+      if (productFilter === "diferencia") return s === "diferencia" || s === "exceso";
+      return true;
+    });
+  }, [products, productFilter, uiVersion, totalPP]);
+
   // ── Incidencias breakdown by tag (for progress bar chips) ───────────────
   const incidenciasPorTag = useMemo(() => {
     const map: Partial<Record<IncidenciaTagKey, number>> = {};
@@ -3496,6 +3522,14 @@ function ConteoORContent() {
     try {
       localStorage.setItem(`amplifica_or_${id}`, JSON.stringify({ estado: "En proceso de conteo" }));
     } catch { /* ignore */ }
+    // Mejorada: toast notification
+    if (uiVersion === "mejorada") {
+      const totalUds = items.reduce((s, it) => s + it.cantidad, 0);
+      const durMin = Math.round((new Date(fin).getTime() - new Date(sesionInicio).getTime()) / 60000);
+      const sesNum = sesiones.length + 1;
+      setSessionToast({ show: true, message: `Sesión #${sesNum} guardada — ${totalUds.toLocaleString("es-CL")} uds. en ${durMin} min` });
+      setTimeout(() => setSessionToast({ show: false, message: "" }), 5000);
+    }
   };
 
   // Liberar: discard current session without saving
@@ -3753,6 +3787,20 @@ function ConteoORContent() {
         getOrInfo={getOrInfo}
       />
 
+      {/* ── Session toast (mejorada) ── */}
+      {sessionToast.show && (
+        <div className="fixed top-6 right-6 z-[60] flex items-center gap-3 bg-white border border-green-200 rounded-xl shadow-xl px-4 py-3 animate-in fade-in slide-in-from-top-2 duration-300">
+          <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-neutral-800">Sesión finalizada</p>
+            <p className="text-xs text-neutral-500">{sessionToast.message}</p>
+          </div>
+          <button onClick={() => setSessionToast({ show: false, message: "" })} className="text-neutral-400 hover:text-neutral-600 ml-2">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* ── Breadcrumb ── */}
       <nav className="max-w-4xl mx-auto px-4 lg:px-6 pt-4 pb-1 flex items-center justify-center sm:justify-start gap-1.5 text-sm text-neutral-500">
         <Link href="/recepciones" className="hover:text-primary-500 transition-colors duration-300">Recepciones</Link>
@@ -3779,6 +3827,32 @@ function ConteoORContent() {
               <p className="text-sm text-neutral-600 mt-0.5">
                 {baseData.sucursal}{baseData.fechaAgendada && baseData.fechaAgendada !== "—" ? ` - ${baseData.fechaAgendada}` : ""}
               </p>
+            )}
+            {/* Version toggle */}
+            {!sesionActiva && (
+              <div className="flex items-center gap-1 bg-neutral-100 rounded-lg p-0.5 mt-2 w-fit">
+                <button
+                  onClick={() => setUiVersion("actual")}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                    uiVersion === "actual"
+                      ? "bg-white text-neutral-800 shadow-sm"
+                      : "text-neutral-500 hover:text-neutral-700"
+                  }`}
+                >
+                  Actual
+                </button>
+                <button
+                  onClick={() => setUiVersion("mejorada")}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                    uiVersion === "mejorada"
+                      ? "bg-primary-50 text-primary-700 shadow-sm"
+                      : "text-neutral-500 hover:text-neutral-700"
+                  }`}
+                >
+                  <Sparkles className="w-3 h-3" />
+                  Mejorada
+                </button>
+              </div>
             )}
           </div>
 
@@ -3894,6 +3968,32 @@ function ConteoORContent() {
           })}
         </div>
 
+        {/* ── Status banner (mejorada) ── */}
+        {uiVersion === "mejorada" && activeTab === "resumen" && !orCerrada && (() => {
+          const bannerEstado: Status =
+            sesionActiva || sesiones.length > 0
+              ? "En proceso de conteo"
+              : (originalEstado as Status) ?? "Programado";
+          const bannerMap: Record<string, { bg: string; border: string; text: string; icon: typeof CheckCircle2 }> = {
+            "Completada":               { bg: "bg-green-50",   border: "border-green-200", text: "text-green-700",   icon: CheckCircle2 },
+            "Pendiente de aprobación":   { bg: "bg-amber-50",   border: "border-amber-200", text: "text-amber-700",   icon: AlertTriangle },
+            "En proceso de conteo":      { bg: "bg-primary-50", border: "border-primary-200", text: "text-primary-700", icon: ScanLine },
+            "Recepcionado en bodega":    { bg: "bg-sky-50",     border: "border-sky-200",   text: "text-sky-700",     icon: Warehouse },
+            "Programado":                { bg: "bg-sky-50",     border: "border-sky-200",   text: "text-sky-700",     icon: CalendarDays },
+          };
+          const b = bannerMap[bannerEstado] ?? { bg: "bg-neutral-50", border: "border-neutral-200", text: "text-neutral-700", icon: Clock };
+          const BIcon = b.icon;
+          return (
+            <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${b.bg} ${b.border}`}>
+              <BIcon className={`w-5 h-5 ${b.text}`} />
+              <div>
+                <p className={`text-sm font-semibold ${b.text}`}>{bannerEstado}</p>
+                <p className="text-xs text-neutral-500 mt-0.5">{id} · {baseData.seller} · {baseData.sucursal}</p>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* ── Resumen unificado de la OR (estado + datos + QR) ── (TAB: RESUMEN) */}
         {activeTab === "resumen" && !orCerrada && (() => {
           const showQr = !sesionActiva && sesiones.length === 0;
@@ -3902,7 +4002,56 @@ function ConteoORContent() {
               ? "En proceso de conteo"
               : (originalEstado as Status) ?? "Programado";
 
-          return (
+          return uiVersion === "mejorada" ? (
+            /* ── MEJORADA: CollapsibleCard + grid-cols-3 ── */
+            <div className={sesionActiva ? "hidden sm:block" : ""}>
+              <CollapsibleCard title="Información de la OR">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
+                  <div>
+                    <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Orden</p>
+                    <p className="text-sm font-semibold text-neutral-800 mt-0.5 font-sans">{id}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Tienda</p>
+                    <p className="text-sm font-medium text-neutral-700 mt-0.5">{baseData.seller}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Sucursal</p>
+                    <p className="text-sm font-medium text-neutral-700 mt-0.5">{baseData.sucursal}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Productos</p>
+                    <p className="text-sm font-medium text-neutral-700 mt-0.5">{products.length} SKUs · {stats.totalEsperadas.toLocaleString("es-CL")} Uds.</p>
+                  </div>
+                  {baseData.pallets != null && (
+                    <div>
+                      <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Pallets</p>
+                      <p className="text-sm font-medium text-neutral-700 mt-0.5">{baseData.pallets}</p>
+                    </div>
+                  )}
+                  {baseData.bultos != null && (
+                    <div>
+                      <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Bultos</p>
+                      <p className="text-sm font-medium text-neutral-700 mt-0.5">{baseData.bultos}</p>
+                    </div>
+                  )}
+                  {sesiones.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Sesiones</p>
+                      <p className="text-sm font-medium text-neutral-700 mt-0.5">{sesiones.length + (sesionActiva ? 1 : 0)}</p>
+                    </div>
+                  )}
+                </div>
+                {baseData.comentarios && (
+                  <div className="mt-3 pt-3 border-t border-neutral-100">
+                    <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Comentarios</p>
+                    <p className="text-sm text-neutral-700 mt-1">{baseData.comentarios}</p>
+                  </div>
+                )}
+              </CollapsibleCard>
+              {showQr && <QrDisplaySection orId={id} seller={baseData.seller} sucursal={baseData.sucursal} bultos={baseData.bultos} />}
+            </div>
+          ) : (
             <div className={`bg-white border border-neutral-200 rounded-xl overflow-hidden ${sesionActiva ? "hidden sm:block" : ""}`}>
               <div className="flex flex-col lg:flex-row">
                 {/* Left: info summary */}
@@ -4501,6 +4650,42 @@ function ConteoORContent() {
         {/* ── Products container (hidden when OR closed — ResumenOR has details) ── (TAB: CONTEO) */}
         {activeTab === "resumen" && !orCerrada && (
           <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+            {/* Mejorada: SKU summary + filter chips */}
+            {uiVersion === "mejorada" && products.length > 0 && (
+              <div className="px-4 py-3 border-b border-neutral-100 space-y-2.5">
+                {/* Mini-resumen */}
+                <p className="text-xs text-neutral-500">
+                  <span className="font-semibold text-neutral-700">{stats.sinDiferencias}</span> de <span className="font-semibold text-neutral-700">{products.length}</span> SKUs completos
+                  {stats.pendientes > 0 && <> — <span className="font-semibold text-amber-600">{stats.pendientes} pendientes</span></>}
+                  {stats.conDiferencias > 0 && <> — <span className="font-semibold text-red-600">{stats.conDiferencias} con diferencia</span></>}
+                </p>
+                {/* Filter chips */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {([
+                    { key: "todos", label: "Todos", count: products.length },
+                    { key: "pendientes", label: "Pendientes", count: stats.pendientes },
+                    { key: "completos", label: "Completos", count: stats.sinDiferencias },
+                    { key: "diferencia", label: "Con diferencia", count: stats.conDiferencias },
+                  ] as const).map(chip => (
+                    <button
+                      key={chip.key}
+                      onClick={() => setProductFilter(chip.key)}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-200 ${
+                        productFilter === chip.key
+                          ? "bg-primary-50 text-primary-700 ring-1 ring-primary-200"
+                          : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                      }`}
+                    >
+                      {chip.label}
+                      <span className={`text-[10px] font-bold px-1 py-0.5 rounded leading-none ${
+                        productFilter === chip.key ? "bg-primary-200/60 text-primary-800" : "bg-neutral-200 text-neutral-500"
+                      }`}>{chip.count}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {products.length === 0 ? (
               <div className="p-12 flex flex-col items-center gap-3 text-center">
                 <div className="w-14 h-14 bg-neutral-100 rounded-2xl flex items-center justify-center">
@@ -4513,7 +4698,7 @@ function ConteoORContent() {
               </div>
             ) : (
               <div>
-                {products.map((p, i) => (
+                {(uiVersion === "mejorada" ? filteredProducts : products).map((p, i) => (
                   <React.Fragment key={p.id}>
                     {i > 0 && <hr className="border-neutral-200" />}
                     <ProductCard
@@ -4528,6 +4713,11 @@ function ConteoORContent() {
                     />
                   </React.Fragment>
                 ))}
+                {uiVersion === "mejorada" && filteredProducts.length === 0 && products.length > 0 && (
+                  <div className="py-8 text-center">
+                    <p className="text-sm text-neutral-400">No hay productos con el filtro seleccionado</p>
+                  </div>
+                )}
               </div>
             )}
 
