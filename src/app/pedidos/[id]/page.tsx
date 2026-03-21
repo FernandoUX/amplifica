@@ -376,8 +376,11 @@ function PedidoDetalleContent() {
               {/* LEFT COLUMN */}
               <div className="space-y-5">
                 {/* Info card — badges + data grid in 2 columns */}
-                <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
-                  <div className="px-4 py-3">
+                <Card size="sm">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Datos del Pedido</CardTitle>
+                  </CardHeader>
+                  <CardContent>
                     <div className="grid grid-cols-2 gap-x-6 gap-y-3">
                       {/* Row 1 */}
                       <div>
@@ -462,8 +465,8 @@ function PedidoDetalleContent() {
                         <p className="text-sm font-medium text-neutral-700 mt-0.5">{pedido.sucursal}</p>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
 
                 {/* Products preview */}
                 <Card size="sm">
