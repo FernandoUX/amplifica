@@ -707,7 +707,7 @@ function PedidosPageInner() {
                   {paginatedRows.map(p => (
                     <tr key={p.id} className="hover:bg-neutral-50/60 transition-colors duration-300 group">
                       <td className="py-3 px-4">
-                        <span className="inline-block bg-neutral-100 text-neutral-700 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 text-xs font-mono cursor-pointer">
+                        <span className="inline-block bg-neutral-100 text-neutral-700 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 text-xs font-mono cursor-pointer" onClick={() => router.push(`/pedidos/${p.id}`)}>
                           {p.id}
                         </span>
                       </td>
@@ -1184,7 +1184,7 @@ function PedidosPageInner() {
                         />
                       </td>
                       <td className="py-3 px-4">
-                        <span className="inline-block bg-neutral-100 text-neutral-700 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 text-xs font-mono cursor-pointer">
+                        <span className="inline-block bg-neutral-100 text-neutral-700 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 text-xs font-mono cursor-pointer" onClick={() => router.push(`/pedidos/${p.id}`)}>
                           {p.id}
                         </span>
                       </td>
