@@ -381,8 +381,8 @@ function PedidoDetalleContent() {
                     <CardTitle className="text-sm">Datos del Pedido</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-                      {/* Row 1 */}
+                    <div className="grid grid-cols-3 gap-x-6 gap-y-3">
+                      {/* Row 1: Estados */}
                       <div>
                         <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider mb-1">Preparación</p>
                         <PedidoStatusBadge status={pedido.estadoPreparacion} />
@@ -391,7 +391,11 @@ function PedidoDetalleContent() {
                         <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider mb-1">Envío</p>
                         <EnvioStatusBadge status={pedido.estadoEnvio} />
                       </div>
-                      {/* Row 2 */}
+                      <div>
+                        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Fecha Creación</p>
+                        <p className="text-sm font-medium text-neutral-700 mt-0.5">{fmtDate(pedido.fechaCreacion)}</p>
+                      </div>
+                      {/* Row 2: SLA */}
                       {pedido.preparacion.length > 0 && (
                         <div>
                           <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider mb-1">Próx. Preparación</p>
@@ -426,40 +430,28 @@ function PedidoDetalleContent() {
                           </div>
                         </div>
                       )}
-                      {/* Row 3 */}
-                      <div>
-                        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Fecha Creación</p>
-                        <p className="text-sm font-medium text-neutral-700 mt-0.5">{fmtDate(pedido.fechaCreacion)}</p>
-                      </div>
-                      {pedido.fechaEnvio ? (
+                      {pedido.fechaEnvio && (
                         <div>
                           <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Fecha Envío</p>
                           <p className="text-sm font-medium text-neutral-700 mt-0.5">{fmtDate(pedido.fechaEnvio)}</p>
                         </div>
-                      ) : (
-                        <div>
-                          <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">ID Amplifica</p>
-                          <p className="text-sm font-semibold text-neutral-800 mt-0.5 font-sans">{pedido.idAmplifica}</p>
-                        </div>
                       )}
-                      {/* Row 4 */}
-                      {pedido.fechaEnvio && (
-                        <div>
-                          <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">ID Amplifica</p>
-                          <p className="text-sm font-semibold text-neutral-800 mt-0.5 font-sans">{pedido.idAmplifica}</p>
-                        </div>
-                      )}
+                      {/* Row 3: IDs */}
+                      <div>
+                        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">ID Amplifica</p>
+                        <p className="text-sm font-semibold text-neutral-800 mt-0.5 font-sans">{pedido.idAmplifica}</p>
+                      </div>
                       {pedido.idExterno && (
                         <div>
                           <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">ID Externo</p>
                           <p className="text-sm font-medium text-neutral-700 mt-0.5 font-mono">{pedido.idExterno}</p>
                         </div>
                       )}
-                      {/* Row 5 */}
                       <div>
                         <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Seller</p>
                         <p className="text-sm font-medium text-neutral-700 mt-0.5">{pedido.seller}</p>
                       </div>
+                      {/* Row 4 */}
                       <div>
                         <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Sucursal</p>
                         <p className="text-sm font-medium text-neutral-700 mt-0.5">{pedido.sucursal}</p>
