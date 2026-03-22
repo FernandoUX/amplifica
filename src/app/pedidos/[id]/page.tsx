@@ -92,6 +92,52 @@ function buildTimelineSteps(p: PedidoDetalle): TimelineStep[] {
     p.estadoPreparacion
   );
 
+  // Auto-generate SLA data when slaTimeline is not provided
+  const slaTimeline = p.slaTimeline ?? (() => {
+    const auto: Record<string, { fechaInicio?: string; fechaFin?: string; fechaProgramada?: string; rangoHorario?: string; slaStatus: "cumplido" | "pendiente" | "atrasado" | "en_riesgo" }> = {};
+    // Parse base date from fechaCreacion (e.g. "Hoy a las 22:15" or ISO)
+    let baseDate: Date;
+    try {
+      const fc = p.fechaCreacion;
+      if (fc.includes("Hoy")) {
+        const timePart = fc.match(/(\d{1,2}):(\d{2})/);
+        baseDate = new Date();
+        if (timePart) { baseDate.setHours(parseInt(timePart[1]), parseInt(timePart[2]), 0, 0); }
+      } else {
+        baseDate = new Date(fc);
+        if (isNaN(baseDate.getTime())) baseDate = new Date();
+      }
+    } catch { baseDate = new Date(); }
+
+    const addH = (d: Date, h: number) => new Date(d.getTime() + h * 3600000).toISOString();
+    const slaFor = (step: number): "cumplido" | "pendiente" | "atrasado" | "en_riesgo" => {
+      if (step < currentIdx) return "cumplido";
+      if (step === currentIdx) return p.conAtraso ? "atrasado" : "pendiente";
+      return "pendiente";
+    };
+
+    // Recepción: base date
+    auto["Recepción"] = { fechaInicio: baseDate.toISOString(), slaStatus: slaFor(0) };
+    // Validación: +1 min
+    auto["Validación"] = { fechaInicio: addH(baseDate, 0.02), fechaFin: addH(baseDate, 0.03), slaStatus: slaFor(1) };
+    // Preparación: +2h planned window
+    auto["Preparación"] = currentIdx > 2
+      ? { fechaInicio: addH(baseDate, 2), fechaFin: addH(baseDate, 6), slaStatus: slaFor(2) }
+      : { fechaProgramada: addH(baseDate, 2), rangoHorario: `${fmtShortTime(addH(baseDate, 2))} - ${fmtShortTime(addH(baseDate, 6))}`, slaStatus: slaFor(2) };
+    // Empaque: +8h
+    auto["Empaque"] = currentIdx > 3
+      ? { fechaInicio: addH(baseDate, 8), slaStatus: slaFor(3) }
+      : { fechaProgramada: addH(baseDate, 8), slaStatus: slaFor(3) };
+    // Retiro: +24h
+    auto["Retiro"] = currentIdx > 4
+      ? { fechaInicio: addH(baseDate, 24), slaStatus: slaFor(4) }
+      : { fechaProgramada: addH(baseDate, 24), slaStatus: slaFor(4) };
+    // Entrega: +48h with range
+    auto["Entrega"] = { fechaProgramada: addH(baseDate, 48), rangoHorario: "15:00 – 20:00 hrs", slaStatus: slaFor(5) };
+
+    return auto;
+  })();
+
   return stateLabels.map((label, i) => {
     let status: TimelineStep["status"] = "pending";
     if (p.estadoPreparacion === "Cancelado") {
@@ -102,8 +148,7 @@ function buildTimelineSteps(p: PedidoDetalle): TimelineStep[] {
       status = p.conAtraso ? "late" : "active";
     }
 
-    // Build fecha lines and SLA from slaTimeline data
-    const slaData = p.slaTimeline?.[label];
+    const slaData = slaTimeline[label];
     let fechaLineas: string[] | undefined;
     let sla: TimelineStep["sla"] | undefined;
 
@@ -111,13 +156,11 @@ function buildTimelineSteps(p: PedidoDetalle): TimelineStep[] {
       const lines: string[] = [];
 
       if (slaData.fechaInicio && slaData.fechaFin) {
-        // Has start + end dates (done/active steps, or scheduled with range)
         lines.push(`${fmtShortDate(slaData.fechaInicio)} ${fmtShortTime(slaData.fechaInicio)}`);
         lines.push(`/ ${fmtShortDate(slaData.fechaFin)} ${fmtShortTime(slaData.fechaFin)}`);
       } else if (slaData.fechaInicio) {
         lines.push(`${fmtShortDate(slaData.fechaInicio)} ${fmtShortTime(slaData.fechaInicio)}`);
       } else if (slaData.fechaProgramada) {
-        // Scheduled date (pending steps)
         if (slaData.rangoHorario) {
           lines.push(fmtShortDate(slaData.fechaProgramada));
           lines.push(slaData.rangoHorario);
