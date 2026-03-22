@@ -10,7 +10,7 @@ import {
   X, Check, Upload, Search, HelpCircle, FileText,
   Bell, CirclePlus, CalendarDays, CheckCircle2, Shield,
   Download, Camera, MessageSquare, Warehouse,
-  Plus, ClipboardCheck, LockOpen, AlertTriangle, Sparkles,
+  Plus, ClipboardCheck, LockOpen, AlertTriangle,
 } from "lucide-react";
 import {
   QuarantineRecord, QuarantineStatus, QuarantineResolution, QuarantineCategory,
@@ -3268,7 +3268,6 @@ function ConteoORContent() {
   // ── Tabs ──
   const initialTab = (searchParams.get("tab") as ORTabKey) || "resumen";
   const [activeTab, setActiveTab] = useState<ORTabKey>(initialTab);
-  const [uiVersion, setUiVersion] = useState<"actual" | "mejorada">("actual");
   const [productFilter, setProductFilter] = useState<"todos" | "pendientes" | "completos" | "diferencia">("todos");
   const [sessionToast, setSessionToast] = useState<{ show: boolean; message: string }>({ show: false, message: "" });
   const switchTab = useCallback((tab: ORTabKey) => {
@@ -3428,9 +3427,9 @@ function ConteoORContent() {
     return { totalEsperadas, totalContadas, totalSesionAct, totalIncidencias, pct, sinDiferencias, conDiferencias, pendientes };
   }, [products, acumulado, totalPP, incidencias]);
 
-  // ── Filtered products (mejorada version) ────────────────────────────────
+  // ── Filtered products ────────────────────────────────────────────────────
   const filteredProducts = useMemo(() => {
-    if (uiVersion !== "mejorada" || productFilter === "todos") return products;
+    if (productFilter === "todos") return products;
     return products.filter(p => {
       const s = getProductStatus(totalPP[p.id] ?? 0, p.esperadas);
       if (productFilter === "pendientes") return s === "pendiente";
@@ -3438,7 +3437,7 @@ function ConteoORContent() {
       if (productFilter === "diferencia") return s === "diferencia" || s === "exceso";
       return true;
     });
-  }, [products, productFilter, uiVersion, totalPP]);
+  }, [products, productFilter, totalPP]);
 
   // ── Incidencias breakdown by tag (for progress bar chips) ───────────────
   const incidenciasPorTag = useMemo(() => {
@@ -3522,14 +3521,12 @@ function ConteoORContent() {
     try {
       localStorage.setItem(`amplifica_or_${id}`, JSON.stringify({ estado: "En proceso de conteo" }));
     } catch { /* ignore */ }
-    // Mejorada: toast notification
-    if (uiVersion === "mejorada") {
-      const totalUds = items.reduce((s, it) => s + it.cantidad, 0);
-      const durMin = Math.round((new Date(fin).getTime() - new Date(sesionInicio).getTime()) / 60000);
-      const sesNum = sesiones.length + 1;
-      setSessionToast({ show: true, message: `Sesión #${sesNum} guardada — ${totalUds.toLocaleString("es-CL")} uds. en ${durMin} min` });
-      setTimeout(() => setSessionToast({ show: false, message: "" }), 5000);
-    }
+    // Toast notification
+    const totalUds = items.reduce((s, it) => s + it.cantidad, 0);
+    const durMin = Math.round((new Date(fin).getTime() - new Date(sesionInicio).getTime()) / 60000);
+    const sesNum = sesiones.length + 1;
+    setSessionToast({ show: true, message: `Sesión #${sesNum} guardada — ${totalUds.toLocaleString("es-CL")} uds. en ${durMin} min` });
+    setTimeout(() => setSessionToast({ show: false, message: "" }), 5000);
   };
 
   // Liberar: discard current session without saving
@@ -3828,32 +3825,6 @@ function ConteoORContent() {
                 {baseData.sucursal}{baseData.fechaAgendada && baseData.fechaAgendada !== "—" ? ` - ${baseData.fechaAgendada}` : ""}
               </p>
             )}
-            {/* Version toggle */}
-            {!sesionActiva && (
-              <div className="flex items-center gap-1 bg-neutral-100 rounded-lg p-0.5 mt-2 w-fit">
-                <button
-                  onClick={() => setUiVersion("actual")}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
-                    uiVersion === "actual"
-                      ? "bg-white text-neutral-800 shadow-sm"
-                      : "text-neutral-500 hover:text-neutral-700"
-                  }`}
-                >
-                  Actual
-                </button>
-                <button
-                  onClick={() => setUiVersion("mejorada")}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
-                    uiVersion === "mejorada"
-                      ? "bg-primary-50 text-primary-700 shadow-sm"
-                      : "text-neutral-500 hover:text-neutral-700"
-                  }`}
-                >
-                  <Sparkles className="w-3 h-3" />
-                  Mejorada
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Desktop-only session buttons / closed OR actions */}
@@ -3968,8 +3939,8 @@ function ConteoORContent() {
           })}
         </div>
 
-        {/* ── Status banner (mejorada) ── */}
-        {uiVersion === "mejorada" && activeTab === "resumen" && !orCerrada && (() => {
+        {/* ── Status banner ── */}
+        {activeTab === "resumen" && !orCerrada && (() => {
           const bannerEstado: Status =
             sesionActiva || sesiones.length > 0
               ? "En proceso de conteo"
@@ -4002,8 +3973,7 @@ function ConteoORContent() {
               ? "En proceso de conteo"
               : (originalEstado as Status) ?? "Programado";
 
-          return uiVersion === "mejorada" ? (
-            /* ── MEJORADA: CollapsibleCard + grid-cols-3 ── */
+          return (
             <div className={sesionActiva ? "hidden sm:block" : ""}>
               <CollapsibleCard title="Información de la OR">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
@@ -4050,91 +4020,6 @@ function ConteoORContent() {
                 )}
               </CollapsibleCard>
               {showQr && <QrDisplaySection orId={id} seller={baseData.seller} sucursal={baseData.sucursal} bultos={baseData.bultos} />}
-            </div>
-          ) : (
-            <div className={`bg-white border border-neutral-200 rounded-xl overflow-hidden ${sesionActiva ? "hidden sm:block" : ""}`}>
-              <div className="flex flex-col lg:flex-row">
-                {/* Left: info summary */}
-                <div className="flex-1 min-w-0 px-4 py-3 flex flex-col">
-                  {/* Estado badge */}
-                  <div className="mb-3">
-                    <StatusBadge status={displayEstado} />
-                  </div>
-
-                  {/* Data grid */}
-                  <div className="flex items-start gap-x-5 gap-y-2.5 flex-wrap">
-                    <div>
-                      <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Orden</p>
-                      <p className="text-sm font-semibold text-neutral-800 mt-0.5 font-sans">{id}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Tienda</p>
-                      <p className="text-sm font-medium text-neutral-700 mt-0.5">{baseData.seller}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Sucursal</p>
-                      <p className="text-sm font-medium text-neutral-700 mt-0.5">{baseData.sucursal}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Productos</p>
-                      <p className="text-sm font-medium text-neutral-700 mt-0.5">{products.length} SKUs · {stats.totalEsperadas.toLocaleString("es-CL")} Uds.</p>
-                    </div>
-                    {baseData.pallets != null && (
-                      <div>
-                        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Pallets</p>
-                        <p className="text-sm font-medium text-neutral-700 mt-0.5">{baseData.pallets}</p>
-                      </div>
-                    )}
-                    {baseData.bultos != null && (
-                      <div>
-                        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Bultos</p>
-                        <p className="text-sm font-medium text-neutral-700 mt-0.5">{baseData.bultos}</p>
-                      </div>
-                    )}
-                    {sesiones.length > 0 && (
-                      <div>
-                        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Sesiones</p>
-                        <p className="text-sm font-medium text-neutral-700 mt-0.5">{sesiones.length + (sesionActiva ? 1 : 0)}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Comentarios — contextuales según estado */}
-                  {(() => {
-                    const isRecepcionado = displayEstado === "Recepcionado en bodega" || displayEstado === "En proceso de conteo" || displayEstado === "Pendiente de aprobación";
-                    const comentario = isRecepcionado ? baseData.comentarioRecepcion : baseData.comentarios;
-                    const label = isRecepcionado ? "Comentarios del operador" : "Comentarios del seller";
-                    return (
-                      <div className="mt-2.5 pt-2.5 border-t border-neutral-100 flex-1 flex flex-col">
-                        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">{label}</p>
-                        <div className="mt-1.5 flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2.5 flex-1">
-                          <MessageSquare className={`w-3.5 h-3.5 flex-shrink-0 mt-0.5 ${comentario ? "text-neutral-600" : "text-neutral-400"}`} />
-                          {comentario
-                            ? <p className="text-sm text-neutral-600 leading-relaxed">{comentario}</p>
-                            : <p className="text-sm text-neutral-400 italic">Sin comentarios adicionales</p>
-                          }
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {/* Right: QR widget (only pre-count) */}
-                {showQr && (
-                  <>
-                    {/* Divider — horizontal on mobile, vertical on desktop */}
-                    <div className="w-full h-px bg-neutral-200 lg:w-px lg:h-auto lg:self-stretch" />
-                    <div className="px-4 py-3 lg:py-4 flex justify-center">
-                      <QrDisplaySection
-                        orId={id}
-                        seller={baseData.seller}
-                        sucursal={baseData.sucursal}
-                        bultos={baseData.bultos}
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
             </div>
           );
         })()}
@@ -4651,7 +4536,7 @@ function ConteoORContent() {
         {activeTab === "resumen" && !orCerrada && (
           <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
             {/* Mejorada: SKU summary + filter chips */}
-            {uiVersion === "mejorada" && products.length > 0 && (
+            {products.length > 0 && (
               <div className="px-4 py-3 border-b border-neutral-100 space-y-2.5">
                 {/* Mini-resumen */}
                 <p className="text-xs text-neutral-500">
@@ -4698,7 +4583,7 @@ function ConteoORContent() {
               </div>
             ) : (
               <div>
-                {(uiVersion === "mejorada" ? filteredProducts : products).map((p, i) => (
+                {filteredProducts.map((p, i) => (
                   <React.Fragment key={p.id}>
                     {i > 0 && <hr className="border-neutral-200" />}
                     <ProductCard
@@ -4713,7 +4598,7 @@ function ConteoORContent() {
                     />
                   </React.Fragment>
                 ))}
-                {uiVersion === "mejorada" && filteredProducts.length === 0 && products.length > 0 && (
+                {filteredProducts.length === 0 && products.length > 0 && (
                   <div className="py-8 text-center">
                     <p className="text-sm text-neutral-400">No hay productos con el filtro seleccionado</p>
                   </div>
