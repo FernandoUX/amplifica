@@ -110,20 +110,17 @@ function buildTimelineSteps(p: PedidoDetalle): TimelineStep[] {
     if (slaData) {
       const lines: string[] = [];
 
-      if (slaData.fechaInicio && slaData.fechaFin && (status === "done" || status === "active")) {
-        // Completed or active with start/end: show both
+      if (slaData.fechaInicio && slaData.fechaFin) {
+        // Has start + end dates (done/active steps, or scheduled with range)
         lines.push(`${fmtShortDate(slaData.fechaInicio)} ${fmtShortTime(slaData.fechaInicio)}`);
         lines.push(`/ ${fmtShortDate(slaData.fechaFin)} ${fmtShortTime(slaData.fechaFin)}`);
-      } else if (slaData.fechaInicio && (status === "done" || status === "active")) {
+      } else if (slaData.fechaInicio) {
         lines.push(`${fmtShortDate(slaData.fechaInicio)} ${fmtShortTime(slaData.fechaInicio)}`);
       } else if (slaData.fechaProgramada) {
-        // Pending/active: show scheduled date
+        // Scheduled date (pending steps)
         if (slaData.rangoHorario) {
           lines.push(fmtShortDate(slaData.fechaProgramada));
           lines.push(slaData.rangoHorario);
-        } else if (slaData.fechaFin) {
-          lines.push(`${fmtShortDate(slaData.fechaProgramada)} ${fmtShortTime(slaData.fechaProgramada)}`);
-          lines.push(`/ ${fmtShortDate(slaData.fechaFin)} ${fmtShortTime(slaData.fechaFin)}`);
         } else {
           lines.push(fmtShortDate(slaData.fechaProgramada));
           lines.push(`${fmtShortTime(slaData.fechaProgramada)} hrs`);
