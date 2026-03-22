@@ -1,7 +1,7 @@
 "use client";
 
 import Button from "@/components/ui/Button";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 
 type StickyActionBarProps = {
   visible: boolean;
@@ -9,6 +9,9 @@ type StickyActionBarProps = {
   onDiscard: () => void;
   saving?: boolean;
   message?: string;
+  /** When true, primary CTA becomes "Recotizar" instead of "Guardar" */
+  requiresRequote?: boolean;
+  onRequote?: () => void;
 };
 
 /** Inline banner — render inside the content flow (above cards) */
@@ -18,7 +21,7 @@ export function DirtyBanner({
 }: Pick<StickyActionBarProps, "visible" | "message">) {
   if (!visible) return null;
   return (
-    <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
+    <div className="flex items-center gap-2 bg-amber-50 border-l-4 border-l-amber-400 rounded-lg px-4 py-2.5">
       <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
       <span className="text-sm text-amber-700">{message}</span>
     </div>
@@ -31,6 +34,8 @@ export default function StickyActionBar({
   onSave,
   onDiscard,
   saving = false,
+  requiresRequote = false,
+  onRequote,
 }: StickyActionBarProps) {
   return (
     <div
@@ -43,9 +48,20 @@ export default function StickyActionBar({
           <Button variant="secondary" size="sm" onClick={onDiscard}>
             Descartar
           </Button>
-          <Button variant="primary" size="sm" onClick={onSave} loading={saving} loadingText="Guardando...">
-            Guardar cambios
-          </Button>
+          {requiresRequote && onRequote ? (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={onRequote}
+              iconLeft={<RefreshCw className="w-3.5 h-3.5" />}
+            >
+              Recotizar
+            </Button>
+          ) : (
+            <Button variant="primary" size="sm" onClick={onSave} loading={saving} loadingText="Guardando...">
+              Guardar cambios
+            </Button>
+          )}
         </div>
       </div>
     </div>

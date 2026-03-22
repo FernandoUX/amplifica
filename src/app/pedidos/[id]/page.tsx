@@ -706,8 +706,17 @@ function PedidoDetalleContent() {
                       )}
                     </div>
                     {editingAddress && (
-                      <div className="flex justify-end gap-2 mt-4">
-                        <Button variant="secondary" size="sm" onClick={discardChanges}>Cancelar</Button>
+                      <div className="flex items-center justify-between mt-4 pt-3 border-t border-neutral-100">
+                        {isDirty && (
+                          <div className="flex items-center gap-2 text-xs text-amber-600">
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            <span>Dirección modificada — requiere recotización</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 ml-auto">
+                          <Button variant="secondary" size="sm" onClick={discardChanges}>Cancelar</Button>
+                          <Button variant="primary" size="sm" onClick={saveChanges}>Guardar cambios</Button>
+                        </div>
                       </div>
                     )}
                   </CardContent>
@@ -766,13 +775,13 @@ function PedidoDetalleContent() {
                     servicio={pedido.cotizacion.servicio}
                     trackingNumber={pedido.cotizacion.trackingNumber}
                     trackingUrl={pedido.cotizacion.trackingUrl}
-                    costo={pedido.cotizacion.costoNeto}
-                    estado={pedido.cotizacion.estado}
-                    tiempoEstimado={pedido.cotizacion.tiempoEstimado}
+                    costo={requiresRequote ? 0 : pedido.cotizacion.costoNeto}
+                    estado={requiresRequote ? "requiere_recotizacion" : pedido.cotizacion.estado}
+                    tiempoEstimado={requiresRequote ? undefined : pedido.cotizacion.tiempoEstimado}
                     dimensiones={pedido.dimensiones}
                     variant="full"
                     onRequote={() => alert("Recotizar (mock)")}
-                    onGenerateLabel={() => alert("Generar etiqueta (mock)")}
+                    onGenerateLabel={requiresRequote ? undefined : () => alert("Generar etiqueta (mock)")}
                   />
                 ) : (
                   <Card size="sm">
@@ -1101,6 +1110,8 @@ function PedidoDetalleContent() {
         visible={isDirty}
         onSave={saveChanges}
         onDiscard={discardChanges}
+        requiresRequote={requiresRequote}
+        onRequote={() => switchTab("envio")}
       />
 
       {/* ── Support Modal ── */}
