@@ -250,6 +250,7 @@ export type Notificacion = {
   estado: "enviada" | "fallida" | "pendiente" | "desactivada";
   timestamp: string;
   motivo?: string;
+  htmlPreview?: string;
 };
 
 export type PedidoDetalle = Pedido & {
@@ -448,6 +449,7 @@ export const MOCK_PEDIDO_DETALLE: Record<number, PedidoDetalle> = {
         destinatario: "macarenavidalulloa@gmail.com",
         estado: "enviada",
         timestamp: "2026-03-19 22:16:30",
+        htmlPreview: `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Validación de dirección</title></head><body style="margin:0;padding:0;background:#f4f4f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f7;padding:32px 0"><tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06)"><tr><td style="background:#4f46e5;padding:24px 32px;text-align:center"><img src="https://placehold.co/140x36/4f46e5/white?text=amplifica" alt="Amplifica" style="height:36px" /></td></tr><tr><td style="padding:32px"><h1 style="margin:0 0 8px;font-size:20px;color:#111827">Valida tu dirección de envío</h1><p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6">Hola Macarena, necesitamos que confirmes la dirección de entrega para tu pedido <strong style="color:#111827">S-BASIC61375</strong>.</p><table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border-radius:8px;margin-bottom:24px"><tr><td style="padding:16px"><p style="margin:0 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#9ca3af;font-weight:600">Dirección actual</p><p style="margin:0;font-size:14px;color:#374151;font-weight:500">Pasaje 2 El Peral 2, Los Ángeles</p></td></tr></table><table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px"><tr><td style="padding:12px 16px;background:#f0fdf4;border-radius:8px;border-left:4px solid #22c55e"><p style="margin:0;font-size:13px;color:#166534"><strong>Productos:</strong> 2 unidades — Monto total: $89.550</p></td></tr></table><table cellpadding="0" cellspacing="0"><tr><td style="background:#4f46e5;border-radius:8px;padding:12px 24px"><a href="#" style="color:#ffffff;text-decoration:none;font-size:14px;font-weight:600">Confirmar dirección</a></td></tr></table><p style="margin:24px 0 0;font-size:12px;color:#9ca3af">Si la dirección es incorrecta, haz clic en el botón para actualizarla.</p></td></tr><tr><td style="padding:20px 32px;background:#f9fafb;text-align:center;border-top:1px solid #e5e7eb"><p style="margin:0;font-size:11px;color:#9ca3af">Amplifica · Santiago, Chile · <a href="#" style="color:#6366f1;text-decoration:none">Desuscribirse</a></p></td></tr></table></td></tr></table></body></html>`,
       },
     ],
     paquete: "Caja Chica (10×10 ×10) - Peso: 1kg",

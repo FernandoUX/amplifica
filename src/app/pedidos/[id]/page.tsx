@@ -8,7 +8,7 @@ import {
   AlertTriangle, Timer, Zap, CopyPlus, Share2, MessageCircle,
   Ban, Eye, Pencil, MapPin, Phone, Mail, ExternalLink,
   ChevronDown, ChevronUp, BellOff, BellRing, CheckCircle2,
-  User, Plus, RefreshCw, StickyNote,
+  User, Plus, RefreshCw, StickyNote, Monitor, Smartphone, X,
 } from "lucide-react";
 
 import { PEDIDOS, MOCK_PEDIDO_DETALLE } from "@/app/pedidos/_data";
@@ -204,6 +204,8 @@ function PedidoDetalleContent() {
   // Modals
   const [supportOpen, setSupportOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [emailPreview, setEmailPreview] = useState<{ html: string; asunto: string } | null>(null);
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
 
   // Keyboard shortcut: Ctrl+Shift+R for support modal
   useEffect(() => {
@@ -918,7 +920,8 @@ function PedidoDetalleContent() {
                             <tr className="border-b border-neutral-100">
                               <th className="text-left text-[10px] font-semibold text-neutral-600 uppercase tracking-wider pb-2 pr-4">Canal</th>
                               <th className="text-left text-[10px] font-semibold text-neutral-600 uppercase tracking-wider pb-2 pr-4">Asunto / Contenido</th>
-                              <th className="text-right text-[10px] font-semibold text-neutral-600 uppercase tracking-wider pb-2">Estado</th>
+                              <th className="text-left text-[10px] font-semibold text-neutral-600 uppercase tracking-wider pb-2 pr-4">Estado</th>
+                              <th className="text-right text-[10px] font-semibold text-neutral-600 uppercase tracking-wider pb-2"></th>
                             </tr>
                           </thead>
                           <tbody>
@@ -940,7 +943,7 @@ function PedidoDetalleContent() {
                                   <p className="text-sm text-neutral-800 truncate max-w-[280px]">{n.asunto}</p>
                                   {n.motivo && <p className="text-xs text-red-400 truncate">{n.motivo}</p>}
                                 </td>
-                                <td className="py-2.5 text-right">
+                                <td className="py-2.5 pr-4">
                                   <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
                                     n.estado === "enviada" ? "bg-green-50 text-green-700" :
                                     n.estado === "fallida" ? "bg-red-50 text-red-600" :
@@ -951,6 +954,17 @@ function PedidoDetalleContent() {
                                      n.estado === "fallida" ? "Fallido" :
                                      n.estado === "desactivada" ? "Desactivado" : "Pendiente"}
                                   </span>
+                                </td>
+                                <td className="py-2.5 text-right">
+                                  {n.htmlPreview && (
+                                    <button
+                                      onClick={() => { setEmailPreview({ html: n.htmlPreview!, asunto: n.asunto }); setPreviewDevice("desktop"); }}
+                                      className="inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:text-primary-700 transition-colors"
+                                    >
+                                      <Eye className="w-3.5 h-3.5" />
+                                      Ver preview
+                                    </button>
+                                  )}
                                 </td>
                               </tr>
                             ))}
@@ -1100,6 +1114,79 @@ function PedidoDetalleContent() {
       >
         Esta acción no se puede deshacer. El pedido pasará a estado &quot;Cancelado&quot; y se notificará al cliente.
       </AlertModal>
+
+      {/* ── Email Preview Modal ── */}
+      {emailPreview && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
+          onMouseDown={() => setEmailPreview(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
+            onMouseDown={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
+              <div>
+                <p className="text-sm font-semibold text-neutral-900">Preview del correo</p>
+                <p className="text-xs text-neutral-500 mt-0.5">{emailPreview.asunto}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                {/* Device toggle */}
+                <div className="flex items-center gap-0.5 bg-neutral-100 rounded-lg p-0.5">
+                  <button
+                    onClick={() => setPreviewDevice("desktop")}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                      previewDevice === "desktop"
+                        ? "bg-white text-neutral-800 shadow-sm"
+                        : "text-neutral-500 hover:text-neutral-700"
+                    }`}
+                  >
+                    <Monitor className="w-3.5 h-3.5" />
+                    Desktop
+                  </button>
+                  <button
+                    onClick={() => setPreviewDevice("mobile")}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                      previewDevice === "mobile"
+                        ? "bg-white text-neutral-800 shadow-sm"
+                        : "text-neutral-500 hover:text-neutral-700"
+                    }`}
+                  >
+                    <Smartphone className="w-3.5 h-3.5" />
+                    Mobile
+                  </button>
+                </div>
+                <button onClick={() => setEmailPreview(null)} className="text-neutral-400 hover:text-neutral-600 transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            {/* Preview iframe */}
+            <div className="flex-1 overflow-auto bg-neutral-100 flex justify-center p-6">
+              <div
+                className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden transition-all duration-300"
+                style={{ width: previewDevice === "desktop" ? 660 : 375, minHeight: 400 }}
+              >
+                <iframe
+                  srcDoc={
+                    previewDevice === "mobile"
+                      ? emailPreview.html.replace(
+                          /<head>/i,
+                          `<head><style>table[width="600"],table[width="100%"]{max-width:100%!important;width:100%!important}td{word-break:break-word}img{max-width:100%!important;height:auto!important}</style>`
+                        )
+                      : emailPreview.html
+                  }
+                  title="Email preview"
+                  className="w-full h-full border-0"
+                  style={{ minHeight: 500 }}
+                  sandbox="allow-same-origin"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -23,11 +23,11 @@ export default function CollapsibleCard({
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <Card size="sm" className={className}>
+    <Card size="sm" className={`!gap-0 !py-4 ${className ?? ""}`}>
       <button
         type="button"
         onClick={() => setOpen(prev => !prev)}
-        className="flex items-center justify-between w-full px-4 group-data-[size=sm]/card:px-3 cursor-pointer select-none"
+        className="flex items-center justify-between w-full px-4 py-0.5 cursor-pointer select-none"
       >
         <span className="text-sm font-medium text-card-foreground">{title}</span>
         <span className="flex items-center gap-2">
@@ -41,7 +41,9 @@ export default function CollapsibleCard({
         className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
       >
         <div className="overflow-hidden">
-          <CardContent>{children}</CardContent>
+          <div className="pt-2">
+            <CardContent className="!px-4">{children}</CardContent>
+          </div>
         </div>
       </div>
     </Card>
