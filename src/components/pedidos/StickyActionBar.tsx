@@ -11,12 +11,26 @@ type StickyActionBarProps = {
   message?: string;
 };
 
+/** Inline banner — render inside the content flow (above cards) */
+export function DirtyBanner({
+  visible,
+  message = "Tienes cambios sin guardar",
+}: Pick<StickyActionBarProps, "visible" | "message">) {
+  if (!visible) return null;
+  return (
+    <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
+      <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+      <span className="text-sm text-amber-700">{message}</span>
+    </div>
+  );
+}
+
+/** Sticky bottom bar with action buttons */
 export default function StickyActionBar({
   visible,
   onSave,
   onDiscard,
   saving = false,
-  message = "Tienes cambios sin guardar",
 }: StickyActionBarProps) {
   return (
     <div
@@ -25,19 +39,13 @@ export default function StickyActionBar({
       }`}
     >
       <div className="bg-white border-t border-neutral-200 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] px-4 sm:px-6 py-3">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-sm text-amber-700">
-            <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
-            <span>{message}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={onDiscard}>
-              Descartar
-            </Button>
-            <Button variant="primary" size="sm" onClick={onSave} loading={saving} loadingText="Guardando...">
-              Guardar cambios
-            </Button>
-          </div>
+        <div className="max-w-7xl mx-auto flex items-center justify-end gap-2">
+          <Button variant="secondary" size="sm" onClick={onDiscard}>
+            Descartar
+          </Button>
+          <Button variant="primary" size="sm" onClick={onSave} loading={saving} loadingText="Guardando...">
+            Guardar cambios
+          </Button>
         </div>
       </div>
     </div>

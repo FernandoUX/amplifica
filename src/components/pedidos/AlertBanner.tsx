@@ -54,7 +54,7 @@ export default function AlertBanner({
 
   return (
     <div
-      className={`flex items-start gap-3 rounded-lg border border-l-4 p-3 ${borderColor[variant]} ${bgColor[variant]}`}
+      className={`flex items-start gap-3 rounded-lg border-l-4 p-3 ${borderColor[variant]} ${bgColor[variant]}`}
     >
       <IconComp className={`w-5 h-5 mt-0.5 flex-shrink-0 ${iconColor[variant]}`} />
       <div className="flex-1 min-w-0">

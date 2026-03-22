@@ -22,7 +22,7 @@ import AlertBanner from "@/components/pedidos/AlertBanner";
 import GanttTimeline from "@/components/pedidos/GanttTimeline";
 import SupportCompactModal from "@/components/pedidos/SupportCompactModal";
 import QuickActionsMenu from "@/components/pedidos/QuickActionsMenu";
-import StickyActionBar from "@/components/pedidos/StickyActionBar";
+import StickyActionBar, { DirtyBanner } from "@/components/pedidos/StickyActionBar";
 import OrderEconomyCard from "@/components/pedidos/OrderEconomyCard";
 import CourierInfoCard from "@/components/pedidos/CourierInfoCard";
 import AlertModal from "@/components/ui/AlertModal";
@@ -366,6 +366,12 @@ function PedidoDetalleContent() {
                 />
               )}
             </div>
+
+            {/* Dirty banner — inline full-width */}
+            <DirtyBanner
+              visible={isDirty}
+              message={requiresRequote ? "Dirección modificada — recotice antes de guardar" : "Tienes cambios sin guardar"}
+            />
 
             {/* Timeline — full width */}
             <Card size="sm">
@@ -1095,7 +1101,6 @@ function PedidoDetalleContent() {
         visible={isDirty}
         onSave={saveChanges}
         onDiscard={discardChanges}
-        message={requiresRequote ? "Dirección modificada — recotice antes de guardar" : "Tienes cambios sin guardar"}
       />
 
       {/* ── Support Modal ── */}
