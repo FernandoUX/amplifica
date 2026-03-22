@@ -831,6 +831,7 @@ function PedidoDetalleContent() {
                     tiempoEstimado={requiresRequote ? undefined : pedido.cotizacion.tiempoEstimado}
                     dimensiones={pedido.dimensiones}
                     variant="full"
+                    hideWarning={editingAddress}
                     onRequote={triggerRequote}
                     onGenerateLabel={requiresRequote ? undefined : () => alert("Generar etiqueta (mock)")}
                   />

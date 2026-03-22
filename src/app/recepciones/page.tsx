@@ -2078,7 +2078,7 @@ function OrdenesPageInner() {
         {/* Desktop Pagination — pinned at bottom of table container */}
         <div className="flex-shrink-0 flex items-center justify-between px-3 py-3 bg-white border-t border-neutral-100">
         <div className="flex items-center gap-2">
-          <label className="flex items-center gap-1.5 bg-neutral-100 rounded-lg px-3 h-[44px] text-sm text-neutral-700 cursor-pointer">
+          <label className="flex items-center gap-1.5 bg-neutral-100 rounded-lg px-3 h-9 text-sm text-neutral-700 cursor-pointer">
             <span className="text-neutral-500">Mostrar</span>
             <select
               value={pageSize}
@@ -2095,7 +2095,7 @@ function OrdenesPageInner() {
           <button
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={clampedPage <= 1}
-            className="px-3 h-[44px] bg-neutral-100 rounded-lg text-sm text-neutral-700 hover:bg-neutral-200 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300 flex items-center gap-1.5"
+            className="px-3 h-9 bg-neutral-100 rounded-lg text-sm text-neutral-700 hover:bg-neutral-200 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300 flex items-center gap-1.5"
             style={NW}
           >
             <ChevronLeft className="w-4 h-4" />
@@ -2107,7 +2107,7 @@ function OrdenesPageInner() {
           <button
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
             disabled={clampedPage >= totalPages}
-            className="px-3 h-[44px] bg-neutral-100 rounded-lg text-sm text-neutral-700 hover:bg-neutral-200 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300 flex items-center gap-1.5"
+            className="px-3 h-9 bg-neutral-100 rounded-lg text-sm text-neutral-700 hover:bg-neutral-200 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300 flex items-center gap-1.5"
             style={NW}
           >
             Siguiente

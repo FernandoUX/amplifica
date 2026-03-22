@@ -16,6 +16,8 @@ type CourierInfoCardProps = {
   tiempoEstimado?: string;
   dimensiones?: { peso: number; largo: number; ancho: number; alto: number };
   variant?: "compact" | "full";
+  /** Hide the internal warning banner (when a parent banner is already shown) */
+  hideWarning?: boolean;
   onRequote?: () => void;
   onGenerateLabel?: () => void;
 };
@@ -53,6 +55,7 @@ export default function CourierInfoCard({
   tiempoEstimado,
   dimensiones,
   variant = "compact",
+  hideWarning = false,
   onRequote,
   onGenerateLabel,
 }: CourierInfoCardProps) {
@@ -63,8 +66,8 @@ export default function CourierInfoCard({
 
   return (
     <CollapsibleCard title="Información del Courier">
-        {/* Requote warning */}
-        {estado === "requiere_recotizacion" && (
+        {/* Requote warning — hidden when parent shows its own banner */}
+        {estado === "requiere_recotizacion" && !hideWarning && (
           <div className="mb-3">
             <AlertBanner
               variant="warning"
