@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Truck, Copy, Check, Printer, AlertTriangle } from "lucide-react";
 import CollapsibleCard from "@/components/ui/CollapsibleCard";
+import AlertBanner from "@/components/pedidos/AlertBanner";
 import Button from "@/components/ui/Button";
 
 type CourierInfoCardProps = {
@@ -64,12 +65,14 @@ export default function CourierInfoCard({
     <CollapsibleCard title="Información del Courier">
         {/* Requote warning */}
         {estado === "requiere_recotizacion" && (
-          <div className="flex items-center gap-2 bg-amber-50 border-l-4 border-l-amber-400 rounded-lg px-3 py-2 mb-3">
-            <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
-            <div>
-              <p className="text-xs font-semibold text-amber-800">Cotización invalidada</p>
-              <p className="text-[11px] text-amber-600">La dirección fue modificada. Debe recotizar el envío.</p>
-            </div>
+          <div className="mb-3">
+            <AlertBanner
+              variant="warning"
+              icon={AlertTriangle}
+              title="Cotización invalidada"
+              description="La dirección fue modificada. Debe recotizar el envío."
+              dismissible={false}
+            />
           </div>
         )}
         {/* Courier header + dimensions */}

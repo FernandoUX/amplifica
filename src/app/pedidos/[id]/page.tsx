@@ -259,11 +259,11 @@ function PedidoDetalleContent() {
   };
 
   const saveChanges = () => {
-    // Mock save
+    // Mock save — address saved, but requote stays until courier is re-quoted
     setEditingAddress(false);
     setAddressDraft(null);
     setIsDirty(false);
-    setRequiresRequote(false);
+    // requiresRequote stays true — courier still needs re-quoting
   };
 
   const addr = editingAddress && addressDraft ? addressDraft : pedido.destinatario;
