@@ -893,31 +893,30 @@ function OrdenesPageInner() {
     return () => document.removeEventListener("mousedown", close);
   }, [cardMenuId, bottomMenuOpen]);
 
-  // ── Data version — clear stale localStorage when seed data changes ──
+  // ── Purge stale localStorage + read overrides (single atomic effect) ──
   useEffect(() => {
-    const DATA_VERSION = "v3-70ors";
+    // Step 1: version check — purge if stale
+    const DATA_VERSION = "v4-70ors";
     try {
-      const stored = localStorage.getItem("amplifica_data_version");
-      if (stored !== DATA_VERSION) {
-        // Purge all amplifica_or_* keys and created ORs
+      const ver = localStorage.getItem("amplifica_data_version");
+      if (ver !== DATA_VERSION) {
         const keysToRemove: string[] = [];
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
-          if (key && (key.startsWith("amplifica_or_") || key === "amplifica_created_ors" || key === "amplifica_pending_toast" || key === QR_STORAGE_KEY)) {
+          if (key && (key.startsWith("amplifica_or_") || key.startsWith("amplifica_") || key === QR_STORAGE_KEY)) {
             keysToRemove.push(key);
           }
         }
         keysToRemove.forEach(k => localStorage.removeItem(k));
         localStorage.setItem("amplifica_data_version", DATA_VERSION);
+        // After purge, no overrides or created ORs exist — skip reading
+        return;
       }
     } catch { /* ignore */ }
-  }, []);
 
-  // Read per-OR status overrides + created ORs from localStorage
-  useEffect(() => {
+    // Step 2: read overrides (only if version matched — data is fresh)
     const overrides: Record<string, { estado: Status; fechaAgendada?: string }> = {};
 
-    // Overrides for static mock ORs
     for (const orden of ORDENES) {
       try {
         const stored = localStorage.getItem(`amplifica_or_${orden.id}`);
@@ -928,12 +927,10 @@ function OrdenesPageInner() {
       } catch { /* ignore */ }
     }
 
-    // Read ORs created via /recepciones/crear
     try {
       const raw = localStorage.getItem("amplifica_created_ors");
       if (raw) {
         const parsed = JSON.parse(raw) as Orden[];
-        // Also apply any state-override saved for these ORs
         for (const or of parsed) {
           try {
             const stored = localStorage.getItem(`amplifica_or_${or.id}`);
@@ -949,7 +946,6 @@ function OrdenesPageInner() {
 
     setOrStatusOverrides(overrides);
 
-    // Show pending toast written by [id]/page.tsx after OR closure + redirect
     try {
       const pending = localStorage.getItem("amplifica_pending_toast");
       if (pending) {
