@@ -320,8 +320,9 @@ function PedidoDetalleContent() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Contextual primary CTA based on state */}
-          {requiresRequote ? (
+          {/* Contextual primary CTA based on state — hidden while editing (buttons are in card) */}
+          {isDirty ? null
+           : requiresRequote ? (
             <Button variant="primary" size="md" iconLeft={<RefreshCw className="w-4 h-4" />} onClick={triggerRequote} className="bg-amber-500 hover:bg-amber-600 border-amber-500 hover:border-amber-600">
               Recotizar
             </Button>
@@ -395,26 +396,14 @@ function PedidoDetalleContent() {
                   description="Este pedido lleva más del umbral configurado en preparación."
                 />
               )}
-              {requiresRequote && (
-                <AlertBanner
-                  variant="warning"
-                  icon={AlertTriangle}
-                  title="Dirección modificada — recotización requerida"
-                  description="Recotice el envío en la pestaña Envío antes de guardar."
-                  action={{ label: "Ir a Envío", onClick: () => switchTab("envio") }}
-                  dismissible={false}
-                />
-              )}
             </div>
 
-            {/* Status banners — one at a time */}
-            {isDirty && !requiresRequote && (
-              <DirtyBanner visible message="Tienes cambios sin guardar" />
-            )}
-            {isDirty && requiresRequote && (
+            {/* Status banner — one at a time, mutually exclusive */}
+            {isDirty && requiresRequote ? (
               <DirtyBanner visible message="Dirección modificada — guarde y luego recotice el envío" />
-            )}
-            {!isDirty && requiresRequote && (
+            ) : isDirty ? (
+              <DirtyBanner visible message="Tienes cambios sin guardar" />
+            ) : requiresRequote ? (
               <AlertBanner
                 variant="warning"
                 icon={AlertTriangle}
@@ -423,7 +412,7 @@ function PedidoDetalleContent() {
                 action={{ label: "Recotizar ahora", onClick: triggerRequote }}
                 dismissible={false}
               />
-            )}
+            ) : null}
 
             {/* Timeline — full width */}
             <Card size="sm">
