@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardAction, CardContent } from "./card";
+import { Card, CardContent } from "./card";
 
 type CollapsibleCardProps = {
   title: React.ReactNode;
@@ -24,20 +24,19 @@ export default function CollapsibleCard({
 
   return (
     <Card size="sm" className={className}>
-      <CardHeader
-        className="cursor-pointer select-none"
+      <button
+        type="button"
         onClick={() => setOpen(prev => !prev)}
+        className="flex items-center justify-between w-full px-4 group-data-[size=sm]/card:px-3 cursor-pointer select-none"
       >
-        <CardTitle className="text-sm">{title}</CardTitle>
-        <CardAction>
-          <div className="flex items-center gap-2">
-            {action}
-            <ChevronDown
-              className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${open ? "" : "-rotate-90"}`}
-            />
-          </div>
-        </CardAction>
-      </CardHeader>
+        <span className="text-sm font-medium text-card-foreground">{title}</span>
+        <span className="flex items-center gap-2">
+          {action}
+          <ChevronDown
+            className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${open ? "" : "-rotate-90"}`}
+          />
+        </span>
+      </button>
       <div
         className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
       >
