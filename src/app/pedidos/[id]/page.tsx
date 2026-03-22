@@ -695,12 +695,15 @@ function PedidoDetalleContent() {
                           <label className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Instrucciones</label>
                           {editingAddress ? (
                             <input
-                              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200"
+                              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 mt-1"
                               value={addr.instrucciones ?? ""}
                               onChange={e => handleAddressChange("instrucciones", e.target.value)}
                             />
                           ) : (
-                            <p className="text-sm text-neutral-800">{addr.instrucciones}</p>
+                            <div className="mt-1.5 flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2.5">
+                              <MessageCircle className="w-3.5 h-3.5 text-neutral-500 flex-shrink-0 mt-0.5" />
+                              <p className="text-sm text-neutral-600 leading-relaxed">{addr.instrucciones}</p>
+                            </div>
                           )}
                         </div>
                       )}
