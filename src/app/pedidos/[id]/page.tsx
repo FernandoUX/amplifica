@@ -206,6 +206,7 @@ function PedidoDetalleContent() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [emailPreview, setEmailPreview] = useState<{ html: string; asunto: string } | null>(null);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
+  const [addressSavedToast, setAddressSavedToast] = useState(false);
 
   // Keyboard shortcut: Ctrl+Shift+R for support modal
   useEffect(() => {
@@ -244,11 +245,17 @@ function PedidoDetalleContent() {
     setAddressDraft({ ...pedido.destinatario });
   };
 
+  // Fields that affect courier quotation (physical address)
+  const REQUOTE_FIELDS: (keyof DireccionEnvio)[] = ["calle", "numero", "depto", "comuna", "region"];
+
   const handleAddressChange = (field: keyof DireccionEnvio, value: string) => {
     if (!addressDraft) return;
     setAddressDraft({ ...addressDraft, [field]: value });
     setIsDirty(true);
-    setRequiresRequote(true);
+    // Only invalidate courier when physical address changes
+    if (REQUOTE_FIELDS.includes(field)) {
+      setRequiresRequote(true);
+    }
   };
 
   const discardChanges = () => {
@@ -264,13 +271,32 @@ function PedidoDetalleContent() {
     setAddressDraft(null);
     setIsDirty(false);
     // requiresRequote stays true — courier still needs re-quoting
+    // Show success toast
+    setAddressSavedToast(true);
+    setTimeout(() => setAddressSavedToast(false), 3000);
   };
 
   const addr = editingAddress && addressDraft ? addressDraft : pedido.destinatario;
 
+  // Mock requote action
+  const triggerRequote = () => {
+    setRequiresRequote(false);
+    alert("Recotización iniciada (mock)");
+  };
+
   // ─── RENDER ──────────────────────────────────────────────────────────────────
   return (
     <div className="max-w-6xl mx-auto px-4 lg:px-6 pt-4 pb-32 lg:pb-6 space-y-4 sm:space-y-5">
+      {/* ── Address saved toast ── */}
+      {addressSavedToast && (
+        <div className="fixed top-6 right-6 z-[60] flex items-center gap-3 bg-white border border-green-200 rounded-xl shadow-xl px-4 py-3 animate-in fade-in slide-in-from-top-2 duration-300">
+          <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+          <p className="text-sm font-semibold text-neutral-800">Dirección actualizada</p>
+          <button onClick={() => setAddressSavedToast(false)} className="text-neutral-400 hover:text-neutral-600 ml-2">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
       {/* ── Breadcrumb ── */}
       <nav className="flex items-center gap-1.5 text-sm text-neutral-500">
         <Link href="/pedidos" className="hover:text-primary-500 transition-colors duration-300">Pedidos</Link>
@@ -367,11 +393,23 @@ function PedidoDetalleContent() {
               )}
             </div>
 
-            {/* Dirty banner — inline full-width */}
-            <DirtyBanner
-              visible={isDirty}
-              message={requiresRequote ? "Dirección modificada — recotice antes de guardar" : "Tienes cambios sin guardar"}
-            />
+            {/* Status banners — one at a time */}
+            {isDirty && !requiresRequote && (
+              <DirtyBanner visible message="Tienes cambios sin guardar" />
+            )}
+            {isDirty && requiresRequote && (
+              <DirtyBanner visible message="Dirección modificada — guarde y luego recotice el envío" />
+            )}
+            {!isDirty && requiresRequote && (
+              <AlertBanner
+                variant="warning"
+                icon={AlertTriangle}
+                title="Recotización pendiente"
+                description="La dirección fue actualizada. El courier y costo anterior fueron invalidados."
+                action={{ label: "Recotizar ahora", onClick: triggerRequote }}
+                dismissible={false}
+              />
+            )}
 
             {/* Timeline — full width */}
             <Card size="sm">
@@ -548,13 +586,20 @@ function PedidoDetalleContent() {
         {activeTab === "envio" && (
           <div className="space-y-5">
             {/* Requote warning — full width */}
-            {requiresRequote && (
+            {requiresRequote && !editingAddress && (
               <AlertBanner
                 variant="warning"
                 icon={AlertTriangle}
-                title="Dirección modificada — courier y costo invalidados"
-                description="Debe recotizar el envío antes de guardar."
+                title="Recotización pendiente"
+                description="La dirección fue actualizada. El courier y costo anterior fueron invalidados."
+                action={{ label: "Recotizar ahora", onClick: triggerRequote }}
                 dismissible={false}
+              />
+            )}
+            {editingAddress && isDirty && (
+              <DirtyBanner
+                visible
+                message={requiresRequote ? "Dirección modificada — guarde y luego recotice" : "Tienes cambios sin guardar"}
               />
             )}
 
@@ -783,7 +828,7 @@ function PedidoDetalleContent() {
                     tiempoEstimado={requiresRequote ? undefined : pedido.cotizacion.tiempoEstimado}
                     dimensiones={pedido.dimensiones}
                     variant="full"
-                    onRequote={() => alert("Recotizar (mock)")}
+                    onRequote={triggerRequote}
                     onGenerateLabel={requiresRequote ? undefined : () => alert("Generar etiqueta (mock)")}
                   />
                 ) : (

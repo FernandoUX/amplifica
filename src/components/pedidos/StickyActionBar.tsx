@@ -39,7 +39,7 @@ export default function StickyActionBar({
 }: StickyActionBarProps) {
   return (
     <div
-      className={`fixed bottom-0 left-0 right-0 lg:left-60 z-40 transition-transform duration-300 ease-out ${
+      className={`fixed bottom-0 left-0 right-0 z-40 lg:hidden transition-transform duration-300 ease-out ${
         visible ? "translate-y-0" : "translate-y-full"
       }`}
     >

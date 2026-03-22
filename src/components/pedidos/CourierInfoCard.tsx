@@ -71,6 +71,7 @@ export default function CourierInfoCard({
               icon={AlertTriangle}
               title="Cotización invalidada"
               description="La dirección fue modificada. Debe recotizar el envío."
+              action={onRequote ? { label: "Recotizar ahora", onClick: onRequote } : undefined}
               dismissible={false}
             />
           </div>
