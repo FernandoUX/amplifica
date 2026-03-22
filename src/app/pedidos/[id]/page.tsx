@@ -8,7 +8,7 @@ import {
   AlertTriangle, Timer, Zap, CopyPlus, Share2, MessageCircle,
   Ban, Eye, Pencil, MapPin, Phone, Mail, ExternalLink,
   ChevronDown, ChevronUp, BellOff, BellRing, CheckCircle2,
-  User, Plus, RefreshCw, StickyNote, Monitor, Smartphone, X,
+  User, Plus, RefreshCw, StickyNote, Monitor, Smartphone, X, Printer,
 } from "lucide-react";
 
 import { PEDIDOS, MOCK_PEDIDO_DETALLE } from "@/app/pedidos/_data";
@@ -320,6 +320,20 @@ function PedidoDetalleContent() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Contextual primary CTA based on state */}
+          {requiresRequote ? (
+            <Button variant="primary" size="md" iconLeft={<RefreshCw className="w-4 h-4" />} onClick={triggerRequote} className="bg-amber-500 hover:bg-amber-600 border-amber-500 hover:border-amber-600">
+              Recotizar
+            </Button>
+          ) : pedido.estadoPreparacion === "Validado" && pedido.cotizacion?.estado === "vigente" ? (
+            <Button variant="primary" size="md" iconLeft={<Printer className="w-4 h-4" />} onClick={() => alert("Generar etiqueta (mock)")}>
+              Generar Etiqueta
+            </Button>
+          ) : pedido.cotizacion?.trackingNumber ? (
+            <Button variant="secondary" size="md" iconLeft={<ExternalLink className="w-4 h-4" />} onClick={() => alert("Ver seguimiento (mock)")}>
+              Ver seguimiento
+            </Button>
+          ) : null}
           <Button variant="secondary" size="md" iconLeft={<Eye className="w-4 h-4" />} onClick={() => setSupportOpen(true)}>
             Vista rápida
           </Button>
