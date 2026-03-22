@@ -14,7 +14,7 @@ import {
   Calendar, Warehouse, Clock, Ban, Check, ClipboardList,
 } from "lucide-react";
 import StatusBadge, { Status } from "@/components/recepciones/StatusBadge";
-import { OR_STATS } from "./_data";
+import { OR_STATS, QR_STORAGE_KEY } from "./_data";
 import Button from "@/components/ui/Button";
 import QrScannerModal from "@/components/recepciones/QrScannerModal";
 import PageInfoModal from "@/components/ui/PageInfoModal";
@@ -892,6 +892,26 @@ function OrdenesPageInner() {
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, [cardMenuId, bottomMenuOpen]);
+
+  // ── Data version — clear stale localStorage when seed data changes ──
+  useEffect(() => {
+    const DATA_VERSION = "v3-70ors";
+    try {
+      const stored = localStorage.getItem("amplifica_data_version");
+      if (stored !== DATA_VERSION) {
+        // Purge all amplifica_or_* keys and created ORs
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith("amplifica_or_") || key === "amplifica_created_ors" || key === "amplifica_pending_toast" || key === QR_STORAGE_KEY)) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+        localStorage.setItem("amplifica_data_version", DATA_VERSION);
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   // Read per-OR status overrides + created ORs from localStorage
   useEffect(() => {
