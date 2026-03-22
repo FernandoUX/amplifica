@@ -961,6 +961,8 @@ function OrdenesPageInner() {
   const [filterSellers,    setFilterSellers]    = useState<Set<string>>(new Set());
   const [filterSucursales, setFilterSucursales] = useState<Set<string>>(new Set());
   const [filterTagTypes,   setFilterTagTypes]   = useState<Set<string>>(new Set());
+  const [filterFechaDesde, setFilterFechaDesde] = useState("");
+  const [filterFechaHasta, setFilterFechaHasta] = useState("");
 
   // Merge created ORs with static data (dedup by id), apply localStorage overrides, and enrich with OR_STATS
   const ordenesEffective = useMemo(() => {
@@ -1010,7 +1012,7 @@ function OrdenesPageInner() {
   const allSucursales = useMemo(() => [...new Set(ordenesEffective.map(o => o.sucursal))].sort(), [ordenesEffective]);
 
   // ── Active filter count (for badge) ──
-  const activeFilterCount = filterTagTypes.size;
+  const activeFilterCount = filterTagTypes.size + (filterFechaDesde ? 1 : 0) + (filterFechaHasta ? 1 : 0);
 
   // ── Toggle helper ──
   const toggleInSet = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, val: string) => {
@@ -1023,6 +1025,8 @@ function OrdenesPageInner() {
 
   const clearAllFilters = () => {
     setFilterTagTypes(new Set());
+    setFilterFechaDesde("");
+    setFilterFechaHasta("");
   };
 
   // Mostrar toast al volver de crear o reagendar
@@ -1125,6 +1129,20 @@ function OrdenesPageInner() {
       ) ?? false
     );
 
+    // ── Fecha agendada range filter ──
+    if (filterFechaDesde || filterFechaHasta) {
+      rows = rows.filter(o => {
+        if (o.fechaAgendada === "—" || o.fechaAgendada === "Sin agendar") return false;
+        const parts = o.fechaAgendada.split(" ")[0].split("/").map(Number);
+        if (parts.length < 3) return false;
+        const [d, m, y] = parts;
+        const iso = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        if (filterFechaDesde && iso < filterFechaDesde) return false;
+        if (filterFechaHasta && iso > filterFechaHasta) return false;
+        return true;
+      });
+    }
+
     const q = search.trim().toLowerCase();
     if (q) {
       rows = rows.filter(o =>
@@ -1158,10 +1176,10 @@ function OrdenesPageInner() {
       });
     }
     return rows;
-  }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes, ordenesEffective, sidebarSucursal, sidebarSeller, sidebarDateFrom, sidebarDateTo]);
+  }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes, filterFechaDesde, filterFechaHasta, ordenesEffective, sidebarSucursal, sidebarSeller, sidebarDateFrom, sidebarDateTo]);
 
   // Reset to page 1 whenever filters/tabs/search change
-  useEffect(() => { setPage(1); }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes, pageSize]);
+  useEffect(() => { setPage(1); }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes, filterFechaDesde, filterFechaHasta, pageSize]);
 
   // Detect tabs overflow → show/hide left/right arrows
   useEffect(() => {
@@ -1334,6 +1352,31 @@ function OrdenesPageInner() {
             {/* Body */}
             <div className="p-5 space-y-5 overflow-y-auto max-h-[60vh]">
               {/* Tags de resultado */}
+              {/* Fecha agendada */}
+              <div>
+                <p className="text-sm font-semibold text-neutral-700 mb-2">Fecha agendada</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">Desde</label>
+                    <input
+                      type="date"
+                      value={filterFechaDesde}
+                      onChange={e => setFilterFechaDesde(e.target.value)}
+                      className="w-full mt-1 px-3 py-2 text-sm border border-neutral-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">Hasta</label>
+                    <input
+                      type="date"
+                      value={filterFechaHasta}
+                      onChange={e => setFilterFechaHasta(e.target.value)}
+                      className="w-full mt-1 px-3 py-2 text-sm border border-neutral-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <FilterSection
                 title="Estado de productos"
                 options={TAG_FILTER_OPTIONS.map(t => t.key)}
