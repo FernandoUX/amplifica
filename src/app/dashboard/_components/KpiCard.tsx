@@ -15,16 +15,16 @@ type KpiCardProps = {
   sparklineColor?: string;
 };
 
-const deltaColorMap = {
-  green:   "text-green-600",
-  red:     "text-red-500",
-  blue:    "text-primary-500",
-  amber:   "text-amber-500",
-  neutral: "text-neutral-500",
+const deltaBadgeMap = {
+  green:   "bg-green-50 text-green-700",
+  red:     "bg-red-50 text-red-600",
+  blue:    "bg-primary-50 text-primary-700",
+  amber:   "bg-amber-50 text-amber-700",
+  neutral: "bg-neutral-100 text-neutral-600",
 };
 
 export default function KpiCard({ title, value, prefix, delta, icon, sparkline, sparklineColor }: KpiCardProps) {
-  const color = deltaColorMap[delta.color];
+  const badgeCls = deltaBadgeMap[delta.color];
   const chartColor = sparklineColor ?? (delta.color === "red" ? "#6366f1" : "#22c55e");
 
   const data: SparklinePoint[] = sparkline?.map(v => ({ v })) ?? [];
@@ -39,18 +39,23 @@ export default function KpiCard({ title, value, prefix, delta, icon, sparkline, 
 
       {/* Value + delta + sparkline */}
       <div className="flex items-end justify-between gap-2">
-        <div className="flex flex-col gap-0.5 min-w-0">
+        <div className="flex flex-col gap-1.5 min-w-0">
           <span className="text-xl sm:text-2xl lg:text-[1.75rem] font-bold text-neutral-900 leading-tight tracking-tight tabular-nums">
             {prefix}{value}
           </span>
-          <span className={`text-xs font-medium ${color}`}>
+          <span className={`inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none ${badgeCls}`}>
             {delta.value} {delta.label}
           </span>
         </div>
 
-        {/* Sparkline */}
+        {/* Sparkline with left fade */}
         {data.length > 0 && (
-          <div className="w-24 h-12 flex-shrink-0">
+          <div className="w-24 h-12 flex-shrink-0 relative">
+            {/* Left-to-right white fade overlay */}
+            <div
+              className="absolute inset-0 z-10 pointer-events-none"
+              style={{ background: "linear-gradient(to right, white 0%, transparent 40%)" }}
+            />
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
                 <defs>
