@@ -498,51 +498,84 @@ function CrearPedidoContent() {
 
           {/* RIGHT: Summary sidebar */}
           <div className="lg:sticky lg:top-4 space-y-4 h-fit">
-            <Card size="sm" className="border-primary-100 bg-primary-50/20">
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <ShoppingCart className="w-4 h-4 text-primary-500" />
-                  <h2 className="text-sm font-bold text-neutral-900">Resumen del Pedido</h2>
+            <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden">
+              {/* Header */}
+              <div className="bg-neutral-900 px-5 py-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+                    <ShoppingCart className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-bold text-white">Resumen del Pedido</h2>
+                    <p className="text-[10px] text-neutral-400">{sucursal} · {tienda}</p>
+                  </div>
                 </div>
+              </div>
+
+              <div className="px-5 py-4 space-y-4">
+                {/* Client info */}
                 {clientType && clientComplete && (
-                  <div className="space-y-1.5 mb-4 pb-4 border-b border-neutral-100">
+                  <div className="space-y-1.5 pb-4 border-b border-neutral-100">
                     <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">Cliente {clientType.toUpperCase()}</p>
                     {clientType === "b2c" ? (
-                      <><p className="text-xs text-neutral-700 font-medium">{b2c.nombre}</p><p className="text-[10px] text-neutral-500">{b2c.email}</p><p className="text-[10px] text-neutral-500">{b2c.direccion}</p></>
+                      <><p className="text-sm text-neutral-800 font-medium">{b2c.nombre}</p><p className="text-xs text-neutral-500">{b2c.email} · {b2c.telefono}</p><p className="text-xs text-neutral-500">{b2c.direccion}</p></>
                     ) : (
-                      <><p className="text-xs text-neutral-700 font-medium">{b2b.razonSocial}</p><p className="text-[10px] text-neutral-500">RUT: {b2b.rut}</p><p className="text-[10px] text-neutral-500">{b2b.direccionEnvio || b2b.direccionFiscal}</p></>
+                      <><p className="text-sm text-neutral-800 font-medium">{b2b.razonSocial}</p><p className="text-xs text-neutral-500">RUT: {b2b.rut} · {b2b.giro}</p><p className="text-xs text-neutral-500">{b2b.direccionEnvio || b2b.direccionFiscal}</p></>
                     )}
                   </div>
                 )}
+
+                {/* Products */}
                 {products.length > 0 ? (
-                  <div className="space-y-2 mb-4">
+                  <div className="space-y-2">
                     <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">Productos</p>
                     {products.map(p => (
-                      <div key={p.id} className="flex items-center justify-between text-xs">
-                        <span className="text-neutral-700 truncate mr-2">{p.nombre} <span className="text-neutral-400">×{p.cantidad}</span></span>
-                        <span className="text-neutral-900 font-medium tabular-nums flex-shrink-0">{fmt(p.precioUnitario * p.cantidad)}</span>
+                      <div key={p.id} className="flex items-center justify-between">
+                        <div className="min-w-0 mr-3">
+                          <p className="text-xs text-neutral-700 truncate">{p.nombre}</p>
+                          <p className="text-[10px] text-neutral-400">{p.sku} · ×{p.cantidad}</p>
+                        </div>
+                        <span className="text-xs font-semibold text-neutral-900 tabular-nums flex-shrink-0">{fmt(p.precioUnitario * p.cantidad)}</span>
                       </div>
                     ))}
-                    <div className="flex items-center justify-between pt-2 border-t border-neutral-200">
-                      <span className="text-xs font-semibold text-neutral-700">Total del pedido</span>
-                      <span className="text-base font-bold text-neutral-900 tabular-nums">{fmt(totalAmount)}</span>
+                    <div className="flex items-center justify-between pt-3 mt-2 border-t border-neutral-200">
+                      <span className="text-sm font-semibold text-neutral-700">Total</span>
+                      <span className="text-lg font-bold text-neutral-900 tabular-nums">{fmt(totalAmount)}</span>
                     </div>
                   </div>
                 ) : (
-                  <div className="py-6 text-center mb-4">
-                    <Package className="w-8 h-8 text-neutral-200 mx-auto mb-2" />
-                    <p className="text-xs text-neutral-400">Agrega productos para ver el resumen</p>
+                  <div className="py-8 text-center">
+                    <div className="w-12 h-12 rounded-xl bg-neutral-100 flex items-center justify-center mx-auto mb-3">
+                      <Package className="w-6 h-6 text-neutral-300" />
+                    </div>
+                    <p className="text-sm text-neutral-500 font-medium">Sin productos</p>
+                    <p className="text-xs text-neutral-400 mt-0.5">Agrega productos para ver el resumen</p>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
+
+            {/* CTAs */}
             <Button variant="primary" size="lg" className="w-full" disabled={!canConfirm} iconLeft={<CheckCircle2 className="w-4 h-4" />}>Confirmar Pedido</Button>
+
             {!canConfirm && (
-              <ul className="space-y-1">
-                {!clientComplete && <li className="flex items-center gap-1.5 text-[10px] text-neutral-400"><span className="w-1.5 h-1.5 rounded-full bg-neutral-300" /> Completar datos del cliente</li>}
-                {products.length === 0 && <li className="flex items-center gap-1.5 text-[10px] text-neutral-400"><span className="w-1.5 h-1.5 rounded-full bg-neutral-300" /> Agregar al menos un producto</li>}
-              </ul>
+              <div className="bg-neutral-50 rounded-lg px-3 py-2.5 space-y-1.5">
+                <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">Requisitos pendientes</p>
+                {!clientComplete && (
+                  <div className="flex items-center gap-2 text-xs text-neutral-500">
+                    <span className="w-4 h-4 rounded-full border border-neutral-300 flex items-center justify-center flex-shrink-0"><span className="w-1.5 h-1.5 rounded-full bg-neutral-300" /></span>
+                    Completar datos del cliente
+                  </div>
+                )}
+                {products.length === 0 && (
+                  <div className="flex items-center gap-2 text-xs text-neutral-500">
+                    <span className="w-4 h-4 rounded-full border border-neutral-300 flex items-center justify-center flex-shrink-0"><span className="w-1.5 h-1.5 rounded-full bg-neutral-300" /></span>
+                    Agregar al menos un producto
+                  </div>
+                )}
+              </div>
             )}
+
             <Button variant="secondary" size="lg" className="w-full" iconLeft={<FileText className="w-4 h-4" />}>Guardar como Borrador</Button>
           </div>
         </div>
