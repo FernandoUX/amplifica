@@ -97,16 +97,25 @@ function buildTimelineSteps(p: PedidoDetalle): TimelineStep[] {
   // Auto-generate SLA data when slaTimeline is not provided
   const slaTimeline = p.slaTimeline ?? (() => {
     const auto: Record<string, { fechaInicio?: string; fechaFin?: string; fechaProgramada?: string; rangoHorario?: string; slaStatus: "cumplido" | "pendiente" | "atrasado" | "en_riesgo" }> = {};
-    // Parse base date from fechaCreacion (e.g. "Hoy a las 22:15" or ISO)
+    // Parse base date from fechaCreacion (e.g. "Hoy a las 22:15", "Ayer a las 18:10", "16/03/2026 14:20", or ISO)
     let baseDate: Date;
     try {
       const fc = p.fechaCreacion;
+      const timePart = fc.match(/(\d{1,2}):(\d{2})/);
       if (fc.includes("Hoy")) {
-        const timePart = fc.match(/(\d{1,2}):(\d{2})/);
         baseDate = new Date();
         if (timePart) { baseDate.setHours(parseInt(timePart[1]), parseInt(timePart[2]), 0, 0); }
+      } else if (fc.includes("Ayer")) {
+        baseDate = new Date(Date.now() - 86400000);
+        if (timePart) { baseDate.setHours(parseInt(timePart[1]), parseInt(timePart[2]), 0, 0); }
       } else {
-        baseDate = new Date(fc);
+        // Try "dd/mm/yyyy HH:mm" format first
+        const ddmmMatch = fc.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
+        if (ddmmMatch) {
+          baseDate = new Date(parseInt(ddmmMatch[3]), parseInt(ddmmMatch[2]) - 1, parseInt(ddmmMatch[1]), parseInt(ddmmMatch[4]), parseInt(ddmmMatch[5]));
+        } else {
+          baseDate = new Date(fc);
+        }
         if (isNaN(baseDate.getTime())) baseDate = new Date();
       }
     } catch { baseDate = new Date(); }
@@ -180,6 +189,95 @@ function buildTimelineSteps(p: PedidoDetalle): TimelineStep[] {
   });
 }
 
+// ─── Mini Timeline (3 visible steps with nav arrows) ────────────────────────
+function MiniTimeline({ steps, offset, onOffsetChange }: { steps: TimelineStep[]; offset: number | null; onOffsetChange: (v: number | null) => void }) {
+  const activeIdx = steps.findIndex(s => s.status === "active" || s.status === "late");
+  const currentIdx = activeIdx >= 0 ? activeIdx : steps.filter(s => s.status === "done").length - 1;
+  const total = steps.length;
+
+  // Default start based on current step
+  let defaultStart: number;
+  if (currentIdx <= 0) defaultStart = 0;
+  else if (currentIdx >= total - 1) defaultStart = Math.max(0, total - 3);
+  else defaultStart = currentIdx - 1;
+
+  const start = offset ?? defaultStart;
+  const end = Math.min(start + 3, total);
+  const visible = steps.slice(start, end);
+  const canPrev = start > 0;
+  const canNext = end < total;
+
+  const iconColorMap: Record<string, { bg: string; border: string; icon: string }> = {
+    done:    { bg: "bg-neutral-100", border: "border-neutral-400", icon: "text-neutral-600" },
+    active:  { bg: "bg-primary-50", border: "border-primary-400", icon: "text-primary-600" },
+    late:    { bg: "bg-red-50", border: "border-red-400", icon: "text-red-600" },
+    pending: { bg: "bg-neutral-50", border: "border-neutral-200", icon: "text-neutral-300" },
+  };
+  const iconMap: Record<string, typeof Package> = { "Recepción": Package, "Validación": ClipboardCheck, "Preparación": Package, "Empaque": Package, "Retiro": Truck, "Entrega": Check };
+
+  return (
+    <Card size="sm">
+      <CardContent className="!py-5 !px-4">
+        <div className="flex items-center gap-2">
+          {/* Left arrow */}
+          <button
+            onClick={() => canPrev && onOffsetChange(start - 1)}
+            disabled={!canPrev}
+            className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${canPrev ? "hover:bg-neutral-100 text-neutral-500" : "text-neutral-200 cursor-default"}`}
+          >
+            <ChevronRight className="w-4 h-4 rotate-180" />
+          </button>
+
+          {/* Steps */}
+          <div className="flex-1 flex items-start justify-between relative">
+            <div className="absolute top-[55px] left-[40px] right-[40px] h-0.5 bg-neutral-200" />
+            <div className="absolute top-[55px] left-[40px] h-0.5 bg-green-600 transition-all" style={{ width: visible.length > 1 ? `${((visible.filter(s => s.status === "done").length) / (visible.length - 1)) * 100}%` : "0%" }} />
+            {visible.map((step) => {
+              const c = iconColorMap[step.status] ?? iconColorMap.pending;
+              const StepIcon = iconMap[step.label] ?? Package;
+              return (
+                <div key={step.label} className="flex flex-col items-center relative z-10" style={{ flex: "1 1 0%" }}>
+                  <p className={`text-xs sm:text-sm font-semibold mb-2 text-center ${step.status === "active" || step.status === "late" ? "text-neutral-900" : step.status === "done" ? "text-neutral-700" : "text-neutral-400"}`}>{step.label}</p>
+                  <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center border-2 ${c.bg} ${c.border}`}>
+                    <StepIcon className={`w-5 h-5 sm:w-6 sm:h-6 ${c.icon}`} />
+                  </div>
+                  <div className="mt-2 text-center">
+                    {step.fechaLineas ? step.fechaLineas.map((line, li) => (
+                      <p key={li} className="text-[10px] sm:text-xs text-neutral-500 leading-snug">{line}</p>
+                    )) : <p className="text-[10px] text-neutral-300">—</p>}
+                  </div>
+                  {step.sla && (
+                    <span className={`mt-1 inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold ${
+                      step.sla.status === "cumplido" ? "bg-green-50 text-green-700" :
+                      step.sla.status === "atrasado" ? "bg-red-50 text-red-600" :
+                      "bg-neutral-50 text-neutral-500"
+                    }`}>
+                      {step.sla.status === "cumplido" ? <><CheckCircle2 className="w-2.5 h-2.5" /> Cumplido</> :
+                       step.sla.status === "atrasado" ? <><AlertTriangle className="w-2.5 h-2.5" /> Atrasado</> :
+                       <><Clock className="w-2.5 h-2.5" /> Pendiente</>}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Right arrow */}
+          <button
+            onClick={() => canNext && onOffsetChange(start + 1)}
+            disabled={!canNext}
+            className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${canNext ? "hover:bg-neutral-100 text-neutral-500" : "text-neutral-200 cursor-default"}`}
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+        {/* Step counter */}
+        <p className="text-center text-[10px] text-neutral-400 mt-2">{start + 1}–{end} de {total} pasos</p>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Collapsible section ─────────────────────────────────────────────────────
 function Collapsible({ title, defaultOpen = false, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -239,6 +337,9 @@ function PedidoDetalleContent() {
 
   // View mode toggle
   const [viewMode, setViewMode] = useState<"actual" | "mejorada">("mejorada");
+
+  // Timeline navigation offset for compact 3-step view
+  const [timelineOffset, setTimelineOffset] = useState<number | null>(null);
 
   // Status change modal (vista actual)
   const [statusModalOpen, setStatusModalOpen] = useState(false);
@@ -442,74 +543,7 @@ function PedidoDetalleContent() {
         {/* ════════ TAB: RESUMEN ════════ */}
         {viewMode === "actual" && (
           <div className="space-y-5">
-            {/* Mini-timeline: prev + current + next steps with large icons */}
-            {(() => {
-              const activeIdx = timelineSteps.findIndex(s => s.status === "active" || s.status === "late");
-              const currentIdx = activeIdx >= 0 ? activeIdx : timelineSteps.filter(s => s.status === "done").length - 1;
-              const total = timelineSteps.length;
-              let start: number, end: number;
-              if (currentIdx <= 0) { start = 0; end = Math.min(2, total); }
-              else if (currentIdx >= total - 1) { start = Math.max(0, total - 2); end = total; }
-              else { start = currentIdx - 1; end = currentIdx + 2; }
-              const visible = timelineSteps.slice(start, end);
-
-              const iconColorMap: Record<string, { bg: string; border: string; icon: string }> = {
-                done:    { bg: "bg-neutral-100", border: "border-neutral-400", icon: "text-neutral-600" },
-                active:  { bg: "bg-primary-50", border: "border-primary-400", icon: "text-primary-600" },
-                late:    { bg: "bg-red-50", border: "border-red-400", icon: "text-red-600" },
-                pending: { bg: "bg-neutral-50", border: "border-neutral-200", icon: "text-neutral-300" },
-              };
-
-              return (
-                <Card size="sm">
-                  <CardContent className="!py-6 !px-6">
-                    <div className="flex items-start justify-between relative">
-                      {/* Connector line — centered on the 56px icons (label ~20px + mb-2 8px + half icon 28px = 56px) */}
-                      <div className="absolute top-[55px] left-[56px] right-[56px] h-0.5 bg-neutral-200" />
-                      <div className="absolute top-[55px] left-[56px] h-0.5 bg-green-600 transition-all" style={{ width: visible.length > 1 ? `${((visible.filter(s => s.status === "done").length) / (visible.length - 1)) * 100}%` : "0%" }} />
-
-                      {visible.map((step, i) => {
-                        const c = iconColorMap[step.status] ?? iconColorMap.pending;
-                        const StepIcon = (() => {
-                          const iconMap: Record<string, typeof Package> = { "Recepción": Package, "Validación": ClipboardCheck, "Preparación": Package, "Empaque": Package, "Retiro": Truck, "Entrega": Check };
-                          return iconMap[step.label] ?? Package;
-                        })();
-                        return (
-                          <div key={step.label} className="flex flex-col items-center relative z-10" style={{ flex: "1 1 0%" }}>
-                            <p className={`text-sm font-semibold mb-2 ${step.status === "active" || step.status === "late" ? "text-neutral-900" : step.status === "done" ? "text-neutral-700" : "text-neutral-400"}`}>{step.label}</p>
-                            <div className={`w-14 h-14 rounded-full flex items-center justify-center border-2 ${c.bg} ${c.border}`}>
-                              <StepIcon className={`w-6 h-6 ${c.icon}`} />
-                            </div>
-                            {/* Dates */}
-                            <div className="mt-2 text-center">
-                              {step.fechaLineas ? step.fechaLineas.map((line, li) => (
-                                <p key={li} className="text-xs text-neutral-500 leading-snug">{line}</p>
-                              )) : (
-                                <p className="text-xs text-neutral-300">—</p>
-                              )}
-                            </div>
-                            {/* SLA badge */}
-                            {step.sla && (
-                              <span className={`mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                                step.sla.status === "cumplido" ? "bg-green-50 text-green-700" :
-                                step.sla.status === "atrasado" ? "bg-red-50 text-red-600" :
-                                step.sla.status === "en_riesgo" ? "bg-amber-50 text-amber-700" :
-                                "bg-neutral-50 text-neutral-500"
-                              }`}>
-                                {step.sla.status === "cumplido" ? <><CheckCircle2 className="w-3 h-3" /> Cumplido</> :
-                                 step.sla.status === "atrasado" ? <><AlertTriangle className="w-3 h-3" /> Atrasado</> :
-                                 step.sla.status === "en_riesgo" ? <><Clock className="w-3 h-3" /> En riesgo</> :
-                                 <><Clock className="w-3 h-3" /> Pendiente</>}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })()}
+            <MiniTimeline steps={timelineSteps} offset={timelineOffset} onOffsetChange={setTimelineOffset} />
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6">
             {/* LEFT: Datos del Pedido + Envío + Método entrega */}
@@ -923,147 +957,96 @@ function PedidoDetalleContent() {
               />
             ) : null}
 
-            {/* Timeline — full width */}
-            <Card size="sm">
-              <CardContent className="pt-4 !px-4">
-                <PedidoTimeline steps={timelineSteps} />
-              </CardContent>
-            </Card>
-
-            {/* ── Status Change Card — prominent CTA ── */}
-            <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">Preparación</p>
-                      <PedidoStatusBadge status={pedido.estadoPreparacion} />
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-neutral-300" />
-                    <div>
-                      <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">Envío</p>
-                      <EnvioStatusBadge status={pedido.estadoEnvio} />
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {pedido.estadoPreparacion !== "Entregado" && pedido.estadoPreparacion !== "Cancelado" && (
-                    <Button
-                      variant="primary"
-                      size="md"
-                      onClick={() => {
-                        setStatusModalType("preparacion");
-                        const nextState = pedido.estadoPreparacion === "Pendiente" ? "Validado" :
-                          pedido.estadoPreparacion === "Validado" ? "En preparación" :
-                          pedido.estadoPreparacion === "En preparación" ? "Empacado" :
-                          pedido.estadoPreparacion === "Por empacar" ? "Empacado" :
-                          pedido.estadoPreparacion === "Empacado" ? "Listo para retiro" :
-                          pedido.estadoPreparacion === "Listo para retiro" ? "Entregado" : "";
-                        setStatusModalValue(nextState);
-                        setStatusModalOpen(true);
-                      }}
-                    >
-                      Avanzar a {pedido.estadoPreparacion === "Pendiente" ? "Validado" :
-                        pedido.estadoPreparacion === "Validado" ? "En preparación" :
-                        pedido.estadoPreparacion === "En preparación" ? "Empacado" :
-                        pedido.estadoPreparacion === "Por empacar" ? "Empacado" :
-                        pedido.estadoPreparacion === "Empacado" ? "Listo para retiro" :
-                        pedido.estadoPreparacion === "Listo para retiro" ? "Entregado" : "—"}
-                    </Button>
-                  )}
-                  <Button variant="secondary" size="md" onClick={() => {
-                    setStatusModalType("envio");
-                    setStatusModalValue(pedido.estadoEnvio);
-                    setStatusModalOpen(true);
-                  }}>
-                    Modificar envío
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <MiniTimeline steps={timelineSteps} offset={timelineOffset} onOffsetChange={setTimelineOffset} />
 
             {/* ── Two-column layout ── */}
             <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-5">
               {/* LEFT COLUMN */}
               <div className="space-y-5">
-                {/* Info card — badges + data grid in 3 columns */}
+                {/* Info card — essential fields only */}
                 <CollapsibleCard icon={ClipboardList} title="Datos del Pedido" description="Información general del pedido">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
-                      {/* Row 1: Estados */}
+                    {/* Essential fields — always visible */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3">
                       <div>
-                        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider mb-1">Preparación</p>
-                        <PedidoStatusBadge status={pedido.estadoPreparacion} />
+                        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">ID Amplifica</p>
+                        <p className="text-sm font-semibold text-neutral-800 mt-0.5 font-mono">{pedido.idAmplifica}</p>
                       </div>
-                      <div>
-                        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider mb-1">Envío</p>
-                        <EnvioStatusBadge status={pedido.estadoEnvio} />
-                      </div>
+                      {pedido.cotizacion?.trackingNumber && (
+                        <div>
+                          <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Tracking</p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <p className="text-sm font-medium text-neutral-800 font-mono truncate">{pedido.cotizacion.trackingNumber}</p>
+                            <CopyId text={pedido.cotizacion.trackingNumber} />
+                          </div>
+                        </div>
+                      )}
                       <div>
                         <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Fecha Creación</p>
                         <p className="text-sm font-medium text-neutral-700 mt-0.5">{fmtDate(pedido.fechaCreacion)}</p>
                       </div>
-                      {/* Row 2: SLA */}
-                      {pedido.preparacion.length > 0 && (
-                        <div>
-                          <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider mb-1">Próx. Preparación</p>
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {pedido.preparacion.map((s, i) => (
-                              <span key={`prep-${i}`} className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
-                                ${s.color === "blue" ? "bg-blue-50 text-blue-700" : ""}
-                                ${s.color === "green" ? "bg-green-50 text-green-700" : ""}
-                                ${s.color === "red" ? "bg-red-50 text-red-700" : ""}
-                                ${s.color === "amber" ? "bg-amber-50 text-amber-700" : ""}
-                              `}>
-                                {s.label}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {pedido.entrega.length > 0 && (
-                        <div>
-                          <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider mb-1">Próx. Entrega</p>
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {pedido.entrega.map((s, i) => (
-                              <span key={`ent-${i}`} className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium
-                                ${s.color === "blue" ? "bg-blue-50 text-blue-700" : ""}
-                                ${s.color === "green" ? "bg-green-50 text-green-700" : ""}
-                                ${s.color === "red" ? "bg-red-50 text-red-700" : ""}
-                                ${s.color === "amber" ? "bg-amber-50 text-amber-700" : ""}
-                              `}>
-                                {s.label}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {pedido.fechaEnvio && (
-                        <div>
-                          <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Fecha Envío</p>
-                          <p className="text-sm font-medium text-neutral-700 mt-0.5">{fmtDate(pedido.fechaEnvio)}</p>
-                        </div>
-                      )}
-                      {/* Row 3: IDs */}
                       <div>
-                        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">ID Amplifica</p>
-                        <p className="text-sm font-semibold text-neutral-800 mt-0.5 font-sans">{pedido.idAmplifica}</p>
-                      </div>
-                      {pedido.idExterno && (
-                        <div>
-                          <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">ID Externo</p>
-                          <p className="text-sm font-medium text-neutral-700 mt-0.5 font-mono">{pedido.idExterno}</p>
-                        </div>
-                      )}
-                      <div>
-                        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Seller</p>
-                        <p className="text-sm font-medium text-neutral-700 mt-0.5">{pedido.seller}</p>
-                      </div>
-                      {/* Row 4 */}
-                      <div>
-                        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Sucursal</p>
-                        <p className="text-sm font-medium text-neutral-700 mt-0.5">{pedido.sucursal}</p>
+                        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Canal</p>
+                        <p className="text-sm font-medium text-neutral-700 mt-0.5">{pedido.canalVenta}</p>
                       </div>
                     </div>
+
+                    {/* Tags */}
+                    <div className="mt-3 pt-3 border-t border-neutral-100">
+                      <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider mb-1.5">Tags</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {(pedido.tags ?? []).map((t, i) => (
+                          <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-neutral-100 text-neutral-600">
+                            {t}
+                            <button className="text-neutral-400 hover:text-red-500 transition-colors"><X className="w-3 h-3" /></button>
+                          </span>
+                        ))}
+                        <button className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border border-dashed border-neutral-300 text-neutral-400 hover:border-primary-300 hover:text-primary-500 transition-colors">
+                          <Plus className="w-3 h-3" /> Agregar tag
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Collapsible extra details */}
+                    <details className="mt-3 pt-3 border-t border-neutral-100 group">
+                      <summary className="text-xs font-medium text-primary-600 cursor-pointer hover:text-primary-700 list-none flex items-center gap-1">
+                        <ChevronDown className="w-3.5 h-3.5 transition-transform group-open:rotate-180" />
+                        Ver más detalles
+                      </summary>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 mt-3">
+                        <div>
+                          <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Seller</p>
+                          <p className="text-sm font-medium text-neutral-700 mt-0.5">{pedido.seller}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Sucursal</p>
+                          <p className="text-sm font-medium text-neutral-700 mt-0.5">{pedido.sucursal}</p>
+                        </div>
+                        {pedido.idExterno && (
+                          <div>
+                            <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">ID Externo</p>
+                            <p className="text-sm font-medium text-neutral-700 mt-0.5 font-mono">{pedido.idExterno}</p>
+                          </div>
+                        )}
+                        {pedido.metodoPago && (
+                          <div>
+                            <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Método de Pago</p>
+                            <p className="text-sm font-medium text-neutral-700 mt-0.5">{pedido.metodoPago}</p>
+                          </div>
+                        )}
+                        {pedido.fechaEnvio && (
+                          <div>
+                            <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Fecha Envío</p>
+                            <p className="text-sm font-medium text-neutral-700 mt-0.5">{fmtDate(pedido.fechaEnvio)}</p>
+                          </div>
+                        )}
+                        {pedido.idOrigen && (
+                          <div>
+                            <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">ID Origen</p>
+                            <p className="text-sm font-medium text-neutral-700 mt-0.5 font-mono">{pedido.idOrigen}</p>
+                          </div>
+                        )}
+                      </div>
+                    </details>
                 </CollapsibleCard>
 
                 {/* Products preview */}
@@ -1123,14 +1106,16 @@ function PedidoDetalleContent() {
 
               {/* RIGHT COLUMN (Sidebar) */}
               <div className="space-y-5">
-                {/* Order Economy */}
-                <OrderEconomyCard
-                  subtotal={pedido.subtotal ?? pedido.montoTotal}
-                  descuentos={pedido.descuentos ?? 0}
-                  impuestos={pedido.impuestos ?? 0}
-                  costoEnvio={pedido.costoEnvioOrden ?? pedido.cotizacion?.costoNeto ?? 0}
-                  montoTotal={pedido.montoTotal}
-                />
+                {/* Order Economy — hidden when all values are $0 */}
+                {pedido.montoTotal > 0 && (
+                  <OrderEconomyCard
+                    subtotal={pedido.subtotal ?? pedido.montoTotal}
+                    descuentos={pedido.descuentos ?? 0}
+                    impuestos={pedido.impuestos ?? 0}
+                    costoEnvio={pedido.costoEnvioOrden ?? pedido.cotizacion?.costoNeto ?? 0}
+                    montoTotal={pedido.montoTotal}
+                  />
+                )}
 
                 {/* Courier Info compact */}
                 {pedido.cotizacion && (
