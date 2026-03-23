@@ -65,7 +65,7 @@ export default function CourierInfoCard({
   const estadoColor = estado === "vigente" ? "bg-green-50 text-green-700" : estado === "expirada" ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700";
 
   return (
-    <CollapsibleCard title="Información del Courier">
+    <CollapsibleCard icon={Truck} title="Información del Courier" description="Courier, tracking y dimensiones">
         {/* Requote warning — hidden when parent shows its own banner */}
         {estado === "requiere_recotizacion" && !hideWarning && (
           <div className="mb-3">

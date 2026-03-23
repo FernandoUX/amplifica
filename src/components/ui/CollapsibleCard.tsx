@@ -62,7 +62,8 @@ export default function CollapsibleCard({
         className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
       >
         <div className="overflow-hidden">
-          <div className="pt-2">
+          <div className="border-t border-neutral-100 mt-3 mx-4" />
+          <div className="pt-3">
             <CardContent className="!px-4">{children}</CardContent>
           </div>
         </div>

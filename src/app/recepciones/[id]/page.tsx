@@ -3975,7 +3975,7 @@ function ConteoORContent() {
 
           return (
             <div className={sesionActiva ? "hidden sm:block" : ""}>
-              <CollapsibleCard title="Información de la OR">
+              <CollapsibleCard icon={ClipboardCheck} title="Información de la OR" description="Datos generales de la orden de recepción">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
                   <div>
                     <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Orden</p>

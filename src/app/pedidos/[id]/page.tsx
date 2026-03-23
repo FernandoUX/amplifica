@@ -8,7 +8,8 @@ import {
   AlertTriangle, Timer, Zap, CopyPlus, Share2, MessageCircle,
   Ban, Eye, Pencil, MapPin, Phone, Mail, ExternalLink,
   ChevronDown, ChevronUp, BellOff, BellRing, CheckCircle2,
-  User, Plus, RefreshCw, StickyNote, Monitor, Smartphone, X, Printer,
+  User, Users, Plus, RefreshCw, StickyNote, Monitor, Smartphone, X, Printer,
+  ClipboardList, Receipt,
 } from "lucide-react";
 
 import { PEDIDOS, MOCK_PEDIDO_DETALLE } from "@/app/pedidos/_data";
@@ -466,7 +467,7 @@ function PedidoDetalleContent() {
               {/* LEFT COLUMN */}
               <div className="space-y-5">
                 {/* Info card — badges + data grid in 3 columns */}
-                <CollapsibleCard title="Datos del Pedido">
+                <CollapsibleCard icon={ClipboardList} title="Datos del Pedido" description="Información general del pedido">
                     <div className="grid grid-cols-3 gap-x-6 gap-y-3">
                       {/* Row 1: Estados */}
                       <div>
@@ -547,7 +548,9 @@ function PedidoDetalleContent() {
 
                 {/* Products preview */}
                 <CollapsibleCard
+                  icon={Package}
                   title={`Productos (${pedido.productos.length})`}
+                  description="Detalle de productos del pedido"
                   action={
                     <span className="text-xs bg-primary-50 text-primary-700 rounded-full px-2.5 py-1 font-semibold">
                       {pedido.productos.reduce((s, p) => s + p.cantidad, 0)} unidades en total
@@ -1137,7 +1140,7 @@ function PedidoDetalleContent() {
 
                 {/* Actores Involucrados */}
                 {pedido.actoresInvolucrados && pedido.actoresInvolucrados.length > 0 && (
-                  <CollapsibleCard title="Actores Involucrados">
+                  <CollapsibleCard icon={Users} title="Actores Involucrados" description="Personas relacionadas con el pedido">
                       <div className="space-y-3">
                         {pedido.actoresInvolucrados.map((actor, i) => (
                           <div key={i} className="flex items-center gap-3">

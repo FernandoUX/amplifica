@@ -1,5 +1,6 @@
 "use client";
 
+import { Receipt } from "lucide-react";
 import CollapsibleCard from "@/components/ui/CollapsibleCard";
 
 type OrderEconomyCardProps = {
@@ -22,7 +23,7 @@ export default function OrderEconomyCard({
   montoTotal,
 }: OrderEconomyCardProps) {
   return (
-    <CollapsibleCard title="Desglose Económico">
+    <CollapsibleCard icon={Receipt} title="Desglose Económico" description="Subtotal, descuentos, impuestos y envío">
         {/* Line items */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
