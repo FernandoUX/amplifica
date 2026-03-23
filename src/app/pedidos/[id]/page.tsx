@@ -488,60 +488,128 @@ function PedidoDetalleContent() {
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6">
             {/* LEFT: Datos del Pedido + Envío + Método entrega */}
             <div className="space-y-5">
-              {/* Datos del Pedido */}
+              {/* Datos del Pedido — with actionable fields */}
               <Card size="sm">
                 <CardHeader><CardTitle className="text-base">Datos del Pedido</CardTitle></CardHeader>
                 <CardContent>
                   <div className="divide-y divide-neutral-100">
-                    <div className="py-2.5 flex items-center justify-between">
-                      <span className="text-xs text-neutral-500">Estado de Preparación</span>
-                      <PedidoStatusBadge status={pedido.estadoPreparacion} />
-                    </div>
-                    <div className="py-2.5 flex items-center justify-between">
-                      <span className="text-xs text-neutral-500">Estado de Entrega</span>
-                      <EnvioStatusBadge status={pedido.estadoEnvio} />
-                    </div>
-                    {pedido.cotizacion?.trackingNumber && (
-                      <div className="py-2.5">
-                        <p className="text-[10px] text-neutral-400 mb-0.5">Tracking</p>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-mono text-neutral-800">{pedido.cotizacion.trackingNumber}</span>
-                          <CopyId text={pedido.cotizacion.trackingNumber} />
-                        </div>
+                    {/* Estado Preparación + next state button */}
+                    <div className="py-2.5">
+                      <p className="text-[10px] text-neutral-400 mb-1.5">Estado de Preparación</p>
+                      <div className="flex items-center justify-between">
+                        <PedidoStatusBadge status={pedido.estadoPreparacion} />
+                        <Button variant="secondary" size="sm" className="text-[10px]">
+                          {pedido.estadoPreparacion === "Pendiente" ? "Validar" :
+                           pedido.estadoPreparacion === "Validado" ? "Empacado" :
+                           pedido.estadoPreparacion === "En preparación" ? "Empacado" :
+                           pedido.estadoPreparacion === "Por empacar" ? "Empacado" :
+                           pedido.estadoPreparacion === "Empacado" ? "Listo retiro" :
+                           pedido.estadoPreparacion === "Listo para retiro" ? "Entregado" : "—"}
+                        </Button>
                       </div>
-                    )}
+                    </div>
+                    {/* Estado Entrega + Modificar estado */}
+                    <div className="py-2.5">
+                      <p className="text-[10px] text-neutral-400 mb-1.5">Estado de Entrega</p>
+                      <div className="flex items-center justify-between">
+                        <EnvioStatusBadge status={pedido.estadoEnvio} />
+                        <Button variant="secondary" size="sm" className="text-[10px]">Modificar estado</Button>
+                      </div>
+                    </div>
+                    {/* Tags */}
+                    <div className="py-2.5">
+                      <p className="text-[10px] text-neutral-400 mb-1.5">Tags</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {(pedido.tags ?? []).map((t, i) => (
+                          <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-neutral-100 text-neutral-600">{t}</span>
+                        ))}
+                        <button className="w-5 h-5 rounded border border-dashed border-neutral-300 flex items-center justify-center text-neutral-400 hover:border-primary-300 hover:text-primary-500 transition-colors">
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                    {/* Etiqueta de Envío upload */}
+                    <div className="py-2.5">
+                      <p className="text-[10px] text-neutral-400 mb-1.5">Etiqueta de Envío</p>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 flex items-center gap-2 border border-neutral-200 rounded-lg px-3 py-1.5 text-xs text-neutral-500 bg-neutral-50">
+                          <span className="font-medium text-neutral-700">Seleccionar archivo</span>
+                          <span className="text-neutral-400">Sin archivos seleccionados</span>
+                        </div>
+                        <Button variant="primary" size="sm" className="text-[10px] flex-shrink-0">Cargar</Button>
+                      </div>
+                    </div>
+                    {/* Tracking — editable input */}
+                    <div className="py-2.5">
+                      <p className="text-[10px] text-neutral-400 mb-0.5">Tracking</p>
+                      <input
+                        type="text"
+                        defaultValue={pedido.cotizacion?.trackingNumber ?? ""}
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-800 font-mono focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
+                      />
+                    </div>
+                    {/* ID — read-only */}
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">ID</p>
-                      <p className="text-sm font-mono text-neutral-800">{pedido.idAmplifica}</p>
+                      <input type="text" value={pedido.idAmplifica} readOnly className="w-full border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-800 font-mono bg-neutral-50" />
                     </div>
+                    {/* Cliente — read-only highlighted */}
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Cliente</p>
-                      <p className="text-sm text-neutral-800">{pedido.seller}</p>
+                      <div className="border border-green-200 bg-green-50 rounded-lg px-3 py-1.5">
+                        <p className="text-sm text-green-800">{pedido.seller}</p>
+                      </div>
                     </div>
+                    {/* ID de Origen */}
                     {(pedido.idOrigen || pedido.idExterno) && (
                       <div className="py-2.5">
                         <p className="text-[10px] text-neutral-400 mb-0.5">ID de Origen</p>
-                        <p className="text-sm font-mono text-neutral-800">{pedido.idOrigen || pedido.idExterno}</p>
+                        <input type="text" value={pedido.idOrigen || pedido.idExterno || ""} readOnly className="w-full border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-800 font-mono bg-neutral-50" />
                       </div>
                     )}
+                    {/* Método de Venta — dropdown */}
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Método de Venta</p>
-                      <p className="text-sm text-neutral-800">{pedido.canalVenta ?? "—"}</p>
+                      <select className="w-full border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none">
+                        <option>{pedido.canalVenta ?? "—"}</option>
+                        <option>Shopify</option>
+                        <option>MercadoLibre</option>
+                        <option>Falabella</option>
+                        <option>Woocommerce</option>
+                      </select>
                     </div>
+                    {/* Método de Pago — dropdown */}
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Método de Pago</p>
-                      <p className="text-sm text-neutral-800">{pedido.metodoPago ?? "No definido"}</p>
+                      <select className="w-full border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none">
+                        <option>{pedido.metodoPago ?? "Selecciona un método"}</option>
+                        <option>Transferencia</option>
+                        <option>Tarjeta de crédito</option>
+                        <option>Tarjeta de débito</option>
+                        <option>Efectivo</option>
+                      </select>
                     </div>
+                    {/* Fecha — warning style */}
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Fecha</p>
-                      <p className="text-sm text-neutral-800">{pedido.fechaCreacion}</p>
-                    </div>
-                    {pedido.muestraPromocional !== undefined && (
-                      <div className="py-2.5 flex items-center gap-2">
-                        <input type="checkbox" checked={pedido.muestraPromocional} disabled className="w-4 h-4 rounded border-neutral-300 text-primary-500" />
-                        <span className="text-sm text-neutral-600">Este pedido es una muestra promocional</span>
+                      <div className="border border-red-200 bg-red-50 rounded-lg px-3 py-1.5">
+                        <p className="text-sm text-red-700 font-mono">{pedido.fechaCreacion}</p>
                       </div>
-                    )}
+                    </div>
+                    {/* N° Etiqueta Manual */}
+                    <div className="py-2.5">
+                      <p className="text-[10px] text-neutral-400 mb-0.5">N° de Etiqueta Manual</p>
+                      <input
+                        type="text"
+                        defaultValue={pedido.cotizacion?.trackingNumber ?? ""}
+                        className="w-full border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-800 font-mono focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
+                      />
+                    </div>
+                    {/* Muestra promocional — interactive checkbox */}
+                    <div className="py-2.5 flex items-center gap-2">
+                      <input type="checkbox" defaultChecked={pedido.muestraPromocional ?? false} className="w-4 h-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-200" />
+                      <span className="text-sm text-neutral-600">Este pedido es una muestra promocional</span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
