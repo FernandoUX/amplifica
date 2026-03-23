@@ -557,21 +557,21 @@ function PedidoDetalleContent() {
                     </span>
                   }
                 >
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
+                    <div className="overflow-x-auto table-scroll">
+                      <table className="w-full text-sm border-collapse" style={{ minWidth: "100%" }}>
                         <thead>
-                          <tr className="border-b border-neutral-100">
-                            <th className="text-left text-xs text-neutral-400 font-medium pb-2 pr-4">Producto</th>
-                            <th className="text-left text-xs text-neutral-400 font-medium pb-2 pr-4">SKU</th>
-                            <th className="text-right text-xs text-neutral-400 font-medium pb-2 pr-4">Cant.</th>
-                            <th className="text-right text-xs text-neutral-400 font-medium pb-2 pr-4">Precio</th>
-                            <th className="text-right text-xs text-neutral-400 font-medium pb-2">Total</th>
+                          <tr className="border-b border-neutral-200 bg-neutral-50">
+                            <th className="text-left text-[10px] font-semibold text-neutral-500 uppercase tracking-wider py-2.5 px-3 sticky top-0 bg-neutral-50">Producto</th>
+                            <th className="text-left text-[10px] font-semibold text-neutral-500 uppercase tracking-wider py-2.5 px-3 sticky top-0 bg-neutral-50">SKU</th>
+                            <th className="text-right text-[10px] font-semibold text-neutral-500 uppercase tracking-wider py-2.5 px-3 sticky top-0 bg-neutral-50">Cant.</th>
+                            <th className="text-right text-[10px] font-semibold text-neutral-500 uppercase tracking-wider py-2.5 px-3 sticky top-0 bg-neutral-50">Precio</th>
+                            <th className="text-right text-[10px] font-semibold text-neutral-500 uppercase tracking-wider py-2.5 px-3 sticky top-0 bg-neutral-50">Total</th>
                           </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-neutral-100">
                           {pedido.productos.map((p) => (
-                            <tr key={p.id} className="border-b border-neutral-50">
-                              <td className="py-2.5 pr-4">
+                            <tr key={p.id} className="hover:bg-neutral-50/60 transition-colors">
+                              <td className="py-3 px-3">
                                 <div className="flex items-center gap-2.5">
                                   {p.imagen ? (
                                     <img src={p.imagen} alt={p.nombre} className="w-8 h-8 rounded-md object-cover bg-neutral-100 flex-shrink-0" />
@@ -580,20 +580,20 @@ function PedidoDetalleContent() {
                                       <Package className="w-4 h-4 text-neutral-300" />
                                     </div>
                                   )}
-                                  <p className="text-neutral-800 font-medium truncate max-w-[200px]">{p.nombre}</p>
+                                  <p className="text-[13px] text-neutral-800 font-medium leading-snug">{p.nombre}</p>
                                 </div>
                               </td>
-                              <td className="py-2.5 pr-4 font-mono text-neutral-500 text-xs">{p.sku}</td>
-                              <td className="py-2.5 pr-4 text-right text-neutral-800">{p.cantidad}</td>
-                              <td className="py-2.5 pr-4 text-right text-neutral-800">{fmt(p.precioUnitario)}</td>
-                              <td className="py-2.5 text-right font-medium text-neutral-900">{fmt(p.precioUnitario * p.cantidad)}</td>
+                              <td className="py-3 px-3 font-mono text-neutral-500 text-xs">{p.sku}</td>
+                              <td className="py-3 px-3 text-right text-[13px] text-neutral-800 tabular-nums">{p.cantidad}</td>
+                              <td className="py-3 px-3 text-right text-[13px] text-neutral-800 tabular-nums">{fmt(p.precioUnitario)}</td>
+                              <td className="py-3 px-3 text-right text-[13px] font-semibold text-neutral-900 tabular-nums">{fmt(p.precioUnitario * p.cantidad)}</td>
                             </tr>
                           ))}
                         </tbody>
                         <tfoot>
-                          <tr className="border-t border-neutral-200">
-                            <td colSpan={4} className="py-2.5 text-right font-medium text-neutral-700">Total</td>
-                            <td className="py-2.5 text-right font-bold text-neutral-900">{fmt(pedido.montoTotal)}</td>
+                          <tr className="border-t border-neutral-200 bg-neutral-50/50">
+                            <td colSpan={4} className="py-3 px-3 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">Total</td>
+                            <td className="py-3 px-3 text-right text-sm font-bold text-neutral-900 tabular-nums">{fmt(pedido.montoTotal)}</td>
                           </tr>
                         </tfoot>
                       </table>

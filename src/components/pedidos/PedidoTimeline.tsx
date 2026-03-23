@@ -198,80 +198,97 @@ export default function PedidoTimeline({ steps, className = "" }: PedidoTimeline
   );
 }
 
-/* ── Mobile carousel component ── */
+/* ── Mobile carousel: center step is hero, sides are icon-only ── */
 function MobileTimeline({ steps, className = "" }: { steps: TimelineStep[]; className?: string }) {
-  const VISIBLE = 3;
-  const [offset, setOffset] = useState(() => {
-    // Start centered on the active step
+  const [center, setCenter] = useState(() => {
     const activeIdx = steps.findIndex(s => s.status === "active" || s.status === "late");
-    if (activeIdx <= 0) return 0;
-    return Math.min(Math.max(activeIdx - 1, 0), steps.length - VISIBLE);
+    return activeIdx >= 0 ? activeIdx : 0;
   });
 
-  const canPrev = offset > 0;
-  const canNext = offset < steps.length - VISIBLE;
+  const canPrev = center > 0;
+  const canNext = center < steps.length - 1;
 
-  const visibleSteps = steps.slice(offset, offset + VISIBLE);
+  const prevStep = center > 0 ? steps[center - 1] : null;
+  const centerStep = steps[center];
+  const nextStep = center < steps.length - 1 ? steps[center + 1] : null;
+
+  const renderSmallIcon = (step: TimelineStep, idx: number) => {
+    const styles = getStepStyles(step);
+    const StepIcon = stepIconMap[step.label];
+    return (
+      <div className={`w-7 h-7 rounded-full flex items-center justify-center ${styles.dot}`}>
+        {step.status === "done" ? (
+          <Check className="w-3 h-3" />
+        ) : step.status === "late" ? (
+          <AlertTriangle className="w-2.5 h-2.5" />
+        ) : StepIcon ? (
+          <StepIcon className="w-3 h-3" />
+        ) : (
+          <span className="text-[9px] font-bold">{idx + 1}</span>
+        )}
+      </div>
+    );
+  };
+
+  const centerStyles = getStepStyles(centerStep);
+  const CenterIcon = stepIconMap[centerStep.label];
 
   return (
     <div className={`sm:hidden ${className}`}>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
         {/* Left chevron */}
         <button
-          onClick={() => setOffset(o => Math.max(0, o - 1))}
+          onClick={() => setCenter(c => Math.max(0, c - 1))}
           disabled={!canPrev}
           className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
-            canPrev ? "text-neutral-600 hover:bg-neutral-100" : "text-neutral-200"
+            canPrev ? "text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200" : "text-neutral-200"
           }`}
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
 
-        {/* 3 visible steps */}
-        <div className="flex-1 flex justify-between">
-          {visibleSteps.map((step, vi) => {
-            const globalIdx = offset + vi;
-            const styles = getStepStyles(step);
-            const StepIcon = stepIconMap[step.label];
-            return (
-              <div key={globalIdx} className="flex flex-col items-center gap-1 flex-1 min-w-0">
-                {/* Icon */}
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold ${styles.dot}`}>
-                  {step.status === "done" ? (
-                    <Check className="w-3.5 h-3.5" />
-                  ) : step.status === "late" ? (
-                    <AlertTriangle className="w-3 h-3" />
-                  ) : StepIcon ? (
-                    <StepIcon className="w-3.5 h-3.5" />
-                  ) : (
-                    globalIdx + 1
-                  )}
-                </div>
-                {/* Label */}
-                <span className={`text-[10px] font-semibold leading-tight text-center ${styles.label}`}>
-                  {step.label}
-                </span>
-                {/* Date lines */}
-                {step.fechaLineas && step.fechaLineas.length > 0 && (
-                  <div className="flex flex-col items-center">
-                    {step.fechaLineas.map((l, li) => (
-                      <span key={li} className="text-[9px] text-neutral-400 text-center leading-tight">{l}</span>
-                    ))}
-                  </div>
-                )}
-                {/* SLA */}
-                {step.sla && <SlaBadge status={step.sla.status} />}
-              </div>
-            );
-          })}
+        {/* Previous step — icon only */}
+        <div className="w-7 flex-shrink-0 flex justify-center">
+          {prevStep ? renderSmallIcon(prevStep, center - 1) : <div className="w-7" />}
+        </div>
+
+        {/* Center (hero) step — large icon + full info */}
+        <div className="flex-1 flex flex-col items-center gap-1.5 py-1">
+          <div className={`w-11 h-11 rounded-full flex items-center justify-center ${centerStyles.dot}`}>
+            {centerStep.status === "done" ? (
+              <Check className="w-5 h-5" />
+            ) : centerStep.status === "late" ? (
+              <AlertTriangle className="w-4 h-4" />
+            ) : CenterIcon ? (
+              <CenterIcon className="w-5 h-5" />
+            ) : (
+              <span className="text-sm font-bold">{center + 1}</span>
+            )}
+          </div>
+          <span className={`text-xs font-bold leading-tight text-center ${centerStyles.label}`}>
+            {centerStep.label}
+          </span>
+          {centerStep.fechaLineas && centerStep.fechaLineas.length > 0 && (
+            <div className="flex flex-col items-center">
+              {centerStep.fechaLineas.map((l, li) => (
+                <span key={li} className="text-[10px] text-neutral-400 text-center leading-tight">{l}</span>
+              ))}
+            </div>
+          )}
+          {centerStep.sla && <SlaBadge status={centerStep.sla.status} />}
+        </div>
+
+        {/* Next step — icon only */}
+        <div className="w-7 flex-shrink-0 flex justify-center">
+          {nextStep ? renderSmallIcon(nextStep, center + 1) : <div className="w-7" />}
         </div>
 
         {/* Right chevron */}
         <button
-          onClick={() => setOffset(o => Math.min(steps.length - VISIBLE, o + 1))}
+          onClick={() => setCenter(c => Math.min(steps.length - 1, c + 1))}
           disabled={!canNext}
           className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
-            canNext ? "text-neutral-600 hover:bg-neutral-100" : "text-neutral-200"
+            canNext ? "text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200" : "text-neutral-200"
           }`}
         >
           <ChevronRight className="w-4 h-4" />
@@ -284,7 +301,7 @@ function MobileTimeline({ steps, className = "" }: { steps: TimelineStep[]; clas
           <div
             key={i}
             className={`w-1.5 h-1.5 rounded-full transition-colors ${
-              i >= offset && i < offset + VISIBLE ? "bg-primary-400" : "bg-neutral-200"
+              i === center ? "bg-primary-500" : "bg-neutral-200"
             }`}
           />
         ))}

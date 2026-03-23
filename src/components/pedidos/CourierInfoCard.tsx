@@ -163,7 +163,7 @@ export default function CourierInfoCard({
               </Button>
             )}
             {onRequote && (
-              <Button variant="secondary" size="sm" className="w-full" onClick={onRequote}>
+              <Button variant="secondary" size="md" className="w-full" onClick={onRequote}>
                 Recotizar
               </Button>
             )}
