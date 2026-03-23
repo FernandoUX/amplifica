@@ -552,8 +552,8 @@ function PedidoDetalleContent() {
                   title={`Productos (${pedido.productos.length})`}
                   description="Detalle de productos del pedido"
                   action={
-                    <span className="text-xs bg-primary-50 text-primary-700 rounded-full px-2.5 py-1 font-semibold">
-                      {pedido.productos.reduce((s, p) => s + p.cantidad, 0)} unidades en total
+                    <span className="text-[10px] bg-primary-50 text-primary-700 rounded-full px-2 py-0.5 font-semibold">
+                      {pedido.productos.reduce((s, p) => s + p.cantidad, 0)} uds.
                     </span>
                   }
                 >
@@ -988,41 +988,16 @@ function PedidoDetalleContent() {
               {/* LEFT COLUMN */}
               <div className="space-y-5">
                 {/* Cronología Textual */}
-                <Card size="sm">
-                  <CardHeader>
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-neutral-400" />
-                      Cronología Textual
-                    </CardTitle>
-                    <CardAction>
-                      <button className="text-neutral-400 hover:text-neutral-600 transition-colors">
-                        <ChevronDown className="w-4 h-4" />
-                      </button>
-                    </CardAction>
-                  </CardHeader>
-                  <CardContent>
+                <CollapsibleCard icon={Clock} title="Cronología Textual" description="Historial de eventos del pedido">
                     {pedido.timeline.length > 0 ? (
                       <GanttTimeline events={pedido.timeline} />
                     ) : (
                       <p className="text-sm text-neutral-400 text-center py-4">Sin eventos registrados</p>
                     )}
-                  </CardContent>
-                </Card>
+                </CollapsibleCard>
 
                 {/* Notificaciones Enviadas */}
-                <Card size="sm">
-                  <CardHeader>
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-neutral-400" />
-                      Notificaciones Enviadas
-                    </CardTitle>
-                    <CardAction>
-                      <button className="text-neutral-400 hover:text-neutral-600 transition-colors">
-                        <ChevronDown className="w-4 h-4" />
-                      </button>
-                    </CardAction>
-                  </CardHeader>
-                  <CardContent>
+                <CollapsibleCard icon={Mail} title="Notificaciones Enviadas" description="Emails, SMS y webhooks del pedido">
                     {pedido.notificaciones.length > 0 ? (
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
@@ -1084,8 +1059,7 @@ function PedidoDetalleContent() {
                     ) : (
                       <p className="text-sm text-neutral-400 text-center py-4">Sin notificaciones</p>
                     )}
-                  </CardContent>
-                </Card>
+                </CollapsibleCard>
               </div>
 
               {/* RIGHT COLUMN (Sidebar) */}
