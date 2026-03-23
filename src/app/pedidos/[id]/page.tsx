@@ -514,8 +514,14 @@ function PedidoDetalleContent() {
               Pedido <span className="font-sans">{pedido.idAmplifica}</span>
               <CopyId text={pedido.idAmplifica} />
             </h1>
-            <PedidoStatusBadge status={pedido.estadoPreparacion} />
-            <EnvioStatusBadge status={pedido.estadoEnvio} />
+            <div className="flex items-center gap-1" title="Estado de Preparación">
+              <span className="text-[9px] text-neutral-400 font-medium uppercase tracking-wider hidden sm:inline">Prep.</span>
+              <PedidoStatusBadge status={pedido.estadoPreparacion} />
+            </div>
+            <div className="flex items-center gap-1" title="Estado de Entrega">
+              <span className="text-[9px] text-neutral-400 font-medium uppercase tracking-wider hidden sm:inline">Envío</span>
+              <EnvioStatusBadge status={pedido.estadoEnvio} />
+            </div>
           </div>
           <p className="text-sm text-neutral-600 mt-0.5">
             {pedido.seller} — {pedido.sucursal}
