@@ -343,13 +343,15 @@ function PedidoDetalleContent() {
 
   // Tags modal
   const [tagsModalOpen, setTagsModalOpen] = useState(false);
-  const [selectedTag, setSelectedTag] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [tagSearch, setTagSearch] = useState("");
   const TAG_OPTIONS = [
     "Falta stock", "En redistribución", "Confirmando dirección", "En espera seller",
     "En espera consumidor", "En devolución", "Devuelto", "Reposición pendiente",
     "Problema entrega", "Siniestrado courier", "Requiere revisión", "Modificando Pedido",
     "Reagendado", "Prioridad alta", "Frágil",
   ];
+  const toggleTag = (tag: string) => setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
 
   // Status change modal (vista actual)
   const [statusModalOpen, setStatusModalOpen] = useState(false);
@@ -480,7 +482,7 @@ function PedidoDetalleContent() {
             {pedido.seller} — {pedido.sucursal}
           </p>
           {/* View mode toggle */}
-          <div className="flex items-center gap-1 bg-neutral-100 rounded-lg p-0.5 mt-2 w-fit">
+          <div className={`flex items-center gap-1 bg-neutral-100 rounded-lg p-0.5 mt-2 w-fit ${editingAddress ? "opacity-40 pointer-events-none" : ""}`}>
             <button
               onClick={() => setViewMode("actual")}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
@@ -503,7 +505,7 @@ function PedidoDetalleContent() {
             </button>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className={`flex items-center gap-2 flex-shrink-0 ${editingAddress ? "opacity-40 pointer-events-none" : ""}`}>
           {/* Primary CTA — contextual based on state */}
           {isDirty ? null
            : requiresRequote ? (
@@ -549,8 +551,11 @@ function PedidoDetalleContent() {
           return (
             <button
               key={tab.key}
-              onClick={() => switchTab(tab.key)}
+              onClick={() => !editingAddress && switchTab(tab.key)}
+              disabled={editingAddress}
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors ${
+                editingAddress && !isActive ? "opacity-40 cursor-not-allowed" : ""
+              } ${
                 isActive
                   ? "border-primary-500 text-primary-600"
                   : "border-transparent text-neutral-400 hover:text-neutral-600 hover:border-neutral-200"
@@ -1789,52 +1794,82 @@ function PedidoDetalleContent() {
         </div>
       )}
 
-      {/* ── Tags Modal ── */}
+      {/* ── Tags Modal (custom multi-select) ── */}
       {tagsModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm">
-            <div className="flex items-center justify-between px-5 pt-5 pb-3">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0">
               <h3 className="text-base font-bold text-neutral-900">Tags Pedido {pedido.idAmplifica}</h3>
-              <button onClick={() => setTagsModalOpen(false)} className="text-neutral-400 hover:text-neutral-600 transition-colors">
+              <button onClick={() => { setTagsModalOpen(false); setTagSearch(""); }} className="text-neutral-400 hover:text-neutral-600 transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="px-5 pb-2">
-              <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">Tags</p>
-              <select
-                value={selectedTag}
-                onChange={e => setSelectedTag(e.target.value)}
-                className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
-              >
-                <option value="">Seleccionar tag...</option>
-                {TAG_OPTIONS.map(t => (
-                  <option key={t} value={t}>{t}</option>
+
+            {/* Selected tags */}
+            {selectedTags.length > 0 && (
+              <div className="px-5 pb-2 flex flex-wrap gap-1.5 flex-shrink-0">
+                {selectedTags.map(t => (
+                  <span key={t} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium bg-primary-50 text-primary-700 border border-primary-200">
+                    {t}
+                    <button onClick={() => toggleTag(t)} className="text-primary-400 hover:text-red-500 transition-colors"><X className="w-3 h-3" /></button>
+                  </span>
                 ))}
-              </select>
-            </div>
-            {/* Current tags */}
-            {(pedido.tags ?? []).length > 0 && (
-              <div className="px-5 py-2">
-                <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Tags actuales</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {(pedido.tags ?? []).map((t, i) => (
-                    <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-neutral-100 text-neutral-600">
-                      {t}
-                      <button className="text-neutral-400 hover:text-red-500"><X className="w-3 h-3" /></button>
-                    </span>
-                  ))}
-                </div>
               </div>
             )}
-            <div className="px-5 py-4">
+
+            {/* Search input */}
+            <div className="px-5 pb-2 flex-shrink-0">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar tag..."
+                  value={tagSearch}
+                  onChange={e => setTagSearch(e.target.value)}
+                  className="w-full border border-neutral-200 rounded-lg pl-9 pr-3 py-2 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            {/* Tag list */}
+            <div className="px-5 overflow-y-auto flex-1 min-h-0">
+              <div className="space-y-0.5 pb-2">
+                {TAG_OPTIONS.filter(t => t.toLowerCase().includes(tagSearch.toLowerCase())).map(tag => {
+                  const isSelected = selectedTags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      onClick={() => toggleTag(tag)}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                        isSelected
+                          ? "bg-primary-50 text-primary-700 font-medium"
+                          : "text-neutral-700 hover:bg-neutral-50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>{tag}</span>
+                        {isSelected && <Check className="w-4 h-4 text-primary-500" />}
+                      </div>
+                    </button>
+                  );
+                })}
+                {TAG_OPTIONS.filter(t => t.toLowerCase().includes(tagSearch.toLowerCase())).length === 0 && (
+                  <p className="text-sm text-neutral-400 text-center py-4">Sin resultados</p>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-4 border-t border-neutral-100 flex-shrink-0">
               <Button
                 variant="primary"
                 size="md"
                 className="w-full"
-                disabled={!selectedTag}
-                onClick={() => { setTagsModalOpen(false); setSelectedTag(""); alert(`Tag "${selectedTag}" agregado (mock)`); }}
+                disabled={selectedTags.length === 0}
+                onClick={() => { setTagsModalOpen(false); setTagSearch(""); alert(`Tags agregados: ${selectedTags.join(", ")} (mock)`); setSelectedTags([]); }}
               >
-                Guardar
+                Guardar {selectedTags.length > 0 && `(${selectedTags.length})`}
               </Button>
             </div>
           </div>
