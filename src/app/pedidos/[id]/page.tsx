@@ -195,7 +195,6 @@ function MiniTimeline({ steps, offset, onOffsetChange }: { steps: TimelineStep[]
   const currentIdx = activeIdx >= 0 ? activeIdx : steps.filter(s => s.status === "done").length - 1;
   const total = steps.length;
 
-  // Default start based on current step
   let defaultStart: number;
   if (currentIdx <= 0) defaultStart = 0;
   else if (currentIdx >= total - 1) defaultStart = Math.max(0, total - 3);
@@ -207,72 +206,102 @@ function MiniTimeline({ steps, offset, onOffsetChange }: { steps: TimelineStep[]
   const canPrev = start > 0;
   const canNext = end < total;
 
-  const iconColorMap: Record<string, { bg: string; border: string; icon: string }> = {
-    done:    { bg: "bg-neutral-100", border: "border-neutral-400", icon: "text-neutral-600" },
-    active:  { bg: "bg-primary-50", border: "border-primary-400", icon: "text-primary-600" },
-    late:    { bg: "bg-red-50", border: "border-red-400", icon: "text-red-600" },
-    pending: { bg: "bg-neutral-50", border: "border-neutral-200", icon: "text-neutral-300" },
+  // Determine current phase based on active step
+  const activeStep = steps.find(s => s.status === "active" || s.status === "late");
+  const phaseMap: Record<string, string> = {
+    "Recepción": "Recepción", "Validación": "Validación",
+    "Preparación": "Preparación", "Empaque": "Preparación",
+    "Retiro": "Despacho", "Entrega": "Entrega",
   };
-  const iconMap: Record<string, typeof Package> = { "Recepción": Package, "Validación": ClipboardCheck, "Preparación": Package, "Empaque": Package, "Retiro": Truck, "Entrega": Check };
+  const phaseName = activeStep ? phaseMap[activeStep.label] ?? activeStep.label : "Completado";
+  const phaseColor = activeStep?.status === "late" ? "text-red-600" : activeStep ? "text-primary-600" : "text-green-600";
+  const phaseSla = activeStep?.sla;
+  const phaseDates = activeStep?.fechaLineas;
+
+  const dotColor: Record<string, string> = {
+    done: "bg-neutral-800", active: "bg-primary-500", late: "bg-red-500", pending: "bg-neutral-300",
+  };
 
   return (
     <Card size="sm">
-      <CardContent className="!py-3 !px-2">
+      <CardContent className="!py-3 !px-3">
+        {/* Phase header */}
+        <div className="flex items-center justify-between mb-3 px-8">
+          <div>
+            <p className={`text-[10px] font-bold uppercase tracking-wider ${phaseColor}`}>Fase {phaseName}</p>
+            {phaseDates && phaseDates.length > 0 && (
+              <p className="text-[10px] text-neutral-500 mt-0.5">SLA: {phaseDates.join(" ")}</p>
+            )}
+          </div>
+          {phaseSla && (
+            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              phaseSla.status === "cumplido" ? "bg-green-50 text-green-700" :
+              phaseSla.status === "atrasado" ? "bg-red-50 text-red-600" :
+              phaseSla.status === "en_riesgo" ? "bg-amber-50 text-amber-700" :
+              "bg-neutral-50 text-neutral-500"
+            }`}>
+              {phaseSla.status === "cumplido" ? <><CheckCircle2 className="w-3 h-3" /> Cumplido</> :
+               phaseSla.status === "atrasado" ? <><AlertTriangle className="w-3 h-3" /> Atrasado</> :
+               phaseSla.status === "en_riesgo" ? <><Clock className="w-3 h-3" /> En riesgo</> :
+               <><Clock className="w-3 h-3" /> Pendiente</>}
+            </span>
+          )}
+        </div>
+
+        {/* Steps row */}
         <div className="flex items-center gap-1">
-          {/* Left arrow */}
           <button
             onClick={() => canPrev && onOffsetChange(start - 1)}
             disabled={!canPrev}
-            className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${canPrev ? "hover:bg-neutral-100 text-neutral-500" : "text-neutral-200 cursor-default"}`}
+            className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${canPrev ? "hover:bg-neutral-100 text-neutral-500" : "text-neutral-200 cursor-default"}`}
           >
-            <ChevronRight className="w-4 h-4 rotate-180" />
+            <ChevronRight className="w-3.5 h-3.5 rotate-180" />
           </button>
 
-          {/* Steps */}
-          <div className="flex-1 flex items-start justify-between relative">
-            <div className="absolute top-[55px] left-[40px] right-[40px] h-0.5 bg-neutral-200" />
-            <div className="absolute top-[55px] left-[40px] h-0.5 bg-green-600 transition-all" style={{ width: visible.length > 1 ? `${((visible.filter(s => s.status === "done").length) / (visible.length - 1)) * 100}%` : "0%" }} />
-            {visible.map((step) => {
-              const c = iconColorMap[step.status] ?? iconColorMap.pending;
-              const StepIcon = iconMap[step.label] ?? Package;
-              return (
-                <div key={step.label} className="flex flex-col items-center relative z-10" style={{ flex: "1 1 0%" }}>
-                  <p className={`text-xs sm:text-sm font-semibold mb-2 text-center ${step.status === "active" || step.status === "late" ? "text-neutral-900" : step.status === "done" ? "text-neutral-700" : "text-neutral-400"}`}>{step.label}</p>
-                  <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center border-2 ${c.bg} ${c.border}`}>
-                    <StepIcon className={`w-5 h-5 sm:w-6 sm:h-6 ${c.icon}`} />
-                  </div>
-                  <div className="mt-2 text-center">
-                    {step.fechaLineas ? step.fechaLineas.map((line, li) => (
-                      <p key={li} className="text-[10px] sm:text-xs text-neutral-500 leading-snug">{line}</p>
-                    )) : <p className="text-[10px] text-neutral-300">—</p>}
-                  </div>
-                  {step.sla && (
-                    <span className={`mt-1 inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold ${
-                      step.sla.status === "cumplido" ? "bg-green-50 text-green-700" :
-                      step.sla.status === "atrasado" ? "bg-red-50 text-red-600" :
-                      "bg-neutral-50 text-neutral-500"
-                    }`}>
-                      {step.sla.status === "cumplido" ? <><CheckCircle2 className="w-2.5 h-2.5" /> Cumplido</> :
-                       step.sla.status === "atrasado" ? <><AlertTriangle className="w-2.5 h-2.5" /> Atrasado</> :
-                       <><Clock className="w-2.5 h-2.5" /> Pendiente</>}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
+          <div className="flex-1 flex items-center relative px-2">
+            {/* Line */}
+            <div className="absolute top-1/2 -translate-y-1/2 left-4 right-4 h-0.5 bg-neutral-200" />
+            <div className="absolute top-1/2 -translate-y-1/2 left-4 h-0.5 bg-neutral-800 transition-all" style={{ width: visible.length > 1 ? `${((visible.filter(s => s.status === "done").length) / (visible.length - 1)) * 100}%` : "0%" }} />
+
+            {visible.map((step) => (
+              <div key={step.label} className="flex flex-col items-center relative z-10" style={{ flex: "1 1 0%" }}>
+                {/* Dot */}
+                <div className={`w-3 h-3 rounded-full ${dotColor[step.status] ?? "bg-neutral-300"} ${
+                  step.status === "active" ? "ring-4 ring-primary-100" :
+                  step.status === "late" ? "ring-4 ring-red-100" : ""
+                }`} />
+                {/* Label + time */}
+                <p className={`text-[10px] font-medium mt-1.5 text-center leading-tight ${
+                  step.status === "active" || step.status === "late" ? "text-neutral-900 font-semibold" :
+                  step.status === "done" ? "text-neutral-700" : "text-neutral-400"
+                }`}>{step.label}</p>
+                {step.fechaLineas?.[0] && (
+                  <p className={`text-[9px] tabular-nums text-center ${
+                    step.status === "done" ? "text-green-600" :
+                    step.status === "late" ? "text-red-500" : "text-neutral-400"
+                  }`}>
+                    {/* Show only time portion if available */}
+                    {step.fechaLineas[0].includes(":") ? step.fechaLineas[0].split(" ").pop() : step.fechaLineas[0]}
+                  </p>
+                )}
+              </div>
+            ))}
           </div>
 
-          {/* Right arrow */}
           <button
             onClick={() => canNext && onOffsetChange(start + 1)}
             disabled={!canNext}
-            className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${canNext ? "hover:bg-neutral-100 text-neutral-500" : "text-neutral-200 cursor-default"}`}
+            className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${canNext ? "hover:bg-neutral-100 text-neutral-500" : "text-neutral-200 cursor-default"}`}
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
-        {/* Step counter */}
-        <p className="text-center text-[10px] text-neutral-400 mt-2">{start + 1}–{end} de {total} pasos</p>
+
+        {/* Progress bar */}
+        <div className="mx-8 mt-2.5 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+          <div className="h-full bg-neutral-300 rounded-full transition-all" style={{ width: `${Math.round(((currentIdx + 1) / total) * 100)}%` }} />
+        </div>
+        <p className="text-center text-[9px] text-neutral-400 mt-1">{start + 1}–{end} de {total}</p>
       </CardContent>
     </Card>
   );
