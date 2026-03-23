@@ -463,9 +463,9 @@ function PedidoDetalleContent() {
                 <Card size="sm">
                   <CardContent className="!py-6 !px-6">
                     <div className="flex items-start justify-between relative">
-                      {/* Connector line */}
-                      <div className="absolute top-[28px] left-[56px] right-[56px] h-0.5 bg-neutral-200" />
-                      <div className="absolute top-[28px] left-[56px] h-0.5 bg-green-600 transition-all" style={{ width: visible.length > 1 ? `${((visible.filter(s => s.status === "done").length) / (visible.length - 1)) * 100}%` : "0%" }} />
+                      {/* Connector line — centered on the 56px icons (label ~20px + mb-2 8px + half icon 28px = 56px) */}
+                      <div className="absolute top-[55px] left-[56px] right-[56px] h-0.5 bg-neutral-200" />
+                      <div className="absolute top-[55px] left-[56px] h-0.5 bg-green-600 transition-all" style={{ width: visible.length > 1 ? `${((visible.filter(s => s.status === "done").length) / (visible.length - 1)) * 100}%` : "0%" }} />
 
                       {visible.map((step, i) => {
                         const c = iconColorMap[step.status] ?? iconColorMap.pending;
