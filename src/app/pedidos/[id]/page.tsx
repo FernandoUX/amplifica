@@ -9,7 +9,7 @@ import {
   Ban, Eye, Pencil, MapPin, Phone, Mail, ExternalLink,
   ChevronDown, ChevronUp, BellOff, BellRing, CheckCircle2,
   User, Users, Plus, RefreshCw, StickyNote, Monitor, Smartphone, X, Printer,
-  ClipboardList, Receipt,
+  ClipboardList, Receipt, Search,
 } from "lucide-react";
 
 import { PEDIDOS, MOCK_PEDIDO_DETALLE } from "@/app/pedidos/_data";
@@ -614,59 +614,127 @@ function PedidoDetalleContent() {
                 </CardContent>
               </Card>
 
-              {/* Datos del Envío */}
+              {/* Datos del Envío — with editable inputs + address search */}
               <Card size="sm">
                 <CardHeader><CardTitle className="text-base">Datos del Envío</CardTitle></CardHeader>
                 <CardContent>
                   <div className="divide-y divide-neutral-100">
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Nombre Destinatario</p>
-                      <p className="text-sm text-neutral-800">{pedido.destinatario.nombre}</p>
+                      <input type="text" defaultValue={pedido.destinatario.nombre} className="w-full border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-200" />
                     </div>
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Correo Destinatario</p>
-                      <p className="text-sm text-neutral-800">{pedido.destinatario.email || "—"}</p>
+                      <input type="email" defaultValue={pedido.destinatario.email || ""} placeholder="correo@ejemplo.cl" className="w-full border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-200" />
                     </div>
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Teléfono Destinatario</p>
-                      <p className="text-sm text-neutral-800">{pedido.destinatario.telefono || "—"}</p>
+                      <input type="tel" defaultValue={pedido.destinatario.telefono || ""} placeholder="+56 9..." className="w-full border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-200" />
                     </div>
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Paquete</p>
-                      <p className="text-sm text-neutral-800">{pedido.paquete}</p>
+                      <select defaultValue={pedido.paquete} className="w-full border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none">
+                        <option>{pedido.paquete}</option>
+                        <option>Caja Ultra Chica</option>
+                        <option>Caja Chica</option>
+                        <option>Caja Mediana</option>
+                        <option>Caja Grande</option>
+                        <option>Sobre</option>
+                      </select>
                     </div>
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Volumen Total</p>
-                      <p className="text-sm text-neutral-800">{pedido.volumenTotal}</p>
+                      <div className="border border-green-200 bg-green-50 rounded-lg px-3 py-1.5">
+                        <p className="text-sm text-green-700">{pedido.volumenTotal}</p>
+                      </div>
                     </div>
+                  </div>
+
+                  {/* Address search — predictive */}
+                  <div className="mt-4 mb-3">
+                    <p className="text-[10px] text-neutral-400 mb-0.5">Buscar Dirección</p>
+                    <div className="relative">
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2"><Search className="w-4 h-4 text-neutral-400" /></div>
+                      <input
+                        type="text"
+                        placeholder="Escribe una dirección para buscar..."
+                        defaultValue={`${pedido.destinatario.calle} ${pedido.destinatario.numero}, ${pedido.destinatario.comuna}`}
+                        className="w-full border border-neutral-200 rounded-lg pl-9 pr-3 py-2 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Address fields — auto-filled from search */}
+                  <div className="divide-y divide-neutral-100">
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Calle o Avenida</p>
-                      <p className="text-sm text-neutral-800">{pedido.destinatario.calle}</p>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 border border-green-200 bg-green-50 rounded-lg px-3 py-1.5">
+                          <p className="text-sm text-green-800">{pedido.destinatario.calle}</p>
+                        </div>
+                        <button className="text-neutral-400 hover:text-neutral-600 p-1"><Pencil className="w-3.5 h-3.5" /></button>
+                      </div>
                     </div>
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Número</p>
-                      <p className="text-sm text-neutral-800">{pedido.destinatario.numero}</p>
-                    </div>
-                    {pedido.destinatario.depto && (
-                      <div className="py-2.5">
-                        <p className="text-[10px] text-neutral-400 mb-0.5">Complemento</p>
-                        <p className="text-sm text-neutral-800">{pedido.destinatario.depto}</p>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 border border-green-200 bg-green-50 rounded-lg px-3 py-1.5">
+                          <p className="text-sm text-green-800">{pedido.destinatario.numero}</p>
+                        </div>
+                        <button className="text-neutral-400 hover:text-neutral-600 p-1"><Pencil className="w-3.5 h-3.5" /></button>
                       </div>
-                    )}
+                    </div>
+                    <div className="py-2.5">
+                      <p className="text-[10px] text-neutral-400 mb-0.5">Complemento</p>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 border border-green-200 bg-green-50 rounded-lg px-3 py-1.5">
+                          <p className="text-sm text-green-800">{pedido.destinatario.depto || "—"}</p>
+                        </div>
+                        <button className="text-neutral-400 hover:text-neutral-600 p-1"><Pencil className="w-3.5 h-3.5" /></button>
+                      </div>
+                    </div>
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Comuna</p>
-                      <p className="text-sm text-neutral-800">{pedido.destinatario.comuna}</p>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 border border-green-200 bg-green-50 rounded-lg px-3 py-1.5">
+                          <p className="text-sm text-green-800">{pedido.destinatario.comuna}</p>
+                        </div>
+                        <button className="text-neutral-400 hover:text-neutral-600 p-1"><Pencil className="w-3.5 h-3.5" /></button>
+                      </div>
                     </div>
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Región</p>
-                      <p className="text-sm text-neutral-800">{pedido.destinatario.region}</p>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 border border-green-200 bg-green-50 rounded-lg px-3 py-1.5">
+                          <p className="text-sm text-green-800">{pedido.destinatario.region}</p>
+                        </div>
+                        <button className="text-neutral-400 hover:text-neutral-600 p-1"><Pencil className="w-3.5 h-3.5" /></button>
+                      </div>
                     </div>
                   </div>
-                  {/* Map placeholder */}
-                  <div className="mt-3 rounded-lg bg-neutral-100 h-40 flex items-center justify-center border border-neutral-200">
-                    <div className="text-center">
-                      <MapPin className="w-6 h-6 text-primary-500 mx-auto mb-1" />
-                      <p className="text-[10px] text-neutral-400">Mapa de ubicación</p>
+
+                  {/* Validation status */}
+                  <div className="mt-3 flex items-center gap-2 text-xs text-green-600">
+                    <Check className="w-3.5 h-3.5" />
+                    <span>La Dirección se ha Validado Automáticamente</span>
+                  </div>
+                  <Button variant="secondary" size="sm" className="mt-2 text-[10px]">Forzar Validación de Dirección</Button>
+
+                  {/* Map */}
+                  <div className="mt-3 rounded-lg overflow-hidden border border-neutral-200">
+                    <div className="bg-neutral-100 h-44 flex items-center justify-center relative">
+                      <div className="absolute inset-0 bg-gradient-to-br from-green-50/50 to-neutral-100" />
+                      <div className="relative text-center">
+                        <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center mx-auto mb-1 shadow-lg">
+                          <MapPin className="w-4 h-4 text-white" />
+                        </div>
+                        <p className="text-xs font-medium text-neutral-700">{pedido.destinatario.comuna}, {pedido.destinatario.region}</p>
+                        <p className="text-[10px] text-neutral-400 font-mono mt-0.5">-33.4489, -70.6483</p>
+                      </div>
+                    </div>
+                    <div className="flex border-t border-neutral-200">
+                      <button className="flex-1 px-3 py-1.5 text-xs font-medium text-neutral-700 bg-white border-r border-neutral-200">Mapa</button>
+                      <button className="flex-1 px-3 py-1.5 text-xs text-neutral-500 bg-neutral-50">Satélite</button>
                     </div>
                   </div>
                 </CardContent>
