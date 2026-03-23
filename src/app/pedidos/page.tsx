@@ -672,6 +672,9 @@ function PedidosPageInner() {
               <table className="w-full table-auto text-sm border-collapse font-sans tracking-normal">
                 <thead className="sticky top-0 z-10">
                   <tr className="border-b border-neutral-100 bg-neutral-50">
+                    <th className="py-3 px-3 w-[40px]">
+                      <Checkbox checked={allPageSelected} indeterminate={!allPageSelected && somePageSelected} onChange={toggleSelectAll} />
+                    </th>
                     <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 w-[90px] cursor-pointer hover:text-neutral-900 select-none" style={NW} onClick={() => toggleSort("id")}>
                       ID <SortIcon field="id" sortField={sortField} sortDir={sortDir} />
                     </th>
@@ -705,9 +708,12 @@ function PedidosPageInner() {
                 </thead>
                 <tbody className="divide-y divide-neutral-50">
                   {paginatedRows.map(p => (
-                    <tr key={p.id} className="hover:bg-neutral-50/60 transition-colors duration-300 group">
+                    <tr key={p.id} className={`hover:bg-neutral-50/60 transition-colors duration-300 group ${selectedIds.has(p.id) ? "bg-primary-50/40" : ""}`}>
+                      <td className="py-3 px-3">
+                        <Checkbox checked={selectedIds.has(p.id)} onChange={() => toggleSelectOne(p.id)} />
+                      </td>
                       <td className="py-3 px-4">
-                        <Link href={`/pedidos/${p.id}`} className="inline-block bg-neutral-100 text-neutral-700 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 text-xs font-mono cursor-pointer">
+                        <Link href={`/pedidos/${p.id}`} className="inline-block bg-neutral-100 text-neutral-700 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 text-xs cursor-pointer">
                           {p.id}
                         </Link>
                       </td>
