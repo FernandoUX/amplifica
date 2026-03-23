@@ -30,7 +30,7 @@ export default function KpiCard({ title, value, prefix, delta, icon, sparkline, 
   const data: SparklinePoint[] = sparkline?.map(v => ({ v })) ?? [];
 
   return (
-    <div className="bg-white border border-neutral-200 rounded-2xl px-5 py-5 flex flex-col gap-3 relative overflow-hidden">
+    <div className="bg-white border border-neutral-200 rounded-2xl px-5 py-5 flex flex-col gap-3 relative">
       {/* Header: title + icon */}
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-neutral-800">{title}</span>
@@ -43,14 +43,14 @@ export default function KpiCard({ title, value, prefix, delta, icon, sparkline, 
           <span className="text-xl sm:text-2xl lg:text-[1.75rem] font-bold text-neutral-900 leading-tight tracking-tight tabular-nums">
             {prefix}{value}
           </span>
-          <span className={`inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none ${badgeCls}`}>
+          <span className={`relative z-20 inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none ${badgeCls}`}>
             {delta.value} {delta.label}
           </span>
         </div>
 
         {/* Sparkline with left fade */}
         {data.length > 0 && (
-          <div className="w-24 h-12 flex-shrink-0 relative">
+          <div className="w-24 h-12 flex-shrink-0 relative overflow-hidden rounded-lg">
             {/* Left-to-right white fade overlay */}
             <div
               className="absolute inset-0 z-10 pointer-events-none"
