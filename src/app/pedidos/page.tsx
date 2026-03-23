@@ -605,7 +605,7 @@ function PedidosPageInner() {
           <Button variant="tertiary" iconLeft={<Download className="w-4 h-4" />}>
             Exportar
           </Button>
-          <Button variant="primary" iconLeft={<Plus className="w-4 h-4" />}>
+          <Button variant="primary" iconLeft={<Plus className="w-4 h-4" />} href="/pedidos/crear">
             Crear pedido
           </Button>
         </div>
