@@ -17,10 +17,10 @@ import ProductsModal, { type AddProduct } from "@/components/recepciones/Product
 type ClientType = "b2c" | "b2b" | null;
 type ViewMode = "actual" | "mejorada";
 
-type ClientDataB2C = { nombre: string; email: string; telefono: string; direccion: string };
+type ClientDataB2C = { nombre: string; email: string; telefono: string; direccion: string; region: string; comuna: string; complemento: string };
 type ClientDataB2B = {
   razonSocial: string; rut: string; giro: string; direccionFiscal: string;
-  nombreContacto: string; emailContacto: string; telefonoContacto: string; direccionEnvio: string;
+  nombreContacto: string; emailContacto: string; telefonoContacto: string; direccionEnvio: string; region: string; comuna: string; complemento: string;
 };
 type ProductItem = { id: string; nombre: string; sku: string; precioUnitario: number; cantidad: number };
 
@@ -63,10 +63,10 @@ function FilterGate({ children }: { children: React.ReactNode }) {
 function CrearPedidoContent() {
   const [viewMode, setViewMode] = useState<ViewMode>("mejorada");
   const [clientType, setClientType] = useState<ClientType>(null);
-  const [b2c, setB2c] = useState<ClientDataB2C>({ nombre: "", email: "", telefono: "", direccion: "" });
+  const [b2c, setB2c] = useState<ClientDataB2C>({ nombre: "", email: "", telefono: "", direccion: "", region: "", comuna: "", complemento: "" });
   const [b2b, setB2b] = useState<ClientDataB2B>({
     razonSocial: "", rut: "", giro: "", direccionFiscal: "",
-    nombreContacto: "", emailContacto: "", telefonoContacto: "", direccionEnvio: "",
+    nombreContacto: "", emailContacto: "", telefonoContacto: "", direccionEnvio: "", region: "", comuna: "", complemento: "",
   });
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [showProductsModal, setShowProductsModal] = useState(false);
@@ -100,7 +100,10 @@ function CrearPedidoContent() {
     : clientType === "b2b"
     ? !!(b2b.razonSocial && b2b.rut && b2b.direccionFiscal && b2b.nombreContacto && b2b.emailContacto)
     : false;
-  const canConfirm = clientComplete && products.length > 0;
+  const hasAddress = clientType === "b2c" ? b2c.direccion.length > 3 : clientType === "b2b" ? b2b.direccionEnvio.length > 3 : false;
+  const hasShippingCost = shipSimulated || !!shipManualCost;
+  const canSimulate = hasAddress && products.length > 0;
+  const canConfirm = clientComplete && products.length > 0 && hasShippingCost;
 
   const handleAddProducts = (added: AddProduct[]) => {
     setProducts(prev => {
@@ -326,6 +329,41 @@ function CrearPedidoContent() {
                     <FormField label="Correo electrónico" type="email" value={b2c.email} onChange={v => setB2c(p => ({ ...p, email: v }))} />
                     <FormField label="Teléfono" type="tel" value={b2c.telefono} onChange={v => setB2c(p => ({ ...p, telefono: v }))} />
                     <div className="sm:col-span-2"><FormField label="Dirección de entrega" value={b2c.direccion} onChange={v => setB2c(p => ({ ...p, direccion: v }))} /></div>
+                    {/* Expanded address fields — appear when address is entered */}
+                    {b2c.direccion.length > 3 && (
+                      <>
+                        <FormField as="select" label="Región" value={b2c.region} onChange={v => setB2c(p => ({ ...p, region: v }))}>
+                          <option value="">Seleccionar región</option>
+                          <option value="Metropolitana">Región Metropolitana</option>
+                          <option value="Valparaíso">Valparaíso</option>
+                          <option value="Biobío">Biobío</option>
+                          <option value="Araucanía">La Araucanía</option>
+                          <option value="OHiggins">O&apos;Higgins</option>
+                        </FormField>
+                        <FormField as="select" label="Comuna" value={b2c.comuna} onChange={v => setB2c(p => ({ ...p, comuna: v }))}>
+                          <option value="">Seleccionar comuna</option>
+                          <option value="Santiago">Santiago</option>
+                          <option value="Providencia">Providencia</option>
+                          <option value="Las Condes">Las Condes</option>
+                          <option value="Quilicura">Quilicura</option>
+                          <option value="La Reina">La Reina</option>
+                          <option value="Ñuñoa">Ñuñoa</option>
+                        </FormField>
+                        <div className="sm:col-span-2"><FormField label="Complemento (depto, piso, oficina)" value={b2c.complemento} onChange={v => setB2c(p => ({ ...p, complemento: v }))} /></div>
+                        {/* Simulated map */}
+                        <div className="sm:col-span-2 rounded-lg overflow-hidden border border-neutral-200">
+                          <div className="bg-neutral-100 h-36 flex items-center justify-center relative">
+                            <div className="absolute inset-0 bg-[url('https://api.mapbox.com/styles/v1/mapbox/light-v11/static/-70.6483,-33.4489,13,0/600x200?access_token=placeholder')] bg-cover bg-center opacity-30" />
+                            <div className="relative text-center">
+                              <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center mx-auto mb-1 shadow-lg">
+                                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                              </div>
+                              <p className="text-[10px] text-neutral-500 font-mono">-33.4489, -70.6483</p>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-5">
@@ -341,7 +379,25 @@ function CrearPedidoContent() {
                         <FormField label="Nombre completo" value={b2b.nombreContacto} onChange={v => setB2b(p => ({ ...p, nombreContacto: v }))} />
                         <FormField label="Correo electrónico" type="email" value={b2b.emailContacto} onChange={v => setB2b(p => ({ ...p, emailContacto: v }))} />
                         <FormField label="Teléfono" type="tel" value={b2b.telefonoContacto} onChange={v => setB2b(p => ({ ...p, telefonoContacto: v }))} />
-                        <FormField label="Dirección de envío" value={b2b.direccionEnvio} onChange={v => setB2b(p => ({ ...p, direccionEnvio: v }))} />
+                        <div className="sm:col-span-2"><FormField label="Dirección de envío" value={b2b.direccionEnvio} onChange={v => setB2b(p => ({ ...p, direccionEnvio: v }))} /></div>
+                        {b2b.direccionEnvio.length > 3 && (
+                          <>
+                            <FormField as="select" label="Región" value={b2b.region} onChange={v => setB2b(p => ({ ...p, region: v }))}>
+                              <option value="">Seleccionar región</option>
+                              <option value="Metropolitana">Región Metropolitana</option>
+                              <option value="Valparaíso">Valparaíso</option>
+                              <option value="Biobío">Biobío</option>
+                            </FormField>
+                            <FormField as="select" label="Comuna" value={b2b.comuna} onChange={v => setB2b(p => ({ ...p, comuna: v }))}>
+                              <option value="">Seleccionar comuna</option>
+                              <option value="Santiago">Santiago</option>
+                              <option value="Providencia">Providencia</option>
+                              <option value="Las Condes">Las Condes</option>
+                              <option value="Quilicura">Quilicura</option>
+                            </FormField>
+                            <div className="sm:col-span-2"><FormField label="Complemento (depto, piso, oficina)" value={b2b.complemento} onChange={v => setB2b(p => ({ ...p, complemento: v }))} /></div>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -453,13 +509,13 @@ function CrearPedidoContent() {
                     <Button
                       variant="primary"
                       size="md"
-                      disabled={!selectedCourier || products.length === 0}
+                      disabled={!selectedCourier || !canSimulate}
                       iconLeft={<Calculator className="w-4 h-4" />}
                       onClick={() => setShipSimulated(true)}
                     >
                       Simular Costo de Envío
                     </Button>
-                    {!products.length && <p className="text-xs text-neutral-400">Agrega al menos 1 producto</p>}
+                    {!canSimulate && <p className="text-xs text-neutral-400">{!hasAddress && !products.length ? "Ingresa dirección y agrega productos" : !hasAddress ? "Ingresa una dirección primero" : "Agrega al menos 1 producto"}</p>}
                   </div>
                   {shipSimulated && (
                     <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3">
@@ -571,6 +627,12 @@ function CrearPedidoContent() {
                   <div className="flex items-center gap-2 text-xs text-neutral-500">
                     <span className="w-4 h-4 rounded-full border border-neutral-300 flex items-center justify-center flex-shrink-0"><span className="w-1.5 h-1.5 rounded-full bg-neutral-300" /></span>
                     Agregar al menos un producto
+                  </div>
+                )}
+                {!hasShippingCost && (
+                  <div className="flex items-center gap-2 text-xs text-neutral-500">
+                    <span className="w-4 h-4 rounded-full border border-neutral-300 flex items-center justify-center flex-shrink-0"><span className="w-1.5 h-1.5 rounded-full bg-neutral-300" /></span>
+                    Cotizar o ingresar costo de envío
                   </div>
                 )}
               </div>
