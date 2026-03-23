@@ -584,18 +584,18 @@ function PedidoDetalleContent() {
                       <input
                         type="text"
                         defaultValue={pedido.cotizacion?.trackingNumber ?? ""}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-800 font-mono focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
+                        className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 font-mono focus:outline-none focus:border-primary-400 bg-transparent"
                       />
                     </div>
                     {/* ID — read-only */}
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">ID</p>
-                      <input type="text" value={pedido.idAmplifica} readOnly className="w-full border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-800 font-mono bg-neutral-50" />
+                      <input type="text" value={pedido.idAmplifica} readOnly className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 font-mono bg-transparent" />
                     </div>
                     {/* Cliente — read-only highlighted */}
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Cliente</p>
-                      <div className="border border-green-200 bg-green-50 rounded-lg px-3 py-1.5">
+                      <div className="border-0 border-b border-green-300 bg-green-50/50 px-0 py-1.5">
                         <p className="text-sm text-green-800">{pedido.seller}</p>
                       </div>
                     </div>
@@ -603,13 +603,13 @@ function PedidoDetalleContent() {
                     {(pedido.idOrigen || pedido.idExterno) && (
                       <div className="py-2.5">
                         <p className="text-[10px] text-neutral-400 mb-0.5">ID de Origen</p>
-                        <input type="text" value={pedido.idOrigen || pedido.idExterno || ""} readOnly className="w-full border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-800 font-mono bg-neutral-50" />
+                        <input type="text" value={pedido.idOrigen || pedido.idExterno || ""} readOnly className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 font-mono bg-transparent" />
                       </div>
                     )}
                     {/* Método de Venta — dropdown */}
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Método de Venta</p>
-                      <select className="w-full border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none">
+                      <select className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 bg-transparent focus:outline-none focus:border-primary-400 appearance-none cursor-pointer">
                         <option>{pedido.canalVenta ?? "—"}</option>
                         <option>Shopify</option>
                         <option>MercadoLibre</option>
@@ -620,7 +620,7 @@ function PedidoDetalleContent() {
                     {/* Método de Pago — dropdown */}
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Método de Pago</p>
-                      <select className="w-full border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none">
+                      <select className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 bg-transparent focus:outline-none focus:border-primary-400 appearance-none cursor-pointer">
                         <option>{pedido.metodoPago ?? "Selecciona un método"}</option>
                         <option>Transferencia</option>
                         <option>Tarjeta de crédito</option>
@@ -631,7 +631,7 @@ function PedidoDetalleContent() {
                     {/* Fecha — warning style */}
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Fecha</p>
-                      <div className="border border-red-200 bg-red-50 rounded-lg px-3 py-1.5">
+                      <div className="border-0 border-b border-red-300 bg-red-50/50 px-0 py-1.5">
                         <p className="text-sm text-red-700 font-mono">{pedido.fechaCreacion}</p>
                       </div>
                     </div>
@@ -641,7 +641,7 @@ function PedidoDetalleContent() {
                       <input
                         type="text"
                         defaultValue={pedido.cotizacion?.trackingNumber ?? ""}
-                        className="w-full border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-800 font-mono focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
+                        className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 font-mono focus:outline-none focus:border-primary-400 bg-transparent"
                       />
                     </div>
                     {/* Muestra promocional — interactive checkbox */}
@@ -660,19 +660,19 @@ function PedidoDetalleContent() {
                   <div className="divide-y divide-neutral-100">
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Nombre Destinatario</p>
-                      <input type="text" defaultValue={pedido.destinatario.nombre} className="w-full border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-200" />
+                      <input type="text" defaultValue={pedido.destinatario.nombre} className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 focus:outline-none focus:border-primary-400 bg-transparent" />
                     </div>
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Correo Destinatario</p>
-                      <input type="email" defaultValue={pedido.destinatario.email || ""} placeholder="correo@ejemplo.cl" className="w-full border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-200" />
+                      <input type="email" defaultValue={pedido.destinatario.email || ""} placeholder="correo@ejemplo.cl" className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 focus:outline-none focus:border-primary-400 bg-transparent" />
                     </div>
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Teléfono Destinatario</p>
-                      <input type="tel" defaultValue={pedido.destinatario.telefono || ""} placeholder="+56 9..." className="w-full border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-200" />
+                      <input type="tel" defaultValue={pedido.destinatario.telefono || ""} placeholder="+56 9..." className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 focus:outline-none focus:border-primary-400 bg-transparent" />
                     </div>
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Paquete</p>
-                      <select defaultValue={pedido.paquete} className="w-full border border-neutral-200 rounded-lg px-3 py-1.5 text-sm text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 appearance-none">
+                      <select defaultValue={pedido.paquete} className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 bg-transparent focus:outline-none focus:border-primary-400 appearance-none cursor-pointer">
                         <option>{pedido.paquete}</option>
                         <option>Caja Ultra Chica</option>
                         <option>Caja Chica</option>
@@ -683,7 +683,7 @@ function PedidoDetalleContent() {
                     </div>
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Volumen Total</p>
-                      <div className="border border-green-200 bg-green-50 rounded-lg px-3 py-1.5">
+                      <div className="border-0 border-b border-green-300 bg-green-50/50 px-0 py-1.5">
                         <p className="text-sm text-green-700">{pedido.volumenTotal}</p>
                       </div>
                     </div>
@@ -708,7 +708,7 @@ function PedidoDetalleContent() {
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Calle o Avenida</p>
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 border border-green-200 bg-green-50 rounded-lg px-3 py-1.5">
+                        <div className="flex-1 border-0 border-b border-green-300 bg-green-50/50 px-0 py-1.5">
                           <p className="text-sm text-green-800">{pedido.destinatario.calle}</p>
                         </div>
                         <button className="text-neutral-400 hover:text-neutral-600 p-1"><Pencil className="w-3.5 h-3.5" /></button>
@@ -717,7 +717,7 @@ function PedidoDetalleContent() {
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Número</p>
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 border border-green-200 bg-green-50 rounded-lg px-3 py-1.5">
+                        <div className="flex-1 border-0 border-b border-green-300 bg-green-50/50 px-0 py-1.5">
                           <p className="text-sm text-green-800">{pedido.destinatario.numero}</p>
                         </div>
                         <button className="text-neutral-400 hover:text-neutral-600 p-1"><Pencil className="w-3.5 h-3.5" /></button>
@@ -726,7 +726,7 @@ function PedidoDetalleContent() {
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Complemento</p>
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 border border-green-200 bg-green-50 rounded-lg px-3 py-1.5">
+                        <div className="flex-1 border-0 border-b border-green-300 bg-green-50/50 px-0 py-1.5">
                           <p className="text-sm text-green-800">{pedido.destinatario.depto || "—"}</p>
                         </div>
                         <button className="text-neutral-400 hover:text-neutral-600 p-1"><Pencil className="w-3.5 h-3.5" /></button>
@@ -735,7 +735,7 @@ function PedidoDetalleContent() {
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Comuna</p>
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 border border-green-200 bg-green-50 rounded-lg px-3 py-1.5">
+                        <div className="flex-1 border-0 border-b border-green-300 bg-green-50/50 px-0 py-1.5">
                           <p className="text-sm text-green-800">{pedido.destinatario.comuna}</p>
                         </div>
                         <button className="text-neutral-400 hover:text-neutral-600 p-1"><Pencil className="w-3.5 h-3.5" /></button>
@@ -744,7 +744,7 @@ function PedidoDetalleContent() {
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Región</p>
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 border border-green-200 bg-green-50 rounded-lg px-3 py-1.5">
+                        <div className="flex-1 border-0 border-b border-green-300 bg-green-50/50 px-0 py-1.5">
                           <p className="text-sm text-green-800">{pedido.destinatario.region}</p>
                         </div>
                         <button className="text-neutral-400 hover:text-neutral-600 p-1"><Pencil className="w-3.5 h-3.5" /></button>
