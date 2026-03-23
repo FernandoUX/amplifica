@@ -84,6 +84,30 @@ function fmtShortTime(d: string) {
   } catch { return d; }
 }
 
+// ─── Address suggestions (shared with /pedidos/crear) ────────────────────────
+type AddressSuggestion = { address: string; comuna: string; region: string };
+const ADDRESS_SUGGESTIONS: AddressSuggestion[] = [
+  { address: "Av. Providencia 1234", comuna: "Providencia", region: "Metropolitana" },
+  { address: "Av. Las Condes 9876", comuna: "Las Condes", region: "Metropolitana" },
+  { address: "Av. Quilicura 5432", comuna: "Quilicura", region: "Metropolitana" },
+  { address: "Pasaje 2 El Peral", comuna: "Los Ángeles", region: "Biobío" },
+  { address: "Calle San Martín 456", comuna: "Santiago", region: "Metropolitana" },
+  { address: "Av. La Reina 2345", comuna: "La Reina", region: "Metropolitana" },
+  { address: "Av. Vicuña Mackenna 6789", comuna: "Ñuñoa", region: "Metropolitana" },
+  { address: "Av. Apoquindo 4321", comuna: "Las Condes", region: "Metropolitana" },
+  { address: "Calle Valparaíso 123", comuna: "Valparaíso", region: "Valparaíso" },
+  { address: "Av. Libertador B. O'Higgins 1000", comuna: "Santiago", region: "Metropolitana" },
+  { address: "Calle Temuco 567", comuna: "Temuco", region: "Araucanía" },
+  { address: "Av. Lo Barnechea 890", comuna: "Lo Barnechea", region: "Metropolitana" },
+];
+
+const SIM_COURIERS = [
+  { id: "blue-express", label: "Blue Express", abbr: "BE" },
+  { id: "fazt", label: "Fazt", abbr: "FZ" },
+  { id: "amplifica", label: "Amplifica Priority", abbr: "AP" },
+  { id: "mercado", label: "Mercado Envíos", abbr: "ME" },
+];
+
 function buildTimelineSteps(p: PedidoDetalle): TimelineStep[] {
   const stateOrder = ["Pendiente", "Validado", "En preparación", "Empacado", "Listo para retiro", "Entregado"];
   const stateLabels = ["Recepción", "Validación", "Preparación", "Empaque", "Retiro", "Entrega"];
@@ -398,6 +422,9 @@ function PedidoDetalleContent() {
   const [addressDraft, setAddressDraft] = useState<DireccionEnvio | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [requiresRequote, setRequiresRequote] = useState(false);
+  const [addrFocused, setAddrFocused] = useState(false);
+  const [simCourier, setSimCourier] = useState<string | null>(null);
+  const [simCost, setSimCost] = useState<number | null>(null);
 
   // Modals
   const [supportOpen, setSupportOpen] = useState(false);
@@ -1253,16 +1280,88 @@ function PedidoDetalleContent() {
                           <FormField label="Nombre" value={addr.nombre} onChange={v => handleAddressChange("nombre", v)} />
                           <FormField label="Email" type="email" value={addr.email} onChange={v => handleAddressChange("email", v)} />
                           <FormField label="Teléfono" type="tel" value={addr.telefono} onChange={v => handleAddressChange("telefono", v)} />
-                          <div className="flex gap-2">
-                            <div className="flex-1"><FormField label="Calle" value={addr.calle} onChange={v => handleAddressChange("calle", v)} /></div>
-                            <div className="w-24"><FormField label="Número" value={addr.numero} onChange={v => handleAddressChange("numero", v)} /></div>
+                          {/* Predictive address input */}
+                          <div className="sm:col-span-2 relative" onFocus={() => setAddrFocused(true)} onBlur={() => setTimeout(() => setAddrFocused(false), 200)}>
+                            <FormField label="Calle y Número" value={`${addr.calle} ${addr.numero}`.trim()} onChange={v => { handleAddressChange("calle", v); handleAddressChange("numero", ""); }} />
+                            {addrFocused && addr.calle.length > 1 && (
+                              <div className="absolute z-30 top-full left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-xl shadow-lg overflow-hidden max-h-[200px] overflow-y-auto">
+                                {ADDRESS_SUGGESTIONS.filter(s => s.address.toLowerCase().includes(addr.calle.toLowerCase()) || s.comuna.toLowerCase().includes(addr.calle.toLowerCase())).slice(0, 5).map((s, i) => (
+                                  <button key={i} type="button" className="w-full text-left px-4 py-2.5 hover:bg-primary-50 transition-colors flex items-start gap-3 border-b border-neutral-50 last:border-0"
+                                    onMouseDown={() => {
+                                      const parts = s.address.split(" ");
+                                      const num = parts[parts.length - 1].match(/\d/) ? parts.pop()! : "";
+                                      handleAddressChange("calle", parts.join(" "));
+                                      handleAddressChange("numero", num);
+                                      handleAddressChange("comuna", s.comuna);
+                                      handleAddressChange("region", s.region);
+                                      setAddrFocused(false);
+                                    }}
+                                  >
+                                    <MapPin className="w-4 h-4 text-neutral-400 flex-shrink-0 mt-0.5" />
+                                    <div><p className="text-sm text-neutral-800">{s.address}</p><p className="text-[10px] text-neutral-500">{s.comuna}, {s.region}</p></div>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                           </div>
                           <FormField label="Depto / Complemento" value={addr.depto ?? ""} onChange={v => handleAddressChange("depto", v)} />
-                          <FormField label="Comuna" value={addr.comuna} onChange={v => handleAddressChange("comuna", v)} />
-                          <FormField label="Región" value={addr.region} onChange={v => handleAddressChange("region", v)} />
+                          {/* Comuna + Región — auto-filled with green badge or editable */}
+                          <div>
+                            <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider mb-1">Comuna</p>
+                            {isDirty && addr.comuna ? (
+                              <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                                <p className="text-sm text-green-800">{addr.comuna}</p>
+                              </div>
+                            ) : (
+                              <FormField label="" value={addr.comuna} onChange={v => handleAddressChange("comuna", v)} />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider mb-1">Región</p>
+                            {isDirty && addr.region ? (
+                              <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                                <p className="text-sm text-green-800">{addr.region}</p>
+                              </div>
+                            ) : (
+                              <FormField label="" value={addr.region} onChange={v => handleAddressChange("region", v)} />
+                            )}
+                          </div>
                           <div className="sm:col-span-2">
                             <FormField label="Instrucciones de entrega" value={addr.instrucciones ?? ""} onChange={v => handleAddressChange("instrucciones", v)} />
                           </div>
+                          {/* Shipping simulation — appears when address is dirty */}
+                          {isDirty && (
+                            <div className="sm:col-span-2 border-t border-neutral-200 pt-4 mt-2">
+                              <p className="text-xs font-semibold text-neutral-800 mb-2">Simulación de Envío</p>
+                              <p className="text-[10px] text-neutral-500 mb-3">Selecciona un courier para estimar el costo con la nueva dirección</p>
+                              <div className="flex flex-wrap gap-2 mb-3">
+                                {SIM_COURIERS.map(c => (
+                                  <button key={c.id} onClick={() => { setSimCourier(c.id); setSimCost(null); }}
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-all ${simCourier === c.id ? "border-primary-300 bg-primary-50 text-primary-700" : "border-neutral-200 text-neutral-600 hover:border-neutral-300"}`}
+                                  >
+                                    <span className="w-6 h-6 rounded bg-neutral-100 flex items-center justify-center text-[10px] font-bold text-neutral-500">{c.abbr}</span>
+                                    {c.label}
+                                  </button>
+                                ))}
+                              </div>
+                              {simCourier && !simCost && (
+                                <Button variant="secondary" size="sm" onClick={() => setSimCost(Math.round(2500 + Math.random() * 5000))}>
+                                  Simular costo
+                                </Button>
+                              )}
+                              {simCost && (
+                                <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+                                  <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                                  <div>
+                                    <p className="text-sm font-semibold text-green-800">Costo estimado: {fmt(simCost)}</p>
+                                    <p className="text-[10px] text-green-600">{SIM_COURIERS.find(c => c.id === simCourier)?.label} · 3-5 días hábiles</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </>
                       ) : (
                         <>
