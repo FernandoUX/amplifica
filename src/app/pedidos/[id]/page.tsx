@@ -239,6 +239,11 @@ function PedidoDetalleContent() {
   // View mode toggle
   const [viewMode, setViewMode] = useState<"actual" | "mejorada">("mejorada");
 
+  // Status change modal (vista actual)
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [statusModalType, setStatusModalType] = useState<"preparacion" | "envio">("preparacion");
+  const [statusModalValue, setStatusModalValue] = useState("");
+
   // Address edit state
   const [editingAddress, setEditingAddress] = useState(false);
   const [addressDraft, setAddressDraft] = useState<DireccionEnvio | null>(null);
@@ -498,7 +503,16 @@ function PedidoDetalleContent() {
                       <p className="text-[10px] text-neutral-400 mb-1.5">Estado de Preparación</p>
                       <div className="flex items-center justify-between">
                         <PedidoStatusBadge status={pedido.estadoPreparacion} />
-                        <Button variant="secondary" size="sm" className="text-[10px]">
+                        <Button variant="secondary" size="sm" className="text-[10px]" onClick={() => {
+                          setStatusModalType("preparacion");
+                          setStatusModalValue(pedido.estadoPreparacion === "Pendiente" ? "Validado" :
+                            pedido.estadoPreparacion === "Validado" ? "Empacado" :
+                            pedido.estadoPreparacion === "En preparación" ? "Empacado" :
+                            pedido.estadoPreparacion === "Por empacar" ? "Empacado" :
+                            pedido.estadoPreparacion === "Empacado" ? "Listo para retiro" :
+                            pedido.estadoPreparacion === "Listo para retiro" ? "Entregado" : "");
+                          setStatusModalOpen(true);
+                        }}>
                           {pedido.estadoPreparacion === "Pendiente" ? "Validar" :
                            pedido.estadoPreparacion === "Validado" ? "Empacado" :
                            pedido.estadoPreparacion === "En preparación" ? "Empacado" :
@@ -513,7 +527,11 @@ function PedidoDetalleContent() {
                       <p className="text-[10px] text-neutral-400 mb-1.5">Estado de Entrega</p>
                       <div className="flex items-center justify-between">
                         <EnvioStatusBadge status={pedido.estadoEnvio} />
-                        <Button variant="secondary" size="sm" className="text-[10px]">Modificar estado</Button>
+                        <Button variant="secondary" size="sm" className="text-[10px]" onClick={() => {
+                          setStatusModalType("envio");
+                          setStatusModalValue(pedido.estadoEnvio);
+                          setStatusModalOpen(true);
+                        }}>Modificar estado</Button>
                       </div>
                     </div>
                     {/* Tags */}
@@ -1628,6 +1646,132 @@ function PedidoDetalleContent() {
       >
         Esta acción no se puede deshacer. El pedido pasará a estado &quot;Cancelado&quot; y se notificará al cliente.
       </AlertModal>
+
+      {/* ── Status Change Modal (vista actual) ── */}
+      {statusModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 pt-6 pb-4">
+              <h3 className="text-base font-bold text-neutral-900">
+                Cambiar Estado del Pedido {pedido.idAmplifica}
+              </h3>
+              <button onClick={() => setStatusModalOpen(false)} className="text-neutral-400 hover:text-neutral-600 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {/* Info rows */}
+            <div className="px-6 space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-neutral-500">Canal de venta:</span>
+                <span className="text-neutral-800 font-medium">{pedido.canalVenta}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-neutral-500">Estado actual:</span>
+                <span className="text-neutral-800 font-medium">{statusModalType === "preparacion" ? pedido.estadoPreparacion : pedido.estadoEnvio}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-neutral-500">Cambiar estado:</span>
+                {statusModalType === "preparacion" ? (
+                  <select
+                    value={statusModalValue}
+                    onChange={e => setStatusModalValue(e.target.value)}
+                    className="bg-primary-500 text-white rounded-lg px-3 py-1.5 text-sm font-medium appearance-none cursor-pointer pr-8"
+                    style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center" }}
+                  >
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="Validado">Validado</option>
+                    <option value="En preparación">En preparación</option>
+                    <option value="Por empacar">Por empacar</option>
+                    <option value="Empacado">Empacado</option>
+                    <option value="Listo para retiro">Listo para retiro</option>
+                    <option value="Entregado">Entregado</option>
+                  </select>
+                ) : (
+                  <select
+                    value={statusModalValue}
+                    onChange={e => setStatusModalValue(e.target.value)}
+                    className="bg-primary-500 text-white rounded-lg px-3 py-1.5 text-sm font-medium appearance-none cursor-pointer pr-8"
+                    style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center" }}
+                  >
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="Solicitado">Solicitado</option>
+                    <option value="Programado">Programado</option>
+                    <option value="Retirado por courier">Retirado por courier</option>
+                    <option value="Enviado">Enviado</option>
+                    <option value="En Ruta Final">En Ruta Final</option>
+                    <option value="Entregado">Entregado</option>
+                    <option value="Cancelado">Cancelado</option>
+                  </select>
+                )}
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-neutral-500">Fecha:</span>
+                <span className="text-neutral-800">{pedido.fechaCreacion}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-neutral-500">Cliente:</span>
+                <span className="text-neutral-800">{pedido.seller}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-neutral-500">Sucursal:</span>
+                <span className="text-neutral-800">{pedido.sucursal}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-neutral-500">Total:</span>
+                <span className="text-neutral-800 font-medium">{fmt(pedido.montoTotal)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-neutral-500">Notas al Pedido:</span>
+                <span className="text-neutral-800">{pedido.notas || "Sin Notas"}</span>
+              </div>
+            </div>
+
+            {/* Product table */}
+            <div className="px-6 mt-4">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="border-y border-neutral-200 bg-neutral-50">
+                    <th className="text-left py-2 px-2 text-xs font-semibold text-neutral-500">SKU</th>
+                    <th className="text-center py-2 px-2 text-xs font-semibold text-neutral-500">Cantidad</th>
+                    <th className="text-left py-2 px-2 text-xs font-semibold text-neutral-500">Nombre</th>
+                    <th className="text-right py-2 px-2 text-xs font-semibold text-neutral-500">Precio Unidad</th>
+                    <th className="text-center py-2 px-2 text-xs font-semibold text-neutral-500">Imagen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pedido.productos.map(p => (
+                    <tr key={p.id} className="border-b border-neutral-100">
+                      <td className="py-2 px-2 text-xs font-mono text-neutral-600">{p.sku}</td>
+                      <td className="py-2 px-2 text-center text-xs">{p.cantidad}</td>
+                      <td className="py-2 px-2 text-xs text-neutral-800">{p.nombre}</td>
+                      <td className="py-2 px-2 text-right text-xs tabular-nums">{p.precioUnitario.toLocaleString("es-CL")}</td>
+                      <td className="py-2 px-2 text-center">
+                        {p.imagen ? (
+                          <img src={p.imagen} alt="" className="w-10 h-10 rounded object-cover mx-auto" />
+                        ) : (
+                          <span className="text-neutral-300 text-xs">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-5 flex justify-end">
+              <Button
+                variant="primary"
+                size="md"
+                onClick={() => { setStatusModalOpen(false); alert(`Estado cambiado a "${statusModalValue}" (mock)`); }}
+              >
+                Guardar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Email Preview Modal ── */}
       {emailPreview && (
