@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   ChevronRight, AlertTriangle, User, Building2, Package, Search,
   Trash2, Plus, ShoppingCart, CheckCircle2, FileText, Sparkles,
-  UserCircle, StickyNote, Truck, Calculator,
+  UserCircle, StickyNote, Truck, Calculator, MapPin,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import FormField from "@/components/ui/FormField";
@@ -59,6 +59,23 @@ function FilterGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// ─── Address suggestions (mock Google Places-like) ──────────────────────────
+type AddressSuggestion = { address: string; comuna: string; region: string; lat: number; lng: number };
+const ADDRESS_SUGGESTIONS: AddressSuggestion[] = [
+  { address: "Av. Providencia 1234", comuna: "Providencia", region: "Metropolitana", lat: -33.4260, lng: -70.6109 },
+  { address: "Av. Las Condes 9876", comuna: "Las Condes", region: "Metropolitana", lat: -33.4080, lng: -70.5690 },
+  { address: "Av. Quilicura 5432", comuna: "Quilicura", region: "Metropolitana", lat: -33.3590, lng: -70.7340 },
+  { address: "Pasaje 2 El Peral", comuna: "Los Ángeles", region: "Biobío", lat: -37.4695, lng: -72.3536 },
+  { address: "Calle San Martín 456", comuna: "Santiago", region: "Metropolitana", lat: -33.4489, lng: -70.6483 },
+  { address: "Av. La Reina 2345", comuna: "La Reina", region: "Metropolitana", lat: -33.4454, lng: -70.5393 },
+  { address: "Av. Vicuña Mackenna 6789", comuna: "Ñuñoa", region: "Metropolitana", lat: -33.4600, lng: -70.6100 },
+  { address: "Av. Apoquindo 4321", comuna: "Las Condes", region: "Metropolitana", lat: -33.4100, lng: -70.5800 },
+  { address: "Calle Valparaíso 123", comuna: "Valparaíso", region: "Valparaíso", lat: -33.0472, lng: -71.6127 },
+  { address: "Av. Libertador Bernardo O'Higgins 1000", comuna: "Santiago", region: "Metropolitana", lat: -33.4400, lng: -70.6500 },
+  { address: "Calle Temuco 567", comuna: "Temuco", region: "Araucanía", lat: -38.7359, lng: -72.5904 },
+  { address: "Av. Lo Barnechea 890", comuna: "Lo Barnechea", region: "Metropolitana", lat: -33.3500, lng: -70.5200 },
+];
+
 // ─── Main Content ─────────────────────────────────────────────────────────────
 function CrearPedidoContent() {
   const [viewMode, setViewMode] = useState<ViewMode>("mejorada");
@@ -68,6 +85,8 @@ function CrearPedidoContent() {
     razonSocial: "", rut: "", giro: "", direccionFiscal: "",
     nombreContacto: "", emailContacto: "", telefonoContacto: "", direccionEnvio: "", region: "", comuna: "", complemento: "",
   });
+  const [addressFocused, setAddressFocused] = useState(false);
+  const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [showProductsModal, setShowProductsModal] = useState(false);
   const [notas, setNotas] = useState("");
@@ -328,40 +347,74 @@ function CrearPedidoContent() {
                     <div className="sm:col-span-2"><FormField label="Nombre completo" value={b2c.nombre} onChange={v => setB2c(p => ({ ...p, nombre: v }))} /></div>
                     <FormField label="Correo electrónico" type="email" value={b2c.email} onChange={v => setB2c(p => ({ ...p, email: v }))} />
                     <FormField label="Teléfono" type="tel" value={b2c.telefono} onChange={v => setB2c(p => ({ ...p, telefono: v }))} />
-                    <div className="sm:col-span-2"><FormField label="Dirección de entrega" value={b2c.direccion} onChange={v => setB2c(p => ({ ...p, direccion: v }))} /></div>
-                    {/* Expanded address fields — appear when address is entered */}
-                    {b2c.direccion.length > 3 && (
-                      <>
-                        <FormField as="select" label="Región" value={b2c.region} onChange={v => setB2c(p => ({ ...p, region: v }))}>
-                          <option value="">Seleccionar región</option>
-                          <option value="Metropolitana">Región Metropolitana</option>
-                          <option value="Valparaíso">Valparaíso</option>
-                          <option value="Biobío">Biobío</option>
-                          <option value="Araucanía">La Araucanía</option>
-                          <option value="OHiggins">O&apos;Higgins</option>
-                        </FormField>
-                        <FormField as="select" label="Comuna" value={b2c.comuna} onChange={v => setB2c(p => ({ ...p, comuna: v }))}>
-                          <option value="">Seleccionar comuna</option>
-                          <option value="Santiago">Santiago</option>
-                          <option value="Providencia">Providencia</option>
-                          <option value="Las Condes">Las Condes</option>
-                          <option value="Quilicura">Quilicura</option>
-                          <option value="La Reina">La Reina</option>
-                          <option value="Ñuñoa">Ñuñoa</option>
-                        </FormField>
-                        <div className="sm:col-span-2"><FormField label="Complemento (depto, piso, oficina)" value={b2c.complemento} onChange={v => setB2c(p => ({ ...p, complemento: v }))} /></div>
-                        {/* Simulated map */}
-                        <div className="sm:col-span-2 rounded-lg overflow-hidden border border-neutral-200">
-                          <div className="bg-neutral-100 h-36 flex items-center justify-center relative">
-                            <div className="absolute inset-0 bg-[url('https://api.mapbox.com/styles/v1/mapbox/light-v11/static/-70.6483,-33.4489,13,0/600x200?access_token=placeholder')] bg-cover bg-center opacity-30" />
-                            <div className="relative text-center">
-                              <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center mx-auto mb-1 shadow-lg">
-                                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    {/* Predictive address input */}
+                    <div className="sm:col-span-2 relative">
+                      <div onFocus={() => setAddressFocused(true)} onBlur={() => setTimeout(() => setAddressFocused(false), 200)}>
+                        <FormField
+                          label="Dirección de entrega"
+                          value={b2c.direccion}
+                          onChange={v => { setB2c(p => ({ ...p, direccion: v, region: "", comuna: "" })); setSelectedCoords(null); setAddressFocused(true); }}
+                        />
+                      </div>
+                      {/* Suggestions dropdown */}
+                      {addressFocused && b2c.direccion.length > 1 && !b2c.region && (
+                        <div className="absolute z-30 top-full left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-xl shadow-lg overflow-hidden max-h-[240px] overflow-y-auto">
+                          {ADDRESS_SUGGESTIONS.filter(s => s.address.toLowerCase().includes(b2c.direccion.toLowerCase()) || s.comuna.toLowerCase().includes(b2c.direccion.toLowerCase())).slice(0, 5).map((s, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              className="w-full text-left px-4 py-2.5 hover:bg-primary-50 transition-colors flex items-start gap-3 border-b border-neutral-50 last:border-0"
+                              onMouseDown={() => {
+                                setB2c(p => ({ ...p, direccion: s.address, region: s.region, comuna: s.comuna }));
+                                setSelectedCoords({ lat: s.lat, lng: s.lng });
+                                setAddressFocused(false);
+                              }}
+                            >
+                              <MapPin className="w-4 h-4 text-neutral-400 flex-shrink-0 mt-0.5" />
+                              <div>
+                                <p className="text-sm text-neutral-800">{s.address}</p>
+                                <p className="text-[10px] text-neutral-500">{s.comuna}, {s.region}</p>
                               </div>
-                              <p className="text-[10px] text-neutral-500 font-mono">-33.4489, -70.6483</p>
-                            </div>
+                            </button>
+                          ))}
+                          {ADDRESS_SUGGESTIONS.filter(s => s.address.toLowerCase().includes(b2c.direccion.toLowerCase()) || s.comuna.toLowerCase().includes(b2c.direccion.toLowerCase())).length === 0 && (
+                            <p className="px-4 py-3 text-sm text-neutral-400 text-center">Sin resultados para &quot;{b2c.direccion}&quot;</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {/* Auto-filled region + comuna + complemento */}
+                    {b2c.region && (
+                      <>
+                        <div>
+                          <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider mb-1">Región</p>
+                          <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                            <p className="text-sm text-green-800">{b2c.region}</p>
                           </div>
                         </div>
+                        <div>
+                          <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider mb-1">Comuna</p>
+                          <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                            <p className="text-sm text-green-800">{b2c.comuna}</p>
+                          </div>
+                        </div>
+                        <div className="sm:col-span-2"><FormField label="Complemento (depto, piso, oficina)" value={b2c.complemento} onChange={v => setB2c(p => ({ ...p, complemento: v }))} /></div>
+                        {/* Map with coordinates */}
+                        {selectedCoords && (
+                          <div className="sm:col-span-2 rounded-lg overflow-hidden border border-neutral-200">
+                            <div className="bg-neutral-100 h-32 flex items-center justify-center relative">
+                              <div className="relative text-center">
+                                <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center mx-auto mb-1 shadow-lg">
+                                  <MapPin className="w-4 h-4 text-white" />
+                                </div>
+                                <p className="text-xs text-neutral-600 font-medium">{b2c.direccion}, {b2c.comuna}</p>
+                                <p className="text-[10px] text-neutral-400">{selectedCoords.lat.toFixed(4)}, {selectedCoords.lng.toFixed(4)}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </>
                     )}
                   </div>
