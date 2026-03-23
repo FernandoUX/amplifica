@@ -930,6 +930,58 @@ function PedidoDetalleContent() {
               </CardContent>
             </Card>
 
+            {/* ── Status Change Card — prominent CTA ── */}
+            <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">Preparación</p>
+                      <PedidoStatusBadge status={pedido.estadoPreparacion} />
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-neutral-300" />
+                    <div>
+                      <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">Envío</p>
+                      <EnvioStatusBadge status={pedido.estadoEnvio} />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {pedido.estadoPreparacion !== "Entregado" && pedido.estadoPreparacion !== "Cancelado" && (
+                    <Button
+                      variant="primary"
+                      size="md"
+                      onClick={() => {
+                        setStatusModalType("preparacion");
+                        const nextState = pedido.estadoPreparacion === "Pendiente" ? "Validado" :
+                          pedido.estadoPreparacion === "Validado" ? "En preparación" :
+                          pedido.estadoPreparacion === "En preparación" ? "Empacado" :
+                          pedido.estadoPreparacion === "Por empacar" ? "Empacado" :
+                          pedido.estadoPreparacion === "Empacado" ? "Listo para retiro" :
+                          pedido.estadoPreparacion === "Listo para retiro" ? "Entregado" : "";
+                        setStatusModalValue(nextState);
+                        setStatusModalOpen(true);
+                      }}
+                    >
+                      Avanzar a {pedido.estadoPreparacion === "Pendiente" ? "Validado" :
+                        pedido.estadoPreparacion === "Validado" ? "En preparación" :
+                        pedido.estadoPreparacion === "En preparación" ? "Empacado" :
+                        pedido.estadoPreparacion === "Por empacar" ? "Empacado" :
+                        pedido.estadoPreparacion === "Empacado" ? "Listo para retiro" :
+                        pedido.estadoPreparacion === "Listo para retiro" ? "Entregado" : "—"}
+                    </Button>
+                  )}
+                  <Button variant="secondary" size="md" onClick={() => {
+                    setStatusModalType("envio");
+                    setStatusModalValue(pedido.estadoEnvio);
+                    setStatusModalOpen(true);
+                  }}>
+                    Modificar envío
+                  </Button>
+                </div>
+              </div>
+            </div>
+
             {/* ── Two-column layout ── */}
             <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-5">
               {/* LEFT COLUMN */}
