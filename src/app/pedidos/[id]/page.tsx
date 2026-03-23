@@ -1437,7 +1437,19 @@ function PedidoDetalleContent() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {pedido.dimensiones ? (
+                    {/* Paquete + Volumen — always visible */}
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Tipo de Paquete</p>
+                        <p className="text-sm font-semibold text-neutral-800 mt-0.5">{pedido.paquete}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Volumen Total</p>
+                        <p className="text-sm font-medium text-neutral-700 mt-0.5">{pedido.volumenTotal}</p>
+                      </div>
+                    </div>
+                    {/* Dimensiones grid */}
+                    {pedido.dimensiones && (
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div className="bg-neutral-50 rounded-lg p-3">
                           <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Peso</p>
@@ -1454,17 +1466,6 @@ function PedidoDetalleContent() {
                         <div className="bg-neutral-50 rounded-lg p-3">
                           <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Alto</p>
                           <p className="text-lg font-bold text-neutral-800 mt-0.5">{pedido.dimensiones.alto}cm</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-start gap-x-5 gap-y-2.5 flex-wrap">
-                        <div>
-                          <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Paquete</p>
-                          <p className="text-sm font-medium text-neutral-700 mt-0.5">{pedido.paquete}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Volumen total</p>
-                          <p className="text-sm font-medium text-neutral-700 mt-0.5">{pedido.volumenTotal}</p>
                         </div>
                       </div>
                     )}
