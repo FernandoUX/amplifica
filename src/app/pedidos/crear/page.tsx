@@ -276,30 +276,37 @@ function CrearPedidoContent() {
           <div className="space-y-5">
             {/* Step 1: Client type selector */}
             {!clientType && (
-              <div className="space-y-3">
-                <p className="text-sm text-neutral-600">Selecciona el tipo de cliente para comenzar.</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <button onClick={() => setClientType("b2c")} className="text-left p-4 rounded-xl border-2 border-neutral-200 hover:border-primary-300 hover:bg-primary-50/30 transition-all">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-10 rounded-lg bg-primary-50 flex items-center justify-center"><User className="w-5 h-5 text-primary-500" /></div>
-                      <span className="text-sm font-bold text-neutral-900">Cliente B2C</span>
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-base font-semibold text-neutral-900">Selecciona el tipo de cliente</h2>
+                  <p className="text-sm text-neutral-500 mt-1">Elige el tipo de cliente para configurar el formulario correspondiente.</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <button onClick={() => setClientType("b2c")} className="group text-left p-5 sm:p-6 rounded-2xl border-2 border-neutral-200 hover:border-primary-400 hover:shadow-md hover:shadow-primary-100/50 transition-all duration-200">
+                    <div className="flex items-center gap-4 mb-3">
+                      <div className="w-12 h-12 rounded-xl bg-primary-50 flex items-center justify-center group-hover:bg-primary-100 transition-colors"><User className="w-6 h-6 text-primary-500" /></div>
+                      <div>
+                        <span className="text-base font-bold text-neutral-900 block">Cliente B2C</span>
+                        <span className="text-sm text-neutral-500">Para consumidores finales</span>
+                      </div>
                     </div>
-                    <p className="text-xs text-neutral-500">Para consumidores finales.</p>
-                    <ul className="mt-2 space-y-0.5">
-                      <li className="text-[10px] text-neutral-400">• Datos básicos del cliente</li>
-                      <li className="text-[10px] text-neutral-400">• Dirección de entrega</li>
+                    <ul className="space-y-1.5 ml-16">
+                      <li className="flex items-center gap-2 text-sm text-neutral-500"><span className="w-1 h-1 rounded-full bg-neutral-300 flex-shrink-0" /> Datos básicos del cliente</li>
+                      <li className="flex items-center gap-2 text-sm text-neutral-500"><span className="w-1 h-1 rounded-full bg-neutral-300 flex-shrink-0" /> Dirección de entrega</li>
                     </ul>
                   </button>
-                  <button onClick={() => setClientType("b2b")} className="text-left p-4 rounded-xl border-2 border-neutral-200 hover:border-primary-300 hover:bg-primary-50/30 transition-all">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center"><Building2 className="w-5 h-5 text-amber-600" /></div>
-                      <span className="text-sm font-bold text-neutral-900">Cliente B2B</span>
+                  <button onClick={() => setClientType("b2b")} className="group text-left p-5 sm:p-6 rounded-2xl border-2 border-neutral-200 hover:border-amber-400 hover:shadow-md hover:shadow-amber-100/50 transition-all duration-200">
+                    <div className="flex items-center gap-4 mb-3">
+                      <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center group-hover:bg-amber-100 transition-colors"><Building2 className="w-6 h-6 text-amber-600" /></div>
+                      <div>
+                        <span className="text-base font-bold text-neutral-900 block">Cliente B2B</span>
+                        <span className="text-sm text-neutral-500">Para empresas y ventas corporativas</span>
+                      </div>
                     </div>
-                    <p className="text-xs text-neutral-500">Para empresas y ventas corporativas.</p>
-                    <ul className="mt-2 space-y-0.5">
-                      <li className="text-[10px] text-neutral-400">• Datos de empresa completos</li>
-                      <li className="text-[10px] text-neutral-400">• Datos de contacto</li>
-                      <li className="text-[10px] text-neutral-400">• Dirección de entrega</li>
+                    <ul className="space-y-1.5 ml-16">
+                      <li className="flex items-center gap-2 text-sm text-neutral-500"><span className="w-1 h-1 rounded-full bg-neutral-300 flex-shrink-0" /> Datos de empresa completos</li>
+                      <li className="flex items-center gap-2 text-sm text-neutral-500"><span className="w-1 h-1 rounded-full bg-neutral-300 flex-shrink-0" /> Datos de contacto</li>
+                      <li className="flex items-center gap-2 text-sm text-neutral-500"><span className="w-1 h-1 rounded-full bg-neutral-300 flex-shrink-0" /> Dirección de entrega</li>
                     </ul>
                   </button>
                 </div>
