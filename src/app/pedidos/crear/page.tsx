@@ -482,27 +482,89 @@ function CrearPedidoContent() {
                     <Package className="w-8 h-8 text-neutral-200 mx-auto mb-2" />
                     <p className="text-sm text-neutral-400">Busca y agrega productos al pedido</p>
                   </div>
+                ) : clientType === "b2b" ? (
+                  /* B2B: full table with Desc%, IVA, Subtotal */
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-neutral-200 bg-neutral-50">
+                          <th className="text-left text-[10px] font-semibold text-neutral-500 uppercase tracking-wider py-2.5 px-3">Producto</th>
+                          <th className="text-center text-[10px] font-semibold text-neutral-500 uppercase tracking-wider py-2.5 px-3">Cantidad</th>
+                          <th className="text-right text-[10px] font-semibold text-neutral-500 uppercase tracking-wider py-2.5 px-3">Precio Unit.</th>
+                          <th className="text-center text-[10px] font-semibold text-neutral-500 uppercase tracking-wider py-2.5 px-3">Desc. %</th>
+                          <th className="text-center text-[10px] font-semibold text-neutral-500 uppercase tracking-wider py-2.5 px-3">IVA</th>
+                          <th className="text-right text-[10px] font-semibold text-neutral-500 uppercase tracking-wider py-2.5 px-3">Subtotal</th>
+                          <th className="py-2.5 px-2 w-8" />
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-neutral-100">
+                        {products.map(p => {
+                          const subtotal = p.precioUnitario * p.cantidad;
+                          return (
+                            <tr key={p.id} className="hover:bg-neutral-50/60">
+                              <td className="py-3 px-3">
+                                <p className="text-sm font-medium text-neutral-800">{p.nombre}</p>
+                                <p className="text-[10px] text-neutral-400">{p.sku}</p>
+                              </td>
+                              <td className="py-3 px-3">
+                                <div className="flex items-center justify-center gap-1">
+                                  <button onClick={() => updateQty(p.id, Math.max(1, p.cantidad - 1))} className="w-7 h-7 rounded border border-neutral-200 flex items-center justify-center text-neutral-500 hover:bg-neutral-100">−</button>
+                                  <input type="number" min={1} value={p.cantidad} onChange={e => updateQty(p.id, parseInt(e.target.value) || 1)} className="w-10 text-center text-sm border border-neutral-200 rounded py-1 focus:outline-none focus:ring-2 focus:ring-primary-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                                  <button onClick={() => updateQty(p.id, p.cantidad + 1)} className="w-7 h-7 rounded border border-neutral-200 flex items-center justify-center text-neutral-500 hover:bg-neutral-100">+</button>
+                                </div>
+                              </td>
+                              <td className="py-3 px-3">
+                                <div className="flex items-center justify-end gap-0.5">
+                                  <span className="text-neutral-400 text-xs">$</span>
+                                  <input type="number" min={0} value={p.precioUnitario} onChange={e => updatePrice(p.id, parseInt(e.target.value) || 0)} className="w-20 text-right text-sm border border-neutral-200 rounded py-1 px-2 focus:outline-none focus:ring-2 focus:ring-primary-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                                </div>
+                              </td>
+                              <td className="py-3 px-3">
+                                <div className="flex items-center justify-center gap-0.5">
+                                  <input type="number" min={0} max={100} defaultValue={0} className="w-12 text-center text-sm border border-neutral-200 rounded py-1 focus:outline-none focus:ring-2 focus:ring-primary-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                                  <span className="text-neutral-400 text-xs">%</span>
+                                </div>
+                              </td>
+                              <td className="py-3 px-3 text-center">
+                                <span className="inline-flex items-center rounded bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600 font-medium">19%</span>
+                              </td>
+                              <td className="py-3 px-3 text-right font-semibold text-neutral-900 tabular-nums">{fmt(subtotal)}</td>
+                              <td className="py-3 px-2">
+                                <button onClick={() => removeProduct(p.id)} className="text-neutral-300 hover:text-red-500 transition-colors p-1"><Trash2 className="w-4 h-4" /></button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 ) : (
+                  /* B2C: simple list */
                   <div className="divide-y divide-neutral-100">
                     {products.map(p => (
                       <div key={p.id} className="flex items-center gap-3 py-3">
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-neutral-800 truncate">{p.nombre}</p>
-                          <p className="text-[10px] text-neutral-400 font-mono">{p.sku}</p>
+                          <p className="text-[10px] text-neutral-400">{p.sku}</p>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <input type="number" min={1} value={p.cantidad} onChange={e => updateQty(p.id, parseInt(e.target.value) || 1)} className="w-14 text-center text-sm border border-neutral-200 rounded-md py-1 focus:outline-none focus:ring-2 focus:ring-primary-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                          <span className="text-xs text-neutral-400">×</span>
-                          <input type="number" min={0} value={p.precioUnitario} onChange={e => updatePrice(p.id, parseInt(e.target.value) || 0)} className="w-24 text-right text-sm border border-neutral-200 rounded-md py-1 px-2 focus:outline-none focus:ring-2 focus:ring-primary-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                          <button onClick={() => updateQty(p.id, Math.max(1, p.cantidad - 1))} className="w-7 h-7 rounded border border-neutral-200 flex items-center justify-center text-neutral-500 hover:bg-neutral-100">−</button>
+                          <input type="number" min={1} value={p.cantidad} onChange={e => updateQty(p.id, parseInt(e.target.value) || 1)} className="w-12 text-center text-sm border border-neutral-200 rounded py-1 focus:outline-none focus:ring-2 focus:ring-primary-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                          <button onClick={() => updateQty(p.id, p.cantidad + 1)} className="w-7 h-7 rounded border border-neutral-200 flex items-center justify-center text-neutral-500 hover:bg-neutral-100">+</button>
+                          <span className="text-xs text-neutral-400 mx-1">×</span>
+                          <input type="number" min={0} value={p.precioUnitario} onChange={e => updatePrice(p.id, parseInt(e.target.value) || 0)} className="w-24 text-right text-sm border border-neutral-200 rounded py-1 px-2 focus:outline-none focus:ring-2 focus:ring-primary-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                         </div>
                         <span className="text-sm font-semibold text-neutral-900 w-24 text-right tabular-nums">{fmt(p.precioUnitario * p.cantidad)}</span>
                         <button onClick={() => removeProduct(p.id)} className="text-neutral-300 hover:text-red-500 transition-colors p-1"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     ))}
-                    <div className="flex items-center justify-end gap-4 pt-3">
-                      <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Total</span>
-                      <span className="text-base font-bold text-neutral-900 tabular-nums">{fmt(totalAmount)}</span>
-                    </div>
+                  </div>
+                )}
+                {/* Total row */}
+                {products.length > 0 && (
+                  <div className="flex items-center justify-end gap-4 pt-3 mt-1 border-t border-neutral-200">
+                    <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Total</span>
+                    <span className="text-base font-bold text-neutral-900 tabular-nums">{fmt(totalAmount)}</span>
                   </div>
                 )}
               </CollapsibleCard>
