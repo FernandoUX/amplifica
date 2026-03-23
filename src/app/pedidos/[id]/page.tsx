@@ -217,8 +217,8 @@ function MiniTimeline({ steps, offset, onOffsetChange }: { steps: TimelineStep[]
 
   return (
     <Card size="sm">
-      <CardContent className="!py-5 !px-4">
-        <div className="flex items-center gap-2">
+      <CardContent className="!py-3 !px-2">
+        <div className="flex items-center gap-1">
           {/* Left arrow */}
           <button
             onClick={() => canPrev && onOffsetChange(start - 1)}
@@ -340,6 +340,16 @@ function PedidoDetalleContent() {
 
   // Timeline navigation offset for compact 3-step view
   const [timelineOffset, setTimelineOffset] = useState<number | null>(null);
+
+  // Tags modal
+  const [tagsModalOpen, setTagsModalOpen] = useState(false);
+  const [selectedTag, setSelectedTag] = useState("");
+  const TAG_OPTIONS = [
+    "Falta stock", "En redistribución", "Confirmando dirección", "En espera seller",
+    "En espera consumidor", "En devolución", "Devuelto", "Reposición pendiente",
+    "Problema entrega", "Siniestrado courier", "Requiere revisión", "Modificando Pedido",
+    "Reagendado", "Prioridad alta", "Frágil",
+  ];
 
   // Status change modal (vista actual)
   const [statusModalOpen, setStatusModalOpen] = useState(false);
@@ -494,15 +504,30 @@ function PedidoDetalleContent() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Contextual primary CTA based on state — hidden while editing (buttons are in card) */}
+          {/* Primary CTA — contextual based on state */}
           {isDirty ? null
            : requiresRequote ? (
             <Button variant="primary" size="md" iconLeft={<RefreshCw className="w-4 h-4" />} onClick={triggerRequote} className="bg-amber-500 hover:bg-amber-600 border-amber-500 hover:border-amber-600">
               Recotizar
             </Button>
-          ) : pedido.estadoPreparacion === "Validado" && pedido.cotizacion?.estado === "vigente" ? (
-            <Button variant="primary" size="md" iconLeft={<Printer className="w-4 h-4" />} onClick={() => alert("Generar etiqueta (mock)")}>
-              Generar Etiqueta
+          ) : pedido.estadoPreparacion !== "Entregado" && pedido.estadoPreparacion !== "Cancelado" ? (
+            <Button variant="primary" size="md" onClick={() => {
+              setStatusModalType("preparacion");
+              const next = pedido.estadoPreparacion === "Pendiente" ? "Validado" :
+                pedido.estadoPreparacion === "Validado" ? "En preparación" :
+                pedido.estadoPreparacion === "En preparación" ? "Empacado" :
+                pedido.estadoPreparacion === "Por empacar" ? "Empacado" :
+                pedido.estadoPreparacion === "Empacado" ? "Listo para retiro" :
+                pedido.estadoPreparacion === "Listo para retiro" ? "Entregado" : "";
+              setStatusModalValue(next);
+              setStatusModalOpen(true);
+            }}>
+              {pedido.estadoPreparacion === "Pendiente" ? "Validar pedido" :
+               pedido.estadoPreparacion === "Validado" ? "Iniciar preparación" :
+               pedido.estadoPreparacion === "En preparación" ? "Marcar empacado" :
+               pedido.estadoPreparacion === "Por empacar" ? "Marcar empacado" :
+               pedido.estadoPreparacion === "Empacado" ? "Listo para retiro" :
+               pedido.estadoPreparacion === "Listo para retiro" ? "Marcar entregado" : "Avanzar"}
             </Button>
           ) : pedido.cotizacion?.trackingNumber ? (
             <Button variant="secondary" size="md" iconLeft={<ExternalLink className="w-4 h-4" />} onClick={() => alert("Ver seguimiento (mock)")}>
@@ -1000,7 +1025,7 @@ function PedidoDetalleContent() {
                             <button className="text-neutral-400 hover:text-red-500 transition-colors"><X className="w-3 h-3" /></button>
                           </span>
                         ))}
-                        <button className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border border-dashed border-neutral-300 text-neutral-400 hover:border-primary-300 hover:text-primary-500 transition-colors">
+                        <button onClick={() => setTagsModalOpen(true)} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border border-dashed border-neutral-300 text-neutral-400 hover:border-primary-300 hover:text-primary-500 transition-colors">
                           <Plus className="w-3 h-3" /> Agregar tag
                         </button>
                       </div>
@@ -1106,16 +1131,14 @@ function PedidoDetalleContent() {
 
               {/* RIGHT COLUMN (Sidebar) */}
               <div className="space-y-5">
-                {/* Order Economy — hidden when all values are $0 */}
-                {pedido.montoTotal > 0 && (
-                  <OrderEconomyCard
-                    subtotal={pedido.subtotal ?? pedido.montoTotal}
-                    descuentos={pedido.descuentos ?? 0}
-                    impuestos={pedido.impuestos ?? 0}
-                    costoEnvio={pedido.costoEnvioOrden ?? pedido.cotizacion?.costoNeto ?? 0}
-                    montoTotal={pedido.montoTotal}
-                  />
-                )}
+                {/* Order Economy */}
+                <OrderEconomyCard
+                  subtotal={pedido.subtotal ?? pedido.montoTotal}
+                  descuentos={pedido.descuentos ?? 0}
+                  impuestos={pedido.impuestos ?? 0}
+                  costoEnvio={pedido.costoEnvioOrden ?? pedido.cotizacion?.costoNeto ?? 0}
+                  montoTotal={pedido.montoTotal}
+                />
 
                 {/* Courier Info compact */}
                 {pedido.cotizacion && (
@@ -1758,6 +1781,58 @@ function PedidoDetalleContent() {
                 variant="primary"
                 size="md"
                 onClick={() => { setStatusModalOpen(false); alert(`Estado cambiado a "${statusModalValue}" (mock)`); }}
+              >
+                Guardar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Tags Modal ── */}
+      {tagsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm">
+            <div className="flex items-center justify-between px-5 pt-5 pb-3">
+              <h3 className="text-base font-bold text-neutral-900">Tags Pedido {pedido.idAmplifica}</h3>
+              <button onClick={() => setTagsModalOpen(false)} className="text-neutral-400 hover:text-neutral-600 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="px-5 pb-2">
+              <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-2">Tags</p>
+              <select
+                value={selectedTag}
+                onChange={e => setSelectedTag(e.target.value)}
+                className="w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400"
+              >
+                <option value="">Seleccionar tag...</option>
+                {TAG_OPTIONS.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+            {/* Current tags */}
+            {(pedido.tags ?? []).length > 0 && (
+              <div className="px-5 py-2">
+                <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Tags actuales</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(pedido.tags ?? []).map((t, i) => (
+                    <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-neutral-100 text-neutral-600">
+                      {t}
+                      <button className="text-neutral-400 hover:text-red-500"><X className="w-3 h-3" /></button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="px-5 py-4">
+              <Button
+                variant="primary"
+                size="md"
+                className="w-full"
+                disabled={!selectedTag}
+                onClick={() => { setTagsModalOpen(false); setSelectedTag(""); alert(`Tag "${selectedTag}" agregado (mock)`); }}
               >
                 Guardar
               </Button>
