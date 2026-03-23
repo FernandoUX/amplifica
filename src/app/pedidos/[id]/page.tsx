@@ -409,8 +409,8 @@ function PedidoDetalleContent() {
         </div>
       </div>
 
-      {/* ── Tabs ── */}
-      <div className="flex border-b border-neutral-200">
+      {/* ── Tabs (hidden in "actual" mode — all content shown at once) ── */}
+      <div className={`flex border-b border-neutral-200 ${viewMode === "actual" ? "hidden" : ""}`}>
         {TABS.map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.key;
@@ -434,7 +434,7 @@ function PedidoDetalleContent() {
       {/* ── Tab Content ── */}
       <div>
         {/* ════════ TAB: RESUMEN ════════ */}
-        {activeTab === "resumen" && viewMode === "actual" && (
+        {viewMode === "actual" && (
           <div className="space-y-5">
             {/* Mini-timeline: show prev + current + next steps only */}
             {(() => {

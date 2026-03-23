@@ -116,6 +116,59 @@ export const TOP_PRODUCTS: ProductItem[] = [
   { sku: "200405",         producto: "PROTEIN BITE CARAMEL PEANUTS SALTY - DISPLAY 4 UNIDADES",   cantidad: 1853, montoTotal: 13_697_298, tienda: "Your Goal" },
 ];
 
+// ─── Orders table (Vista por Pedidos) ────────────────────────────────────────
+export type OrderItem = {
+  id: number;
+  codigoPedido: string;
+  nroBoleta: string;
+  canalVenta: string;
+  montoTotal: number;
+  fecha: string;
+  sucursal: string;
+  tienda: string;
+};
+
+export const ORDERS_TABLE: OrderItem[] = [
+  { id: 1150804, codigoPedido: "S-BASIC58484", nroBoleta: "Producto sin boleta", canalVenta: "Shopify", montoTotal: 65426, fecha: "2026-02-23 21:13:45", sucursal: "Lo Barnechea", tienda: "Basics" },
+  { id: 1150796, codigoPedido: "S-BASIC58483", nroBoleta: "Producto sin boleta", canalVenta: "Shopify", montoTotal: 51098, fecha: "2026-02-23 21:07:52", sucursal: "Lo Barnechea", tienda: "Basics" },
+  { id: 1150788, codigoPedido: "S-BASIC58481", nroBoleta: "Producto sin boleta", canalVenta: "Shopify", montoTotal: 132854, fecha: "2026-02-23 21:04:42", sucursal: "Lo Barnechea", tienda: "Basics" },
+  { id: 1150761, codigoPedido: "S-MELLY5284", nroBoleta: "Producto sin boleta", canalVenta: "Shopify", montoTotal: 90282, fecha: "2026-02-23 20:42:34", sucursal: "Lo Barnechea", tienda: "Melly Mood" },
+  { id: 1150760, codigoPedido: "S-NUTRI9103", nroBoleta: "Producto sin boleta", canalVenta: "Shopify", montoTotal: 34990, fecha: "2026-02-23 20:42:09", sucursal: "Lo Barnechea", tienda: "NutriFoods" },
+  { id: 1150756, codigoPedido: "S-MANAB12880", nroBoleta: "Producto sin boleta", canalVenta: "Shopify", montoTotal: 15800, fecha: "2026-02-23 20:39:29", sucursal: "Lo Barnechea", tienda: "Manabu" },
+  { id: 1150752, codigoPedido: "S-SAINT40762", nroBoleta: "Producto sin boleta", canalVenta: "Shopify", montoTotal: 23741, fecha: "2026-02-23 20:37:11", sucursal: "Lo Barnechea", tienda: "Saint Venik" },
+  { id: 1150750, codigoPedido: "S-BORAN13112", nroBoleta: "Producto sin boleta", canalVenta: "Shopify", montoTotal: 54974, fecha: "2026-02-23 20:36:51", sucursal: "Lo Barnechea", tienda: "Borangora" },
+  { id: 1150748, codigoPedido: "S-BASIC58479", nroBoleta: "Producto sin boleta", canalVenta: "Shopify", montoTotal: 51098, fecha: "2026-02-23 20:35:50", sucursal: "Lo Barnechea", tienda: "Basics" },
+  { id: 1150740, codigoPedido: "S-OKWU28844", nroBoleta: "Producto sin boleta", canalVenta: "Shopify", montoTotal: 89900, fecha: "2026-02-23 20:30:12", sucursal: "Lo Barnechea", tienda: "Okwu" },
+  { id: 1150735, codigoPedido: "S-MUTE6721", nroBoleta: "Producto sin boleta", canalVenta: "Shopify", montoTotal: 45990, fecha: "2026-02-23 20:28:33", sucursal: "Quilicura", tienda: "Mute" },
+  { id: 1150730, codigoPedido: "S-FUNGI4455", nroBoleta: "Producto sin boleta", canalVenta: "Shopify", montoTotal: 67800, fecha: "2026-02-23 20:25:01", sucursal: "Quilicura", tienda: "Mundo Fungi" },
+];
+
+// ─── Product-Order table (Vista por Producto Pedido) ─────────────────────────
+export type ProductOrderItem = {
+  sku: string;
+  producto: string;
+  codigoPedido: string;
+  nroBoleta: string;
+  fechaEntrega: string;
+  fechaBoleta: string;
+  precioUnitario: number;
+};
+
+export const PRODUCT_ORDERS_TABLE: ProductOrderItem[] = [
+  { sku: "CCSA-200-103", producto: "Compota 0% fragancia 120ml", codigoPedido: "S-DLSAV7694", nroBoleta: "Producto sin boleta", fechaEntrega: "2026-02-23 22:37:40", fechaBoleta: "Producto sin boleta", precioUnitario: 13515 },
+  { sku: "CLGNx1", producto: "GRASS-FED COLLAGEN PEPTIDES 1 mes", codigoPedido: "S-BASIC58501", nroBoleta: "Producto sin boleta", fechaEntrega: "2026-02-23 22:35:22", fechaBoleta: "Producto sin boleta", precioUnitario: 19900 },
+  { sku: "SB3MESES", producto: "Pack x3 unidades SLEEP BASICS - MAGNESIO BISGLICINATO", codigoPedido: "S-BASIC58501", nroBoleta: "Producto sin boleta", fechaEntrega: "2026-02-23 22:35:22", fechaBoleta: "Producto sin boleta", precioUnitario: 44490 },
+  { sku: "OMG33", producto: "Pack x3 unidades OMEGA-3 (800 EPA- 400 DHA)", codigoPedido: "S-BASIC58501", nroBoleta: "Producto sin boleta", fechaEntrega: "2026-02-23 22:35:22", fechaBoleta: "Producto sin boleta", precioUnitario: 39990 },
+  { sku: "CLGNx1", producto: "GRASS-FED COLLAGEN PEPTIDES 1 mes", codigoPedido: "S-BASIC58501", nroBoleta: "Producto sin boleta", fechaEntrega: "2026-02-23 22:35:22", fechaBoleta: "Producto sin boleta", precioUnitario: 15920 },
+  { sku: "THESUPERELIXIR", producto: "The Super Elixir WelleCo", codigoPedido: "S-MUSEE2501", nroBoleta: "Producto sin boleta", fechaEntrega: "2026-02-23 22:32:58", fechaBoleta: "Producto sin boleta", precioUnitario: 85876 },
+  { sku: "CUCHARAELIXIR", producto: "Cuchara Elixir WelleCo", codigoPedido: "S-MUSEE2501", nroBoleta: "Producto sin boleta", fechaEntrega: "2026-02-23 22:32:58", fechaBoleta: "Producto sin boleta", precioUnitario: 5000 },
+  { sku: "CLEARHYDRATORBOT", producto: "Clear Hydrator Bottle", codigoPedido: "S-MUSEE2501", nroBoleta: "Producto sin boleta", fechaEntrega: "2026-02-23 22:32:58", fechaBoleta: "Producto sin boleta", precioUnitario: 19990 },
+  { sku: "8809932160699", producto: "Máscara EXOSOMAS Galvánica Energética LuciDor (6 unidades)", codigoPedido: "S-MUSEE2501", nroBoleta: "Producto sin boleta", fechaEntrega: "2026-02-23 22:32:58", fechaBoleta: "Producto sin boleta", precioUnitario: 75000 },
+  { sku: "4WBLBM", producto: "Bra Long Navy M", codigoPedido: "S-4WOME2089", nroBoleta: "Producto sin boleta", fechaEntrega: "2026-02-23 22:32:15", fechaBoleta: "Producto sin boleta", precioUnitario: 24990 },
+  { sku: "NUTRI-2", producto: "Nutri Protein +", codigoPedido: "S-NUTRI9105", nroBoleta: "Producto sin boleta", fechaEntrega: "2026-02-23 22:28:44", fechaBoleta: "Producto sin boleta", precioUnitario: 45990 },
+  { sku: "SB1MES", producto: "SLEEP BASICS - MAGNESIO BISGLICINATO 1mes", codigoPedido: "S-BASIC58499", nroBoleta: "Producto sin boleta", fechaEntrega: "2026-02-23 22:22:47", fechaBoleta: "Producto sin boleta", precioUnitario: 17910 },
+];
+
 // ─── Formatter helpers ───────────────────────────────────────────────────────
 export function fmtCLP(n: number): string {
   return "$" + n.toLocaleString("es-CL");
