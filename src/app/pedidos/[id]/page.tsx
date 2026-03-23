@@ -511,7 +511,7 @@ function PedidoDetalleContent() {
         <div>
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-bold text-neutral-900 flex items-center gap-2">
-              Pedido <span className="font-mono">{pedido.idAmplifica}</span>
+              Pedido <span className="font-sans">{pedido.idAmplifica}</span>
               <CopyId text={pedido.idAmplifica} />
             </h1>
             <PedidoStatusBadge status={pedido.estadoPreparacion} />
@@ -687,13 +687,13 @@ function PedidoDetalleContent() {
                       <input
                         type="text"
                         defaultValue={pedido.cotizacion?.trackingNumber ?? ""}
-                        className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 font-mono focus:outline-none focus:border-primary-400 bg-transparent"
+                        className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 font-sans focus:outline-none focus:border-primary-400 bg-transparent"
                       />
                     </div>
                     {/* ID — read-only */}
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">ID</p>
-                      <input type="text" value={pedido.idAmplifica} readOnly className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 font-mono bg-transparent" />
+                      <input type="text" value={pedido.idAmplifica} readOnly className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 font-sans bg-transparent" />
                     </div>
                     {/* Cliente — read-only highlighted */}
                     <div className="py-2.5">
@@ -706,7 +706,7 @@ function PedidoDetalleContent() {
                     {(pedido.idOrigen || pedido.idExterno) && (
                       <div className="py-2.5">
                         <p className="text-[10px] text-neutral-400 mb-0.5">ID de Origen</p>
-                        <input type="text" value={pedido.idOrigen || pedido.idExterno || ""} readOnly className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 font-mono bg-transparent" />
+                        <input type="text" value={pedido.idOrigen || pedido.idExterno || ""} readOnly className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 font-sans bg-transparent" />
                       </div>
                     )}
                     {/* Método de Venta — dropdown */}
@@ -735,7 +735,7 @@ function PedidoDetalleContent() {
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Fecha</p>
                       <div className="border-0 border-b border-red-300 bg-red-50/50 px-0 py-1.5">
-                        <p className="text-sm text-red-700 font-mono">{pedido.fechaCreacion}</p>
+                        <p className="text-sm text-red-700 font-sans">{pedido.fechaCreacion}</p>
                       </div>
                     </div>
                     {/* N° Etiqueta Manual */}
@@ -744,7 +744,7 @@ function PedidoDetalleContent() {
                       <input
                         type="text"
                         defaultValue={pedido.cotizacion?.trackingNumber ?? ""}
-                        className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 font-mono focus:outline-none focus:border-primary-400 bg-transparent"
+                        className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 font-sans focus:outline-none focus:border-primary-400 bg-transparent"
                       />
                     </div>
                     {/* Muestra promocional — interactive checkbox */}
@@ -871,7 +871,7 @@ function PedidoDetalleContent() {
                           <MapPin className="w-4 h-4 text-white" />
                         </div>
                         <p className="text-xs font-medium text-neutral-700">{pedido.destinatario.comuna}, {pedido.destinatario.region}</p>
-                        <p className="text-[10px] text-neutral-400 font-mono mt-0.5">-33.4489, -70.6483</p>
+                        <p className="text-[10px] text-neutral-400 font-sans mt-0.5">-33.4489, -70.6483</p>
                       </div>
                     </div>
                     <div className="flex border-t border-neutral-200">
@@ -940,7 +940,7 @@ function PedidoDetalleContent() {
                         <tr key={p.id} className="border-b border-neutral-50">
                           <td className="py-2">
                             <p className="text-neutral-800 font-medium">{p.nombre}</p>
-                            <p className="text-[10px] text-neutral-500 font-mono">SKU: {p.sku}</p>
+                            <p className="text-[10px] text-neutral-500 font-sans">SKU: {p.sku}</p>
                           </td>
                           <td className="py-2 text-right tabular-nums">{fmt(p.precioUnitario)}</td>
                           <td className="py-2 text-right tabular-nums">{p.cantidad}</td>
@@ -1038,13 +1038,13 @@ function PedidoDetalleContent() {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3">
                       <div>
                         <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">ID Amplifica</p>
-                        <p className="text-sm font-semibold text-neutral-800 mt-0.5 font-mono">{pedido.idAmplifica}</p>
+                        <p className="text-sm font-semibold text-neutral-800 mt-0.5 font-sans">{pedido.idAmplifica}</p>
                       </div>
                       {pedido.cotizacion?.trackingNumber && (
                         <div>
                           <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Tracking</p>
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <p className="text-sm font-medium text-neutral-800 font-mono truncate">{pedido.cotizacion.trackingNumber}</p>
+                            <p className="text-sm font-medium text-neutral-800 font-sans truncate">{pedido.cotizacion.trackingNumber}</p>
                             <CopyId text={pedido.cotizacion.trackingNumber} />
                           </div>
                         </div>
@@ -1093,7 +1093,7 @@ function PedidoDetalleContent() {
                         {pedido.idExterno && (
                           <div>
                             <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">ID Externo</p>
-                            <p className="text-sm font-medium text-neutral-700 mt-0.5 font-mono">{pedido.idExterno}</p>
+                            <p className="text-sm font-medium text-neutral-700 mt-0.5 font-sans">{pedido.idExterno}</p>
                           </div>
                         )}
                         {pedido.metodoPago && (
@@ -1111,7 +1111,7 @@ function PedidoDetalleContent() {
                         {pedido.idOrigen && (
                           <div>
                             <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">ID Origen</p>
-                            <p className="text-sm font-medium text-neutral-700 mt-0.5 font-mono">{pedido.idOrigen}</p>
+                            <p className="text-sm font-medium text-neutral-700 mt-0.5 font-sans">{pedido.idOrigen}</p>
                           </div>
                         )}
                       </div>
@@ -1155,7 +1155,7 @@ function PedidoDetalleContent() {
                                   <p className="text-[13px] text-neutral-800 font-medium leading-snug">{p.nombre}</p>
                                 </div>
                               </td>
-                              <td className="py-3 px-3 font-mono text-neutral-500 text-xs">{p.sku}</td>
+                              <td className="py-3 px-3 font-sans text-neutral-500 text-xs">{p.sku}</td>
                               <td className="py-3 px-3 text-right text-[13px] text-neutral-800 tabular-nums">{p.cantidad}</td>
                               <td className="py-3 px-3 text-right text-[13px] text-neutral-800 tabular-nums">{fmt(p.precioUnitario)}</td>
                               <td className="py-3 px-3 text-right text-[13px] font-semibold text-neutral-900 tabular-nums">{fmt(p.precioUnitario * p.cantidad)}</td>
@@ -1442,7 +1442,7 @@ function PedidoDetalleContent() {
                     <tbody>
                       {pedido.productos.map((p) => (
                         <tr key={p.id} className="border-b border-neutral-50">
-                          <td className="py-2.5 pr-4 font-mono text-neutral-500 text-xs">{p.sku}</td>
+                          <td className="py-2.5 pr-4 font-sans text-neutral-500 text-xs">{p.sku}</td>
                           <td className="py-2.5 pr-4">
                             <div className="flex items-center gap-3">
                               {p.imagen ? (
@@ -1455,7 +1455,7 @@ function PedidoDetalleContent() {
                               <p className="text-neutral-800 font-medium">{p.nombre}</p>
                             </div>
                           </td>
-                          <td className="py-2.5 pr-4 font-mono text-neutral-500 text-xs">{p.barcode || "—"}</td>
+                          <td className="py-2.5 pr-4 font-sans text-neutral-500 text-xs">{p.barcode || "—"}</td>
                           <td className="py-2.5 pr-4 text-right text-neutral-800">{p.cantidad}</td>
                           <td className="py-2.5 pr-4 text-right text-neutral-800">{fmt(p.precioUnitario)}</td>
                           <td className="py-2.5 text-right font-medium text-primary-600">{fmt(p.precioUnitario * p.cantidad)}</td>
@@ -1585,7 +1585,7 @@ function PedidoDetalleContent() {
                               }`}>
                                 {inc.estado === "resuelta" ? "Resuelta" : inc.estado === "en_gestion" ? "En gestión" : "Abierta"}
                               </span>
-                              <span className="text-[11px] text-neutral-400 font-mono">{fmtDate(inc.creadoEn)}</span>
+                              <span className="text-[11px] text-neutral-400 font-sans">{fmtDate(inc.creadoEn)}</span>
                             </div>
                             <p className="text-sm text-neutral-800">{inc.tipo}</p>
                             {inc.responsable && inc.responsable !== "—" && <p className="text-xs text-neutral-400">Responsable: {inc.responsable}</p>}
@@ -1775,7 +1775,7 @@ function PedidoDetalleContent() {
                 <tbody>
                   {pedido.productos.map(p => (
                     <tr key={p.id} className="border-b border-neutral-100">
-                      <td className="py-2 px-2 text-xs font-mono text-neutral-600">{p.sku}</td>
+                      <td className="py-2 px-2 text-xs font-sans text-neutral-600">{p.sku}</td>
                       <td className="py-2 px-2 text-center text-xs">{p.cantidad}</td>
                       <td className="py-2 px-2 text-xs text-neutral-800">{p.nombre}</td>
                       <td className="py-2 px-2 text-right text-xs tabular-nums">{p.precioUnitario.toLocaleString("es-CL")}</td>
