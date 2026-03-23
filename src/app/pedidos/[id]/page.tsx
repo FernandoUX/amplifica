@@ -396,6 +396,10 @@ function PedidoDetalleContent() {
 
   // Quick actions
   const quickActions = [
+    { label: "Modo Supervisión", icon: CheckCircle2, onClick: () => alert("Modo supervisión activado (mock)") },
+    { label: "Anotar", icon: StickyNote, onClick: () => alert("Agregar nota interna (mock)") },
+    { label: "Sincronizar", icon: RefreshCw, onClick: () => alert("Sincronizando con canal de venta (mock)") },
+    { label: "Nuevo Evento", icon: Plus, onClick: () => alert("Crear evento manual (mock)") },
     { label: "Duplicar pedido", icon: CopyPlus, onClick: () => alert("Duplicar pedido (mock)") },
     ...(pedido.cotizacion?.trackingNumber ? [{ label: "Compartir tracking", icon: Share2, onClick: () => alert("Link copiado (mock)") }] : []),
     ...(pedido.destinatario.email !== "—" ? [{ label: "Contactar cliente", icon: MessageCircle, onClick: () => alert("Abrir Intercom (mock)") }] : []),
@@ -1533,19 +1537,7 @@ function PedidoDetalleContent() {
               {/* RIGHT COLUMN (Sidebar) */}
               <div className="space-y-5">
                 {/* Incidencias */}
-                <Card size="sm">
-                  <CardHeader>
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4 text-amber-500" />
-                      Incidencias
-                    </CardTitle>
-                    <CardAction>
-                      <button className="text-neutral-400 hover:text-neutral-600 transition-colors">
-                        <ChevronDown className="w-4 h-4" />
-                      </button>
-                    </CardAction>
-                  </CardHeader>
-                  <CardContent>
+                <CollapsibleCard icon={AlertTriangle} title="Incidencias" description="Problemas reportados en el pedido">
                     {pedido.incidencias.length > 0 && pedido.incidencias.some(i => i.tipo !== "—") ? (
                       <div className="space-y-2">
                         {pedido.incidencias.map((inc) => (
@@ -1577,8 +1569,7 @@ function PedidoDetalleContent() {
                         </Button>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
+                </CollapsibleCard>
 
                 {/* Actores Involucrados */}
                 {pedido.actoresInvolucrados && pedido.actoresInvolucrados.length > 0 && (
@@ -1623,21 +1614,7 @@ function PedidoDetalleContent() {
               </div>
             </div>
 
-            {/* Bottom action bar */}
-            <div className="flex items-center justify-center gap-2 bg-white border border-neutral-200 rounded-xl px-4 py-3">
-              <Button variant="secondary" size="sm" iconLeft={<CheckCircle2 className="w-4 h-4" />}>
-                Modo Supervisión
-              </Button>
-              <Button variant="secondary" size="sm" iconLeft={<StickyNote className="w-4 h-4" />}>
-                Anotar
-              </Button>
-              <Button variant="secondary" size="sm" iconLeft={<RefreshCw className="w-4 h-4" />}>
-                Sincronizar
-              </Button>
-              <Button variant="primary" size="sm" iconLeft={<Plus className="w-4 h-4" />}>
-                Nuevo Evento
-              </Button>
-            </div>
+            {/* Actions moved to QuickActionsMenu (⋮) in header */}
           </div>
         )}
       </div>

@@ -394,7 +394,7 @@ export const MOCK_PEDIDO_DETALLE: Record<number, PedidoDetalle> = {
         tipo: "etiqueta",
         titulo: "Sistema Amplifica eliminó la etiqueta",
         usuario: "Sistema Amplifica",
-        badges: [{ label: "Confirmando dirección (Consumidor)", color: "bg-green-500 text-white" }],
+        badges: [{ label: "Confirmando dirección (Consumidor)", color: "bg-green-50 text-green-700" }],
       },
       {
         id: "evt-4",
@@ -409,7 +409,7 @@ export const MOCK_PEDIDO_DETALLE: Record<number, PedidoDetalle> = {
         tipo: "etiqueta",
         titulo: "Sistema Amplifica etiquetó al pedido con",
         usuario: "Sistema Amplifica",
-        badges: [{ label: "Confirmando dirección (Consumidor)", color: "bg-green-500 text-white" }],
+        badges: [{ label: "Confirmando dirección (Consumidor)", color: "bg-green-50 text-green-700" }],
       },
       {
         id: "evt-6",
