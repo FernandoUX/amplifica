@@ -468,7 +468,7 @@ function PedidoDetalleContent() {
               <div className="space-y-5">
                 {/* Info card — badges + data grid in 3 columns */}
                 <CollapsibleCard icon={ClipboardList} title="Datos del Pedido" description="Información general del pedido">
-                    <div className="grid grid-cols-3 gap-x-6 gap-y-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
                       {/* Row 1: Estados */}
                       <div>
                         <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider mb-1">Preparación</p>
