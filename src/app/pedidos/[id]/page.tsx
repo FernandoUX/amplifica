@@ -28,6 +28,7 @@ import OrderEconomyCard from "@/components/pedidos/OrderEconomyCard";
 import CourierInfoCard from "@/components/pedidos/CourierInfoCard";
 import AlertModal from "@/components/ui/AlertModal";
 import Button from "@/components/ui/Button";
+import FormField from "@/components/ui/FormField";
 import { Card, CardHeader, CardTitle, CardContent, CardAction } from "@/components/ui/card";
 import CollapsibleCard from "@/components/ui/CollapsibleCard";
 
@@ -1136,134 +1137,69 @@ function PedidoDetalleContent() {
                     )}
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* Name */}
-                      <div>
-                        <label className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Nombre</label>
-                        {editingAddress ? (
-                          <input
-                            className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200"
-                            value={addr.nombre}
-                            onChange={e => handleAddressChange("nombre", e.target.value)}
-                          />
-                        ) : (
-                          <p className="text-sm text-neutral-800">{addr.nombre}</p>
-                        )}
-                      </div>
-                      {/* Email */}
-                      <div>
-                        <label className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Email</label>
-                        <div className="flex items-center gap-1.5">
-                          {editingAddress ? (
-                            <input
-                              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200"
-                              value={addr.email}
-                              onChange={e => handleAddressChange("email", e.target.value)}
-                            />
-                          ) : (
-                            <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {editingAddress ? (
+                        <>
+                          <FormField label="Nombre" value={addr.nombre} onChange={v => handleAddressChange("nombre", v)} />
+                          <FormField label="Email" type="email" value={addr.email} onChange={v => handleAddressChange("email", v)} />
+                          <FormField label="Teléfono" type="tel" value={addr.telefono} onChange={v => handleAddressChange("telefono", v)} />
+                          <div className="flex gap-2">
+                            <div className="flex-1"><FormField label="Calle" value={addr.calle} onChange={v => handleAddressChange("calle", v)} /></div>
+                            <div className="w-24"><FormField label="Número" value={addr.numero} onChange={v => handleAddressChange("numero", v)} /></div>
+                          </div>
+                          <FormField label="Depto / Complemento" value={addr.depto ?? ""} onChange={v => handleAddressChange("depto", v)} />
+                          <FormField label="Comuna" value={addr.comuna} onChange={v => handleAddressChange("comuna", v)} />
+                          <FormField label="Región" value={addr.region} onChange={v => handleAddressChange("region", v)} />
+                          <div className="sm:col-span-2">
+                            <FormField label="Instrucciones de entrega" value={addr.instrucciones ?? ""} onChange={v => handleAddressChange("instrucciones", v)} />
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div>
+                            <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Nombre</p>
+                            <p className="text-sm text-neutral-800 mt-0.5">{addr.nombre}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Email</p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
                               <Mail className="w-3.5 h-3.5 text-neutral-400" />
                               <p className="text-sm text-neutral-800">{addr.email}</p>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      {/* Phone */}
-                      <div>
-                        <label className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Teléfono</label>
-                        <div className="flex items-center gap-1.5">
-                          {editingAddress ? (
-                            <input
-                              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200"
-                              value={addr.telefono}
-                              onChange={e => handleAddressChange("telefono", e.target.value)}
-                            />
-                          ) : (
-                            <>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Teléfono</p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
                               <Phone className="w-3.5 h-3.5 text-neutral-400" />
                               <p className="text-sm text-neutral-800">{addr.telefono}</p>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      {/* Street + number */}
-                      <div>
-                        <label className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Calle y Número</label>
-                        {editingAddress ? (
-                          <div className="flex gap-2">
-                            <input
-                              className="flex-1 border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200"
-                              value={addr.calle}
-                              onChange={e => handleAddressChange("calle", e.target.value)}
-                              placeholder="Calle"
-                            />
-                            <input
-                              className="w-20 border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200"
-                              value={addr.numero}
-                              onChange={e => handleAddressChange("numero", e.target.value)}
-                              placeholder="Nro"
-                            />
+                            </div>
                           </div>
-                        ) : (
-                          <p className="text-sm text-neutral-800">{addr.calle} {addr.numero}</p>
-                        )}
-                      </div>
-                      {/* Depto */}
-                      <div>
-                        <label className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Depto / Complemento</label>
-                        {editingAddress ? (
-                          <input
-                            className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200"
-                            value={addr.depto ?? ""}
-                            onChange={e => handleAddressChange("depto", e.target.value)}
-                          />
-                        ) : (
-                          <p className="text-sm text-neutral-800">{addr.depto || "—"}</p>
-                        )}
-                      </div>
-                      {/* Comuna */}
-                      <div>
-                        <label className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Comuna</label>
-                        {editingAddress ? (
-                          <input
-                            className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200"
-                            value={addr.comuna}
-                            onChange={e => handleAddressChange("comuna", e.target.value)}
-                          />
-                        ) : (
-                          <p className="text-sm text-neutral-800">{addr.comuna}</p>
-                        )}
-                      </div>
-                      {/* Region */}
-                      <div>
-                        <label className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Región</label>
-                        {editingAddress ? (
-                          <input
-                            className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200"
-                            value={addr.region}
-                            onChange={e => handleAddressChange("region", e.target.value)}
-                          />
-                        ) : (
-                          <p className="text-sm text-neutral-800">{addr.region}</p>
-                        )}
-                      </div>
-                      {/* Instructions */}
-                      {(addr.instrucciones || editingAddress) && (
-                        <div className="sm:col-span-2">
-                          <label className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Instrucciones</label>
-                          {editingAddress ? (
-                            <input
-                              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 mt-1"
-                              value={addr.instrucciones ?? ""}
-                              onChange={e => handleAddressChange("instrucciones", e.target.value)}
-                            />
-                          ) : (
-                            <div className="mt-1.5 flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2.5">
-                              <MessageCircle className="w-3.5 h-3.5 text-neutral-500 flex-shrink-0 mt-0.5" />
-                              <p className="text-sm text-neutral-600 leading-relaxed">{addr.instrucciones}</p>
+                          <div>
+                            <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Calle y Número</p>
+                            <p className="text-sm text-neutral-800 mt-0.5">{addr.calle} {addr.numero}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Depto / Complemento</p>
+                            <p className="text-sm text-neutral-800 mt-0.5">{addr.depto || "—"}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Comuna</p>
+                            <p className="text-sm text-neutral-800 mt-0.5">{addr.comuna}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Región</p>
+                            <p className="text-sm text-neutral-800 mt-0.5">{addr.region}</p>
+                          </div>
+                          {addr.instrucciones && (
+                            <div className="sm:col-span-2">
+                              <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">Instrucciones</p>
+                              <div className="mt-1.5 flex items-start gap-2 bg-neutral-50 rounded-lg px-3 py-2.5">
+                                <MessageCircle className="w-3.5 h-3.5 text-neutral-500 flex-shrink-0 mt-0.5" />
+                                <p className="text-sm text-neutral-600 leading-relaxed">{addr.instrucciones}</p>
+                              </div>
                             </div>
                           )}
-                        </div>
+                        </>
                       )}
                     </div>
                     {editingAddress && (
