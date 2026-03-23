@@ -236,6 +236,9 @@ function PedidoDetalleContent() {
     window.history.replaceState({}, "", url.toString());
   }, []);
 
+  // View mode toggle
+  const [viewMode, setViewMode] = useState<"actual" | "mejorada">("mejorada");
+
   // Address edit state
   const [editingAddress, setEditingAddress] = useState(false);
   const [addressDraft, setAddressDraft] = useState<DireccionEnvio | null>(null);
@@ -359,6 +362,29 @@ function PedidoDetalleContent() {
           <p className="text-sm text-neutral-600 mt-0.5">
             {pedido.seller} — {pedido.sucursal}
           </p>
+          {/* View mode toggle */}
+          <div className="flex items-center gap-1 bg-neutral-100 rounded-lg p-0.5 mt-2 w-fit">
+            <button
+              onClick={() => setViewMode("actual")}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                viewMode === "actual"
+                  ? "bg-white text-neutral-800 shadow-sm"
+                  : "text-neutral-500 hover:text-neutral-700"
+              }`}
+            >
+              Vista actual
+            </button>
+            <button
+              onClick={() => setViewMode("mejorada")}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                viewMode === "mejorada"
+                  ? "bg-white text-neutral-800 shadow-sm"
+                  : "text-neutral-500 hover:text-neutral-700"
+              }`}
+            >
+              Vista mejorada
+            </button>
+          </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {/* Contextual primary CTA based on state — hidden while editing (buttons are in card) */}
@@ -408,7 +434,223 @@ function PedidoDetalleContent() {
       {/* ── Tab Content ── */}
       <div>
         {/* ════════ TAB: RESUMEN ════════ */}
-        {activeTab === "resumen" && (
+        {activeTab === "resumen" && viewMode === "actual" && (
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6">
+            {/* LEFT: Datos del Pedido + Envío + Método entrega */}
+            <div className="space-y-5">
+              {/* Datos del Pedido */}
+              <Card size="sm">
+                <CardHeader><CardTitle className="text-base">Datos del Pedido</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="divide-y divide-neutral-100">
+                    <div className="py-2.5 flex items-center justify-between">
+                      <span className="text-xs text-neutral-500">Estado de Preparación</span>
+                      <PedidoStatusBadge status={pedido.estadoPreparacion} />
+                    </div>
+                    <div className="py-2.5 flex items-center justify-between">
+                      <span className="text-xs text-neutral-500">Estado de Entrega</span>
+                      <EnvioStatusBadge status={pedido.estadoEnvio} />
+                    </div>
+                    {pedido.cotizacion?.trackingNumber && (
+                      <div className="py-2.5">
+                        <p className="text-[10px] text-neutral-400 mb-0.5">Tracking</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-mono text-neutral-800">{pedido.cotizacion.trackingNumber}</span>
+                          <CopyId text={pedido.cotizacion.trackingNumber} />
+                        </div>
+                      </div>
+                    )}
+                    <div className="py-2.5">
+                      <p className="text-[10px] text-neutral-400 mb-0.5">ID</p>
+                      <p className="text-sm font-mono text-neutral-800">{pedido.idAmplifica}</p>
+                    </div>
+                    <div className="py-2.5">
+                      <p className="text-[10px] text-neutral-400 mb-0.5">Cliente</p>
+                      <p className="text-sm text-neutral-800">{pedido.seller}</p>
+                    </div>
+                    {(pedido.idOrigen || pedido.idExterno) && (
+                      <div className="py-2.5">
+                        <p className="text-[10px] text-neutral-400 mb-0.5">ID de Origen</p>
+                        <p className="text-sm font-mono text-neutral-800">{pedido.idOrigen || pedido.idExterno}</p>
+                      </div>
+                    )}
+                    <div className="py-2.5">
+                      <p className="text-[10px] text-neutral-400 mb-0.5">Método de Venta</p>
+                      <p className="text-sm text-neutral-800">{pedido.canalVenta ?? "—"}</p>
+                    </div>
+                    <div className="py-2.5">
+                      <p className="text-[10px] text-neutral-400 mb-0.5">Método de Pago</p>
+                      <p className="text-sm text-neutral-800">{pedido.metodoPago ?? "No definido"}</p>
+                    </div>
+                    <div className="py-2.5">
+                      <p className="text-[10px] text-neutral-400 mb-0.5">Fecha</p>
+                      <p className="text-sm text-neutral-800">{pedido.fechaCreacion}</p>
+                    </div>
+                    {pedido.muestraPromocional !== undefined && (
+                      <div className="py-2.5 flex items-center gap-2">
+                        <input type="checkbox" checked={pedido.muestraPromocional} disabled className="w-4 h-4 rounded border-neutral-300 text-primary-500" />
+                        <span className="text-sm text-neutral-600">Este pedido es una muestra promocional</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Datos del Envío */}
+              <Card size="sm">
+                <CardHeader><CardTitle className="text-base">Datos del Envío</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="divide-y divide-neutral-100">
+                    <div className="py-2.5">
+                      <p className="text-[10px] text-neutral-400 mb-0.5">Nombre Destinatario</p>
+                      <p className="text-sm text-neutral-800">{pedido.destinatario.nombre}</p>
+                    </div>
+                    <div className="py-2.5">
+                      <p className="text-[10px] text-neutral-400 mb-0.5">Correo Destinatario</p>
+                      <p className="text-sm text-neutral-800">{pedido.destinatario.email || "—"}</p>
+                    </div>
+                    <div className="py-2.5">
+                      <p className="text-[10px] text-neutral-400 mb-0.5">Teléfono Destinatario</p>
+                      <p className="text-sm text-neutral-800">{pedido.destinatario.telefono || "—"}</p>
+                    </div>
+                    <div className="py-2.5">
+                      <p className="text-[10px] text-neutral-400 mb-0.5">Paquete</p>
+                      <p className="text-sm text-neutral-800">{pedido.paquete}</p>
+                    </div>
+                    <div className="py-2.5">
+                      <p className="text-[10px] text-neutral-400 mb-0.5">Volumen Total</p>
+                      <p className="text-sm text-neutral-800">{pedido.volumenTotal}</p>
+                    </div>
+                    <div className="py-2.5">
+                      <p className="text-[10px] text-neutral-400 mb-0.5">Calle o Avenida</p>
+                      <p className="text-sm text-neutral-800">{pedido.destinatario.calle}</p>
+                    </div>
+                    <div className="py-2.5">
+                      <p className="text-[10px] text-neutral-400 mb-0.5">Número</p>
+                      <p className="text-sm text-neutral-800">{pedido.destinatario.numero}</p>
+                    </div>
+                    {pedido.destinatario.depto && (
+                      <div className="py-2.5">
+                        <p className="text-[10px] text-neutral-400 mb-0.5">Complemento</p>
+                        <p className="text-sm text-neutral-800">{pedido.destinatario.depto}</p>
+                      </div>
+                    )}
+                    <div className="py-2.5">
+                      <p className="text-[10px] text-neutral-400 mb-0.5">Comuna</p>
+                      <p className="text-sm text-neutral-800">{pedido.destinatario.comuna}</p>
+                    </div>
+                    <div className="py-2.5">
+                      <p className="text-[10px] text-neutral-400 mb-0.5">Región</p>
+                      <p className="text-sm text-neutral-800">{pedido.destinatario.region}</p>
+                    </div>
+                  </div>
+                  {/* Map placeholder */}
+                  <div className="mt-3 rounded-lg bg-neutral-100 h-40 flex items-center justify-center border border-neutral-200">
+                    <div className="text-center">
+                      <MapPin className="w-6 h-6 text-primary-500 mx-auto mb-1" />
+                      <p className="text-[10px] text-neutral-400">Mapa de ubicación</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Método de entrega */}
+              {pedido.cotizacion && (
+                <Card size="sm">
+                  <CardHeader><CardTitle className="text-base">Método de entrega</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="py-2">
+                      <p className="text-[10px] text-neutral-400 mb-0.5">Servicio de Courier</p>
+                      <p className="text-sm text-neutral-800">{pedido.cotizacion.courier} — {pedido.cotizacion.servicio}</p>
+                    </div>
+                    <div className="mt-3 bg-primary-500 text-white rounded-lg px-4 py-2.5 text-sm font-medium">
+                      Cotización Actual ({pedido.cotizacion.courier}) — {fmt(pedido.cotizacion.costoNeto)}
+                    </div>
+                    <Button variant="secondary" size="sm" className="mt-3">Abrir Ticket</Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* RIGHT: Cronología + Fotos + Productos + Integraciones */}
+            <div className="space-y-5">
+              {/* Cronología del pedido */}
+              <Card size="sm">
+                <CardHeader><CardTitle className="text-base">Cronología del pedido</CardTitle></CardHeader>
+                <CardContent>
+                  <GanttTimeline events={pedido.timeline} />
+                </CardContent>
+              </Card>
+
+              {/* Registros fotográficos */}
+              <Card size="sm">
+                <CardHeader><CardTitle className="text-base">Registros fotográficos del picking</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="rounded-lg bg-neutral-100 h-48 flex items-center justify-center border border-neutral-200">
+                    <div className="text-center">
+                      <Package className="w-8 h-8 text-neutral-300 mx-auto mb-2" />
+                      <p className="text-xs text-neutral-400">Sin fotos registradas</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Productos del Pedido */}
+              <Card size="sm">
+                <CardHeader><CardTitle className="text-base">Productos del Pedido</CardTitle></CardHeader>
+                <CardContent>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-neutral-100">
+                        <th className="text-left text-xs text-neutral-400 font-medium pb-2">Producto</th>
+                        <th className="text-right text-xs text-neutral-400 font-medium pb-2">Precio</th>
+                        <th className="text-right text-xs text-neutral-400 font-medium pb-2">Cantidad</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pedido.productos.map(p => (
+                        <tr key={p.id} className="border-b border-neutral-50">
+                          <td className="py-2">
+                            <p className="text-neutral-800 font-medium">{p.nombre}</p>
+                            <p className="text-[10px] text-neutral-500 font-mono">SKU: {p.sku}</p>
+                          </td>
+                          <td className="py-2 text-right tabular-nums">{fmt(p.precioUnitario)}</td>
+                          <td className="py-2 text-right tabular-nums">{p.cantidad}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t border-neutral-200">
+                        <td className="py-2 text-right font-medium text-neutral-700" colSpan={2}>Total:</td>
+                        <td className="py-2 text-right font-bold tabular-nums">{fmt(pedido.montoTotal)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </CardContent>
+              </Card>
+
+              {/* Información de integraciones */}
+              <Card size="sm">
+                <CardHeader><CardTitle className="text-base">Información de PedidosYa</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-neutral-600">Solicitar un nuevo rider de PedidosYa</p>
+                    <Button variant="primary" size="sm">Solicitar</Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card size="sm">
+                <CardHeader><CardTitle className="text-base">Información de UberDirect</CardTitle></CardHeader>
+                <CardContent>
+                  <p className="text-sm text-neutral-500">Por el momento no hay información disponible.</p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "resumen" && viewMode === "mejorada" && (
           <div className="space-y-5">
             {/* Alert zone — full width */}
             <div className="space-y-2">
