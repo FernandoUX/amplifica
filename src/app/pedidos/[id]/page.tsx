@@ -218,8 +218,15 @@ function MiniTimeline({ steps, offset, onOffsetChange }: { steps: TimelineStep[]
   const phaseSla = activeStep?.sla;
   const phaseDates = activeStep?.fechaLineas;
 
-  const dotColor: Record<string, string> = {
-    done: "bg-neutral-800", active: "bg-primary-500", late: "bg-red-500", pending: "bg-neutral-300",
+  const iconMap: Record<string, typeof Package> = {
+    "Recepción": Package, "Validación": ClipboardCheck, "Preparación": Package,
+    "Empaque": Package, "Retiro": Truck, "Entrega": Check,
+  };
+  const stepStyle: Record<string, { bg: string; border: string; icon: string; ring: string }> = {
+    done:    { bg: "bg-neutral-500", border: "border-neutral-500", icon: "text-white", ring: "" },
+    active:  { bg: "bg-sky-500", border: "border-sky-500", icon: "text-white", ring: "ring-4 ring-sky-100" },
+    late:    { bg: "bg-red-500", border: "border-red-500", icon: "text-white", ring: "ring-4 ring-red-100" },
+    pending: { bg: "bg-white", border: "border-neutral-300", icon: "text-neutral-300", ring: "" },
   };
 
   return (
@@ -258,34 +265,36 @@ function MiniTimeline({ steps, offset, onOffsetChange }: { steps: TimelineStep[]
             <ChevronRight className="w-3.5 h-3.5 rotate-180" />
           </button>
 
-          <div className="flex-1 flex items-center relative px-2">
-            {/* Line */}
-            <div className="absolute top-1/2 -translate-y-1/2 left-4 right-4 h-0.5 bg-neutral-200" />
-            <div className="absolute top-1/2 -translate-y-1/2 left-4 h-0.5 bg-neutral-800 transition-all" style={{ width: visible.length > 1 ? `${((visible.filter(s => s.status === "done").length) / (visible.length - 1)) * 100}%` : "0%" }} />
+          <div className="flex-1 flex items-start justify-between relative px-2">
+            {/* Line — centered on icons (label ~16px + mb-1 4px + half icon 16px = 36px) */}
+            <div className="absolute top-[36px] left-[24px] right-[24px] h-0.5 bg-neutral-200" />
+            <div className="absolute top-[36px] left-[24px] h-0.5 bg-neutral-500 transition-all" style={{ width: visible.length > 1 ? `${((visible.filter(s => s.status === "done").length) / (visible.length - 1)) * 100}%` : "0%" }} />
 
-            {visible.map((step) => (
-              <div key={step.label} className="flex flex-col items-center relative z-10" style={{ flex: "1 1 0%" }}>
-                {/* Dot */}
-                <div className={`w-3 h-3 rounded-full ${dotColor[step.status] ?? "bg-neutral-300"} ${
-                  step.status === "active" ? "ring-4 ring-primary-100" :
-                  step.status === "late" ? "ring-4 ring-red-100" : ""
-                }`} />
-                {/* Label + time */}
-                <p className={`text-[10px] font-medium mt-1.5 text-center leading-tight ${
-                  step.status === "active" || step.status === "late" ? "text-neutral-900 font-semibold" :
-                  step.status === "done" ? "text-neutral-700" : "text-neutral-400"
-                }`}>{step.label}</p>
-                {step.fechaLineas?.[0] && (
-                  <p className={`text-[9px] tabular-nums text-center ${
-                    step.status === "done" ? "text-green-600" :
-                    step.status === "late" ? "text-red-500" : "text-neutral-400"
-                  }`}>
-                    {/* Show only time portion if available */}
-                    {step.fechaLineas[0].includes(":") ? step.fechaLineas[0].split(" ").pop() : step.fechaLineas[0]}
-                  </p>
-                )}
-              </div>
-            ))}
+            {visible.map((step) => {
+              const s = stepStyle[step.status] ?? stepStyle.pending;
+              const StepIcon = step.status === "done" ? Check : (iconMap[step.label] ?? Package);
+              return (
+                <div key={step.label} className="flex flex-col items-center relative z-10" style={{ flex: "1 1 0%" }}>
+                  <p className={`text-[10px] font-medium mb-1 text-center leading-tight ${
+                    step.status === "active" || step.status === "late" ? "text-neutral-900 font-semibold" :
+                    step.status === "done" ? "text-neutral-600" : "text-neutral-400"
+                  }`}>{step.label}</p>
+                  {/* Icon circle */}
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${s.bg} ${s.border} border ${s.ring} transition-all`}>
+                    <StepIcon className={`w-4 h-4 ${s.icon}`} />
+                  </div>
+                  {/* Time */}
+                  {step.fechaLineas?.[0] && (
+                    <p className={`text-[9px] tabular-nums text-center mt-1 ${
+                      step.status === "done" ? "text-neutral-500" :
+                      step.status === "late" ? "text-red-500" : "text-neutral-400"
+                    }`}>
+                      {step.fechaLineas[0].includes(":") ? step.fechaLineas[0].split(" ").pop() : step.fechaLineas[0]}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           <button
