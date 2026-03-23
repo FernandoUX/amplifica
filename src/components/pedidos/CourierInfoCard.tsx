@@ -82,7 +82,9 @@ export default function CourierInfoCard({
         {/* Courier header + dimensions */}
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
-            <Truck className="w-5 h-5 text-primary-500" />
+            <span className="text-xs font-bold text-primary-600 leading-none">
+              {courier.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
+            </span>
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-neutral-800">{courier}</p>
