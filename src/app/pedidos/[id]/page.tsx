@@ -306,11 +306,8 @@ function MiniTimeline({ steps, offset, onOffsetChange }: { steps: TimelineStep[]
           </button>
         </div>
 
-        {/* Progress bar */}
-        <div className="mx-8 mt-2.5 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-          <div className="h-full bg-neutral-300 rounded-full transition-all" style={{ width: `${Math.round(((currentIdx + 1) / total) * 100)}%` }} />
-        </div>
-        <p className="text-center text-[9px] text-neutral-400 mt-1">{start + 1}–{end} de {total}</p>
+        {/* Step counter */}
+        <p className="text-center text-[9px] text-neutral-400 mt-2">Paso {currentIdx + 1} de {total}</p>
       </CardContent>
     </Card>
   );
