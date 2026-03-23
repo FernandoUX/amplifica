@@ -6,6 +6,10 @@ import { Card, CardContent } from "./card";
 
 type CollapsibleCardProps = {
   title: React.ReactNode;
+  /** Brief description below the title (e.g. "Completa los datos del cliente") */
+  description?: string;
+  /** Icon shown in a rounded container before the title */
+  icon?: React.ComponentType<{ className?: string }>;
   /** Extra element next to the chevron (e.g. badge) */
   action?: React.ReactNode;
   defaultOpen?: boolean;
@@ -15,6 +19,8 @@ type CollapsibleCardProps = {
 
 export default function CollapsibleCard({
   title,
+  description,
+  icon: Icon,
   action,
   defaultOpen = true,
   children,
@@ -27,10 +33,25 @@ export default function CollapsibleCard({
       <button
         type="button"
         onClick={() => setOpen(prev => !prev)}
-        className="flex items-center justify-between w-full px-4 py-0.5 cursor-pointer select-none"
+        className="flex items-center gap-3 w-full px-4 py-0.5 cursor-pointer select-none"
       >
-        <span className="text-sm font-medium text-card-foreground">{title}</span>
-        <span className="flex items-center gap-2">
+        {/* Optional icon */}
+        {Icon && (
+          <div className="w-10 h-10 rounded-lg bg-neutral-100 flex items-center justify-center flex-shrink-0">
+            <Icon className="w-5 h-5 text-neutral-500" />
+          </div>
+        )}
+
+        {/* Title + description */}
+        <div className="flex flex-col items-start text-left min-w-0 flex-1">
+          <span className="text-sm font-medium text-card-foreground">{title}</span>
+          {description && (
+            <span className="text-xs text-neutral-500 mt-0.5">{description}</span>
+          )}
+        </div>
+
+        {/* Action + chevron */}
+        <span className="flex items-center gap-2 flex-shrink-0">
           {action}
           <ChevronDown
             className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${open ? "" : "-rotate-90"}`}
