@@ -9,7 +9,7 @@ import {
   Ban, Eye, Pencil, MapPin, Phone, Mail, ExternalLink,
   ChevronDown, ChevronUp, BellOff, BellRing, CheckCircle2,
   User, Users, Plus, RefreshCw, StickyNote, Monitor, Smartphone, X, Printer,
-  ClipboardList, Receipt, Search,
+  ClipboardList, ClipboardCheck, Receipt, Search,
 } from "lucide-react";
 
 import { PEDIDOS, MOCK_PEDIDO_DETALLE } from "@/app/pedidos/_data";
@@ -441,49 +441,69 @@ function PedidoDetalleContent() {
         {/* ════════ TAB: RESUMEN ════════ */}
         {viewMode === "actual" && (
           <div className="space-y-5">
-            {/* Mini-timeline: show prev + current + next steps only */}
+            {/* Mini-timeline: prev + current + next steps with large icons */}
             {(() => {
               const activeIdx = timelineSteps.findIndex(s => s.status === "active" || s.status === "late");
-              const currentIdx = activeIdx >= 0 ? activeIdx : timelineSteps.findIndex(s => s.status === "done") >= 0
-                ? timelineSteps.filter(s => s.status === "done").length - 1
-                : 0;
+              const currentIdx = activeIdx >= 0 ? activeIdx : timelineSteps.filter(s => s.status === "done").length - 1;
               const total = timelineSteps.length;
               let start: number, end: number;
-              if (currentIdx === 0) { start = 0; end = Math.min(2, total); }
+              if (currentIdx <= 0) { start = 0; end = Math.min(2, total); }
               else if (currentIdx >= total - 1) { start = Math.max(0, total - 2); end = total; }
               else { start = currentIdx - 1; end = currentIdx + 2; }
               const visible = timelineSteps.slice(start, end);
-              const stepColors: Record<string, { bg: string; text: string; ring: string }> = {
-                done:    { bg: "bg-green-500", text: "text-white", ring: "" },
-                active:  { bg: "bg-primary-500", text: "text-white", ring: "ring-4 ring-primary-100" },
-                late:    { bg: "bg-red-500", text: "text-white", ring: "ring-4 ring-red-100" },
-                pending: { bg: "bg-neutral-200", text: "text-neutral-400", ring: "" },
+
+              const iconColorMap: Record<string, { bg: string; border: string; icon: string }> = {
+                done:    { bg: "bg-neutral-100", border: "border-neutral-400", icon: "text-neutral-600" },
+                active:  { bg: "bg-primary-50", border: "border-primary-400", icon: "text-primary-600" },
+                late:    { bg: "bg-red-50", border: "border-red-400", icon: "text-red-600" },
+                pending: { bg: "bg-neutral-50", border: "border-neutral-200", icon: "text-neutral-300" },
               };
+
               return (
                 <Card size="sm">
-                  <CardContent className="!py-4">
-                    <div className="flex items-center justify-center gap-2">
-                      {start > 0 && <span className="text-neutral-300 text-xs">···</span>}
+                  <CardContent className="!py-6 !px-6">
+                    <div className="flex items-start justify-between relative">
+                      {/* Connector line */}
+                      <div className="absolute top-[28px] left-[56px] right-[56px] h-0.5 bg-neutral-200" />
+                      <div className="absolute top-[28px] left-[56px] h-0.5 bg-green-600 transition-all" style={{ width: visible.length > 1 ? `${((visible.filter(s => s.status === "done").length) / (visible.length - 1)) * 100}%` : "0%" }} />
+
                       {visible.map((step, i) => {
-                        const c = stepColors[step.status] ?? stepColors.pending;
+                        const c = iconColorMap[step.status] ?? iconColorMap.pending;
+                        const StepIcon = (() => {
+                          const iconMap: Record<string, typeof Package> = { "Recepción": Package, "Validación": ClipboardCheck, "Preparación": Package, "Empaque": Package, "Retiro": Truck, "Entrega": Check };
+                          return iconMap[step.label] ?? Package;
+                        })();
                         return (
-                          <div key={step.label} className="flex items-center gap-2">
-                            {i > 0 && <div className={`w-8 h-0.5 ${step.status === "done" || step.status === "active" ? "bg-primary-200" : "bg-neutral-200"}`} />}
-                            <div className="flex items-center gap-2">
-                              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold ${c.bg} ${c.text} ${c.ring}`}>
-                                {step.status === "done" ? <Check className="w-3.5 h-3.5" /> : (start + i + 1)}
-                              </div>
-                              <div>
-                                <p className={`text-xs font-medium ${step.status === "active" || step.status === "late" ? "text-primary-700" : step.status === "done" ? "text-neutral-700" : "text-neutral-400"}`}>{step.label}</p>
-                                {step.fechaLineas && step.fechaLineas[0] && (
-                                  <p className="text-[10px] text-neutral-400">{step.fechaLineas[0]}</p>
-                                )}
-                              </div>
+                          <div key={step.label} className="flex flex-col items-center relative z-10" style={{ flex: "1 1 0%" }}>
+                            <p className={`text-sm font-semibold mb-2 ${step.status === "active" || step.status === "late" ? "text-neutral-900" : step.status === "done" ? "text-neutral-700" : "text-neutral-400"}`}>{step.label}</p>
+                            <div className={`w-14 h-14 rounded-full flex items-center justify-center border-2 ${c.bg} ${c.border}`}>
+                              <StepIcon className={`w-6 h-6 ${c.icon}`} />
                             </div>
+                            {/* Dates */}
+                            <div className="mt-2 text-center">
+                              {step.fechaLineas ? step.fechaLineas.map((line, li) => (
+                                <p key={li} className="text-xs text-neutral-500 leading-snug">{line}</p>
+                              )) : (
+                                <p className="text-xs text-neutral-300">—</p>
+                              )}
+                            </div>
+                            {/* SLA badge */}
+                            {step.sla && (
+                              <span className={`mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                step.sla.status === "cumplido" ? "bg-green-50 text-green-700" :
+                                step.sla.status === "atrasado" ? "bg-red-50 text-red-600" :
+                                step.sla.status === "en_riesgo" ? "bg-amber-50 text-amber-700" :
+                                "bg-neutral-50 text-neutral-500"
+                              }`}>
+                                {step.sla.status === "cumplido" ? <><CheckCircle2 className="w-3 h-3" /> Cumplido</> :
+                                 step.sla.status === "atrasado" ? <><AlertTriangle className="w-3 h-3" /> Atrasado</> :
+                                 step.sla.status === "en_riesgo" ? <><Clock className="w-3 h-3" /> En riesgo</> :
+                                 <><Clock className="w-3 h-3" /> Pendiente</>}
+                              </span>
+                            )}
                           </div>
                         );
                       })}
-                      {end < total && <span className="text-neutral-300 text-xs ml-1">···</span>}
                     </div>
                   </CardContent>
                 </Card>
