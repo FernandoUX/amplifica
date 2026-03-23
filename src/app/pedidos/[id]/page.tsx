@@ -435,6 +435,56 @@ function PedidoDetalleContent() {
       <div>
         {/* ════════ TAB: RESUMEN ════════ */}
         {activeTab === "resumen" && viewMode === "actual" && (
+          <div className="space-y-5">
+            {/* Mini-timeline: show prev + current + next steps only */}
+            {(() => {
+              const activeIdx = timelineSteps.findIndex(s => s.status === "active" || s.status === "late");
+              const currentIdx = activeIdx >= 0 ? activeIdx : timelineSteps.findIndex(s => s.status === "done") >= 0
+                ? timelineSteps.filter(s => s.status === "done").length - 1
+                : 0;
+              const total = timelineSteps.length;
+              let start: number, end: number;
+              if (currentIdx === 0) { start = 0; end = Math.min(2, total); }
+              else if (currentIdx >= total - 1) { start = Math.max(0, total - 2); end = total; }
+              else { start = currentIdx - 1; end = currentIdx + 2; }
+              const visible = timelineSteps.slice(start, end);
+              const stepColors: Record<string, { bg: string; text: string; ring: string }> = {
+                done:    { bg: "bg-green-500", text: "text-white", ring: "" },
+                active:  { bg: "bg-primary-500", text: "text-white", ring: "ring-4 ring-primary-100" },
+                late:    { bg: "bg-red-500", text: "text-white", ring: "ring-4 ring-red-100" },
+                pending: { bg: "bg-neutral-200", text: "text-neutral-400", ring: "" },
+              };
+              return (
+                <Card size="sm">
+                  <CardContent className="!py-4">
+                    <div className="flex items-center justify-center gap-2">
+                      {start > 0 && <span className="text-neutral-300 text-xs">···</span>}
+                      {visible.map((step, i) => {
+                        const c = stepColors[step.status] ?? stepColors.pending;
+                        return (
+                          <div key={step.label} className="flex items-center gap-2">
+                            {i > 0 && <div className={`w-8 h-0.5 ${step.status === "done" || step.status === "active" ? "bg-primary-200" : "bg-neutral-200"}`} />}
+                            <div className="flex items-center gap-2">
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold ${c.bg} ${c.text} ${c.ring}`}>
+                                {step.status === "done" ? <Check className="w-3.5 h-3.5" /> : (start + i + 1)}
+                              </div>
+                              <div>
+                                <p className={`text-xs font-medium ${step.status === "active" || step.status === "late" ? "text-primary-700" : step.status === "done" ? "text-neutral-700" : "text-neutral-400"}`}>{step.label}</p>
+                                {step.fechaLineas && step.fechaLineas[0] && (
+                                  <p className="text-[10px] text-neutral-400">{step.fechaLineas[0]}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {end < total && <span className="text-neutral-300 text-xs ml-1">···</span>}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6">
             {/* LEFT: Datos del Pedido + Envío + Método entrega */}
             <div className="space-y-5">
@@ -647,6 +697,7 @@ function PedidoDetalleContent() {
                 </CardContent>
               </Card>
             </div>
+          </div>
           </div>
         )}
 
