@@ -3,11 +3,12 @@
 import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 import Link from "next/link";
 import {
-  ChevronRight, Palette, Type, RectangleHorizontal, FormInput,
+  ChevronRight, ChevronLeft, ChevronsLeft, ChevronsRight,
+  Palette, Type, RectangleHorizontal, FormInput,
   AlertTriangle, Tag, SquareStack, Ruler, Sparkles, Copy, Check,
   Trash2, Info, Plus, ArrowRight, Search, Download, CheckCircle2,
-  Clock, Ban, Table2, BarChart3, MoreVertical, ArrowUpDown, Play,
-  ClipboardCheck, Eye,
+  Clock, Ban, Table2, BarChart3, MoreVertical, ArrowUpDown, ArrowUp, ArrowDown, Play,
+  ClipboardCheck, Eye, Package,
 } from "lucide-react";
 
 // ── Actual components ────────────────────────────────────────────────────────
@@ -599,68 +600,114 @@ export default function DesignSystemPage() {
           </section>
 
           {/* ═══════════════════════════════════════════════════════════════
-              7. TABLAS
+              7. TABLAS — ESPECIFICACIÓN CANÓNICA
           ══════════════════════════════════════════════════════════════ */}
           <section className="space-y-4">
-            <SectionHeader id="tablas" title="Tablas" description="Patrón de tabla con header sticky, scrollbar minimal, hover en filas y columna de acciones fija." refCb={setRef("tablas")} />
+            <SectionHeader id="tablas" title="Tablas — Spec canónica" description="Implementación OBLIGATORIA para todas las tablas de Amplifica. Incluye header sticky, checkbox, columna de acciones sticky right, sorting, paginación numerada y scroll fade. Referencia: /src/app/pedidos/page.tsx" refCb={setRef("tablas")} />
 
-            <PreviewCard title="Tabla — Patrón estándar" code={`<div className="border border-neutral-200 rounded-2xl overflow-hidden">\n  <div className="overflow-x-auto table-scroll">\n    <table className="w-full table-fixed text-sm border-collapse">\n      <thead className="sticky top-0 z-10">\n        <tr className="border-b border-neutral-100 bg-neutral-50">\n          <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700">…</th>\n        </tr>\n      </thead>\n      <tbody className="divide-y divide-neutral-50">\n        <tr className="hover:bg-neutral-50/60">\n          <td className="py-3 px-4">…</td>\n        </tr>\n      </tbody>\n    </table>\n  </div>\n</div>`}>
-              <div className="border border-neutral-200 rounded-2xl overflow-hidden">
-                <div className="overflow-x-auto table-scroll">
-                  <table className="w-full text-sm border-collapse">
+            {/* ── Canonical table preview ── */}
+            <PreviewCard title="Tabla canónica — Patrón completo con paginación" code={`{/* Table container */}
+<div className="hidden sm:flex flex-col flex-1 min-h-0 bg-white border border-neutral-200 rounded-2xl overflow-hidden relative">
+  {/* Scroll area */}
+  <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 w-full table-scroll scroll-fade-right">
+    <table className="w-full table-fixed text-sm border-collapse font-sans tracking-normal">
+      <thead className="sticky top-0 z-10">
+        <tr className="border-b border-neutral-100 bg-neutral-50">
+          <th className="py-2 px-2 w-[44px]">{/* checkbox */}</th>
+          <th className="text-left py-2 px-2 text-xs font-semibold text-neutral-700 cursor-pointer hover:text-neutral-900 select-none"
+            style={{ whiteSpace: "nowrap" }} onClick={() => toggleSort("id")}>
+            ID <SortIcon field="id" />
+          </th>
+          {/* ...data columns... */}
+          <th className="w-[80px] py-2 px-2 text-xs font-semibold text-neutral-700 bg-neutral-50"
+            style={{ whiteSpace: "nowrap", position: "sticky", right: 0, boxShadow: "-4px 0 8px -2px rgba(0,0,0,0.07)" }}>
+            Acciones
+          </th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-neutral-50">
+        <tr className="hover:bg-neutral-50/60 transition-colors">
+          <td className="px-2 text-center">{/* checkbox */}</td>
+          <td className="py-2 px-2">{/* data */}</td>
+          <td className="py-2 px-2 bg-white"
+            style={{ position: "sticky", right: 0, boxShadow: "-4px 0 8px -2px rgba(0,0,0,0.07)" }}>
+            {/* actions */}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  {/* Pagination — INSIDE the container */}
+  <div className="flex-shrink-0 flex items-center justify-between px-3 py-3 bg-white border-t border-neutral-100">
+    <label className="flex items-center gap-1.5 bg-neutral-100 rounded-lg px-3 h-9 text-sm text-neutral-700">
+      <span className="text-neutral-500">Mostrar</span>
+      <select className="bg-transparent font-medium">
+        <option>20</option><option>50</option><option>100</option>
+      </select>
+    </label>
+    <span className="text-sm text-neutral-500 tabular-nums">1–20 de 70</span>
+    <div className="flex items-center gap-1">
+      <button className="w-9 h-9 rounded-lg"><ChevronsLeft /></button>
+      <button className="w-9 h-9 rounded-lg"><ChevronLeft /></button>
+      <button className="w-9 h-9 rounded-lg bg-primary-25 text-primary-900">1</button>
+      <button className="w-9 h-9 rounded-lg text-neutral-600">2</button>
+      <span>...</span>
+      <button className="w-9 h-9 rounded-lg"><ChevronRight /></button>
+      <button className="w-9 h-9 rounded-lg"><ChevronsRight /></button>
+    </div>
+  </div>
+</div>`}>
+              <div className="flex flex-col bg-white border border-neutral-200 rounded-2xl overflow-hidden relative">
+                {/* Scroll area */}
+                <div className="overflow-x-auto overflow-y-auto w-full table-scroll scroll-fade-right">
+                  <table className="w-full table-fixed text-sm border-collapse font-sans tracking-normal">
                     <thead className="sticky top-0 z-10">
                       <tr className="border-b border-neutral-100 bg-neutral-50">
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 w-[140px]" style={{ whiteSpace: "nowrap" }}>ID</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 cursor-pointer hover:text-neutral-900 select-none w-[110px]" style={{ whiteSpace: "nowrap" }}>
-                          <span className="inline-flex items-center gap-1">Creación <ArrowUpDown className="w-3 h-3 text-neutral-400" /></span>
+                        <th className="py-2 px-2 w-[44px]">
+                          <span className="flex w-3.5 h-3.5 rounded-[3px] items-center justify-center border-[1.5px] bg-primary-500 border-primary-500 mx-auto">
+                            <svg className="w-2 h-2 text-white" viewBox="0 0 12 12" fill="none"><path d="M3 6h6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" /></svg>
+                          </span>
                         </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 cursor-pointer hover:text-neutral-900 select-none w-[160px]" style={{ whiteSpace: "nowrap" }}>
-                          <span className="inline-flex items-center gap-1">F. agendada <ArrowUpDown className="w-3 h-3 text-neutral-400" /></span>
+                        <th className="text-left py-2 px-2 text-xs font-semibold text-neutral-700 cursor-pointer hover:text-neutral-900 select-none w-[90px]" style={{ whiteSpace: "nowrap" }}>
+                          <span className="inline-flex items-center gap-1">ID <ArrowDown className="w-3 h-3 text-primary-500" /></span>
                         </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 w-[100px]" style={{ whiteSpace: "nowrap" }}>Tienda</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 w-[220px]" style={{ whiteSpace: "nowrap" }}>Estado</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 w-[130px]" style={{ whiteSpace: "nowrap" }}>Progreso</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 w-[100px]" style={{ whiteSpace: "nowrap" }}>Acciones</th>
+                        <th className="text-left py-2 px-2 text-xs font-semibold text-neutral-700 cursor-pointer hover:text-neutral-900 select-none w-[110px]" style={{ whiteSpace: "nowrap" }}>
+                          <span className="inline-flex items-center gap-1">Creacion <ArrowUpDown className="w-3 h-3 text-neutral-400" /></span>
+                        </th>
+                        <th className="text-left py-2 px-2 text-xs font-semibold text-neutral-700 w-[100px]" style={{ whiteSpace: "nowrap" }}>Seller</th>
+                        <th className="text-left py-2 px-2 text-xs font-semibold text-neutral-700 w-[110px]" style={{ whiteSpace: "nowrap" }}>Estado</th>
+                        <th className="text-left py-2 px-2 text-xs font-semibold text-neutral-700 w-[100px]" style={{ whiteSpace: "nowrap" }}>Envio</th>
+                        <th className="w-[80px] py-2 px-2 text-xs font-semibold text-neutral-700 bg-neutral-50 text-left" style={{ whiteSpace: "nowrap", position: "sticky" as const, right: 0, boxShadow: "-4px 0 8px -2px rgba(0,0,0,0.07)" }}>Acciones</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-50">
-                      {TABLE_ROWS.map((row) => (
-                        <tr key={row.id} className="hover:bg-neutral-50/60 transition-colors duration-300 group">
-                          <td className="py-3 px-4" style={{ whiteSpace: "nowrap" }}>
-                            <span className="inline-block bg-primary-50 text-primary-700 hover:bg-primary-100 rounded px-2 py-0.5 text-xs font-mono transition-colors cursor-pointer">
-                              {row.id}
+                      {[
+                        { id: "1024", fecha: "27/03/2026", seller: "Extra Life", estado: "Pendiente", estadoColor: "bg-yellow-100 text-yellow-800", envio: "Sin envio", envioColor: "bg-neutral-100 text-neutral-500", selected: true },
+                        { id: "1023", fecha: "26/03/2026", seller: "VitaFit", estado: "En preparacion", estadoColor: "bg-yellow-100 text-yellow-800", envio: "Procesando", envioColor: "bg-blue-100 text-blue-700", selected: true },
+                        { id: "1022", fecha: "25/03/2026", seller: "Gohard", estado: "Empacado", estadoColor: "bg-green-100 text-green-800", envio: "Despachado", envioColor: "bg-blue-100 text-blue-700", selected: false },
+                        { id: "1021", fecha: "24/03/2026", seller: "Extra Life", estado: "Entregado", estadoColor: "bg-green-100 text-green-800", envio: "Entregado", envioColor: "bg-green-100 text-green-700", selected: false },
+                      ].map(row => (
+                        <tr key={row.id} className={`hover:bg-neutral-50/60 transition-colors group ${row.selected ? "bg-primary-50/40" : ""}`}>
+                          <td className="px-2 text-center">
+                            <span className={`flex w-3.5 h-3.5 rounded-[3px] items-center justify-center border-[1.5px] mx-auto ${row.selected ? "bg-primary-500 border-primary-500" : "bg-white border-neutral-300"}`}>
+                              {row.selected && <svg className="w-2 h-2 text-white" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-xs text-neutral-600 tabular-nums" style={{ whiteSpace: "nowrap" }}>{row.creacion}</td>
-                          <td className="py-3 px-4 text-xs text-neutral-600 tabular-nums" style={{ whiteSpace: "nowrap" }}>{row.fechaAgendada}</td>
-                          <td className="py-3 px-4 text-xs text-neutral-700 font-medium" style={{ whiteSpace: "nowrap" }}>{row.tienda}</td>
-                          <td className="py-3 px-4" style={{ whiteSpace: "nowrap" }}>
-                            <StatusBadge status={row.estado} />
+                          <td className="py-2 px-2" style={{ whiteSpace: "nowrap" }}>
+                            <span className="inline-block bg-neutral-100 text-neutral-700 hover:text-primary-700 hover:bg-primary-50 rounded px-1 py-0.5 text-xs font-mono transition-colors cursor-pointer">{row.id}</span>
                           </td>
-                          <td className="py-3 px-4" style={{ whiteSpace: "nowrap" }}>
-                            <div className="flex items-center gap-2">
-                              <div className="w-16 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full transition-all ${
-                                    row.progreso === 100 ? "bg-green-500" : row.progreso > 0 ? "bg-primary-500" : "bg-neutral-200"
-                                  }`}
-                                  style={{ width: `${row.progreso}%` }}
-                                />
-                              </div>
-                              <span className="text-[10px] text-neutral-400 tabular-nums">{row.progreso}%</span>
-                            </div>
+                          <td className="py-2 px-2 text-xs text-neutral-600 tabular-nums" style={{ whiteSpace: "nowrap" }}>{row.fecha}</td>
+                          <td className="py-2 px-2 text-xs text-neutral-700 font-medium" style={{ whiteSpace: "nowrap" }}>{row.seller}</td>
+                          <td className="py-2 px-2" style={{ whiteSpace: "nowrap" }}>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${row.estadoColor}`}>{row.estado}</span>
                           </td>
-                          <td className="py-3 px-4" style={{ whiteSpace: "nowrap" }}>
+                          <td className="py-2 px-2" style={{ whiteSpace: "nowrap" }}>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${row.envioColor}`}>{row.envio}</span>
+                          </td>
+                          <td className="py-2 px-2 bg-white" style={{ position: "sticky" as const, right: 0, boxShadow: "-4px 0 8px -2px rgba(0,0,0,0.07)", whiteSpace: "nowrap" }}>
                             <div className="flex items-center gap-1">
-                              <button className="p-1.5 rounded-lg text-neutral-400 hover:text-primary-600 hover:bg-primary-50 transition-colors">
-                                <Play className="w-3.5 h-3.5" />
-                              </button>
-                              <button className="p-1.5 rounded-lg text-neutral-400 hover:text-primary-600 hover:bg-primary-50 transition-colors">
-                                <Eye className="w-3.5 h-3.5" />
-                              </button>
-                              <button className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors">
-                                <MoreVertical className="w-3.5 h-3.5" />
-                              </button>
+                              <button className="p-1.5 rounded-lg text-neutral-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"><Eye className="w-3.5 h-3.5" /></button>
+                              <button className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"><MoreVertical className="w-3.5 h-3.5" /></button>
                             </div>
                           </td>
                         </tr>
@@ -669,64 +716,227 @@ export default function DesignSystemPage() {
                   </table>
                 </div>
 
-                {/* Pagination */}
-                <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-neutral-100">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-neutral-500">Mostrar</span>
-                    <select className="text-xs border border-neutral-200 rounded-lg px-2 py-1 bg-white text-neutral-700 focus:outline-none focus:ring-1 focus:ring-primary-200">
-                      <option>20</option>
-                      <option>50</option>
-                      <option>100</option>
-                    </select>
+                {/* Pagination — INSIDE the table container */}
+                <div className="flex-shrink-0 flex items-center justify-between px-3 py-3 bg-white border-t border-neutral-100">
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-1.5 bg-neutral-100 rounded-lg px-3 h-9 text-sm text-neutral-700 cursor-pointer">
+                      <span className="text-neutral-500">Mostrar</span>
+                      <select className="bg-transparent font-medium focus:outline-none cursor-pointer text-sm" defaultValue="20">
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                      </select>
+                    </label>
+                    <span className="text-sm text-neutral-500 tabular-nums">1–20 de 70</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-neutral-500">1–6 de 6</span>
-                    <div className="flex gap-1">
-                      <button disabled className="px-2.5 py-1 text-xs rounded-lg border border-neutral-200 text-neutral-300 bg-white cursor-not-allowed">Anterior</button>
-                      <button disabled className="px-2.5 py-1 text-xs rounded-lg border border-neutral-200 text-neutral-300 bg-white cursor-not-allowed">Siguiente</button>
+                  <div className="flex items-center gap-1">
+                    <button disabled className="w-9 h-9 rounded-lg flex items-center justify-center text-neutral-600 hover:bg-neutral-100 disabled:opacity-30"><ChevronsLeft className="w-4 h-4" /></button>
+                    <button disabled className="w-9 h-9 rounded-lg flex items-center justify-center text-neutral-600 hover:bg-neutral-100 disabled:opacity-30"><ChevronLeft className="w-4 h-4" /></button>
+                    <div className="flex items-center gap-0.5">
+                      <button className="w-9 h-9 rounded-lg text-sm font-medium bg-primary-25 text-primary-900">1</button>
+                      <button className="w-9 h-9 rounded-lg text-sm font-medium text-neutral-600 hover:bg-neutral-100">2</button>
+                      <button className="w-9 h-9 rounded-lg text-sm font-medium text-neutral-600 hover:bg-neutral-100">3</button>
+                      <span className="w-9 h-9 flex items-center justify-center text-neutral-400 text-sm">...</span>
+                      <button className="w-9 h-9 rounded-lg text-sm font-medium text-neutral-600 hover:bg-neutral-100">4</button>
                     </div>
+                    <button className="w-9 h-9 rounded-lg flex items-center justify-center text-neutral-600 hover:bg-neutral-100"><ChevronRight className="w-4 h-4" /></button>
+                    <button className="w-9 h-9 rounded-lg flex items-center justify-center text-neutral-600 hover:bg-neutral-100"><ChevronsRight className="w-4 h-4" /></button>
                   </div>
                 </div>
               </div>
             </PreviewCard>
 
-            <SubHeading>Especificaciones</SubHeading>
+            {/* ── Structure hierarchy diagram ── */}
+            <PreviewCard title="Jerarquia de estructura" code={`Table Container (rounded-2xl wrapper, flex-col, flex-1)
+├── Scroll Area (overflow-x-auto overflow-y-auto, flex-1)
+│   └── <table> (w-full, table-fixed, border-collapse)
+│       ├── <thead> (sticky top-0 z-10)
+│       │   └── <tr> (border-b border-neutral-100 bg-neutral-50)
+│       │       ├── <th> checkbox (w-[44px])
+│       │       ├── <th> data columns
+│       │       └── <th> acciones (sticky right, w-[80px])
+│       └── <tbody> (divide-y divide-neutral-50)
+│           └── <tr> rows (hover:bg-neutral-50/60)
+└── Pagination Bar (flex-shrink-0, border-t border-neutral-100)
+    ├── Left: Mostrar select + counter
+    └── Right: First/Prev/Pages/Next/Last`}>
+              <div className="bg-neutral-950 rounded-lg p-4 overflow-x-auto">
+                <pre className="text-[11px] text-neutral-300 font-mono whitespace-pre leading-relaxed">{`Table Container (rounded-2xl wrapper)
+├── Scroll Area (overflow-x-auto overflow-y-auto)
+│   └── <table> (w-full, table-fixed, border-collapse)
+│       ├── <thead> (sticky top-0 z-10)
+│       │   └── <tr> (border-b border-neutral-100 bg-neutral-50)
+│       │       ├── <th> checkbox   → w-[44px]
+│       │       ├── <th> data cols  → text-xs font-semibold text-neutral-700
+│       │       └── <th> acciones   → sticky right, w-[80px], shadow
+│       └── <tbody> (divide-y divide-neutral-50)
+│           └── <tr> → hover:bg-neutral-50/60 transition-colors
+│               ├── <td> checkbox   → px-2 text-center
+│               ├── <td> data       → py-2 px-2
+│               └── <td> acciones   → sticky right, bg-white, shadow
+└── Pagination Bar (flex-shrink-0, border-t border-neutral-100)
+    ├── Left:  [Mostrar 20▾]  1–20 de 70
+    └── Right: « ‹ [1] 2 3 ... 4 › »`}</pre>
+              </div>
+            </PreviewCard>
+
+            {/* ── Specifications grid ── */}
+            <SubHeading>Especificaciones obligatorias</SubHeading>
             <div className="grid gap-3 sm:grid-cols-2">
               {[
-                { label: "Header", desc: "Sticky top-0, bg-neutral-50, text-xs font-semibold text-neutral-700, border-b" },
-                { label: "Celdas", desc: "py-3 px-4, text-sm, tabular-nums para números, whiteSpace: nowrap" },
-                { label: "Filas", desc: "hover:bg-neutral-50/60, divide-y divide-neutral-50, transition-colors" },
-                { label: "Scroll", desc: "overflow-x-auto + clase .table-scroll (scrollbar 4px, neutral-200)" },
-                { label: "Contenedor", desc: "border border-neutral-200 rounded-2xl overflow-hidden" },
-                { label: "Acciones", desc: "Columna fija a la derecha con sticky, iconos hover:text-primary-600" },
-                { label: "Paginación", desc: "border-t, select para page size (20/50/100) + Anterior/Siguiente" },
-                { label: "Empty state", desc: "Centrado, texto \"No se encontraron…\" + término de búsqueda" },
+                { label: "Container", desc: "hidden sm:flex flex-col flex-1 min-h-0 bg-white border border-neutral-200 rounded-2xl overflow-hidden relative" },
+                { label: "Scroll", desc: "overflow-x-auto overflow-y-auto flex-1 min-h-0 w-full table-scroll scroll-fade-right" },
+                { label: "<table>", desc: "w-full table-fixed text-sm border-collapse font-sans tracking-normal" },
+                { label: "<thead>", desc: "sticky top-0 z-10, tr: border-b border-neutral-100 bg-neutral-50" },
+                { label: "<th>", desc: "text-left py-2 px-2 text-xs font-semibold text-neutral-700, NO uppercase, NO tracking-wider" },
+                { label: "<tbody>", desc: "divide-y divide-neutral-50 (NO border-t/border-b en rows individuales)" },
+                { label: "<tr>", desc: "hover:bg-neutral-50/60 transition-colors, selected: bg-primary-50/40, NO style={{ height }}" },
+                { label: "<td>", desc: "py-2 px-2, whiteSpace: nowrap via helper NW" },
+                { label: "Checkbox", desc: "w-[44px] touch target, w-3.5 h-3.5, checked: bg-primary-500 border-primary-500" },
+                { label: "Acciones", desc: "sticky right-0, w-[80px], shadow: -4px 0 8px -2px rgba(0,0,0,0.07), bg-neutral-50 (header) / bg-white (rows)" },
+                { label: "Paginacion", desc: "DENTRO del container, flex-shrink-0 border-t border-neutral-100, Mostrar select (20/50/100) + page numbers" },
+                { label: "Sorting", desc: "ArrowUpDown (inactive neutral-400), ArrowUp/ArrowDown (active primary-500), cursor-pointer select-none" },
               ].map(spec => (
                 <div key={spec.label} className="flex gap-3 items-start p-3 rounded-lg bg-neutral-50 border border-neutral-100">
                   <span className="text-xs font-semibold text-neutral-700 w-20 flex-shrink-0">{spec.label}</span>
-                  <span className="text-xs text-neutral-500">{spec.desc}</span>
+                  <span className="text-xs text-neutral-500 break-words">{spec.desc}</span>
                 </div>
               ))}
             </div>
 
-            <PreviewCard title="Empty state" code={`<tr>\n  <td colSpan={N} className="py-14 text-center text-sm text-neutral-600">\n    No se encontraron órdenes.\n  </td>\n</tr>`}>
+            {/* ── Helper constants ── */}
+            <PreviewCard title="Helper constants (obligatorios)" code={`const NW: React.CSSProperties = { whiteSpace: "nowrap" };
+const stickyRight: React.CSSProperties = {
+  position: "sticky",
+  right: 0,
+  boxShadow: "-4px 0 8px -2px rgba(0,0,0,0.07)",
+};`}>
+              <div className="flex flex-col gap-3 text-xs">
+                <div className="flex items-start gap-3 p-3 bg-neutral-50 rounded-lg border border-neutral-100">
+                  <code className="font-mono text-primary-600 flex-shrink-0">NW</code>
+                  <span className="text-neutral-500">Aplicar a todas las celdas para forzar una sola linea. Evita wrapping de texto en columnas.</span>
+                </div>
+                <div className="flex items-start gap-3 p-3 bg-neutral-50 rounded-lg border border-neutral-100">
+                  <code className="font-mono text-primary-600 flex-shrink-0">stickyRight</code>
+                  <span className="text-neutral-500">Aplicar a th y td de la columna de acciones. Fija la columna al borde derecho con sombra.</span>
+                </div>
+              </div>
+            </PreviewCard>
+
+            {/* ── Features checklist ── */}
+            <SubHeading>Features obligatorias (checklist)</SubHeading>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {[
+                { n: 1,  label: "Checkbox bulk selection", desc: "th + td con w-[44px] touch target" },
+                { n: 2,  label: "Sticky header", desc: "thead sticky top-0 z-10" },
+                { n: 3,  label: "Sticky actions column", desc: "ultima columna sticky right-0 con sombra" },
+                { n: 4,  label: "Column sorting", desc: "Al menos fecha + columnas clave con toggleSort()" },
+                { n: 5,  label: "Paginacion numerada", desc: "Mostrar select (20/50/100) + page numbers + flechas" },
+                { n: 6,  label: "Empty state", desc: "Icono + mensaje + CTA cuando no hay datos" },
+                { n: 7,  label: "Loading skeleton", desc: "Rows con animate-pulse mientras carga" },
+                { n: 8,  label: "Search con debounce", desc: "Input de busqueda con al menos 300ms debounce" },
+                { n: 9,  label: "Status tabs", desc: "Variante B pills (ver seccion Tabs) para filtrar por estado" },
+                { n: 10, label: "Scroll fade right", desc: "Indicador visual de scroll horizontal (scroll-fade-right)" },
+              ].map(item => (
+                <div key={item.n} className="flex items-start gap-2.5 p-2.5 rounded-lg bg-green-50/50 border border-green-100">
+                  <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-xs font-semibold text-neutral-700">{item.n}. {item.label}</span>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* ── Anti-patterns ── */}
+            <SubHeading>Anti-patterns (NUNCA hacer)</SubHeading>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {[
+                { bad: "Paginacion fuera del table container", reason: "Debe estar dentro del rounded-2xl wrapper" },
+                { bad: "border-t / border-b en rows individuales", reason: "Usar divide-y divide-neutral-50 en <tbody>" },
+                { bad: "style={{ height: 40 }} en rows", reason: "El alto lo define el padding de celdas" },
+                { bad: "uppercase tracking-wide en headers", reason: "Siempre text-xs font-semibold text-neutral-700" },
+                { bad: "Padding diferente entre modulos", reason: "Siempre py-2 px-2 en headers y celdas" },
+                { bad: "Falta table-fixed o border-collapse", reason: "Obligatorios en el <table>" },
+              ].map(item => (
+                <div key={item.bad} className="flex items-start gap-2.5 p-2.5 rounded-lg bg-red-50/50 border border-red-100">
+                  <Ban className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-xs font-semibold text-neutral-700">{item.bad}</span>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">{item.reason}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* ── Empty state ── */}
+            <PreviewCard title="Empty state" code={`<tr>
+  <td colSpan={N} className="text-center py-16 text-neutral-400 text-sm">
+    <Package className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
+    <p className="text-sm font-semibold text-neutral-700 mb-1">No se encontraron pedidos</p>
+    <p className="text-xs text-neutral-500 mb-4">Intenta con otros filtros o crea uno nuevo</p>
+    <Button variant="primary">Crear pedido</Button>
+  </td>
+</tr>`}>
               <div className="border border-neutral-200 rounded-2xl overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm border-collapse">
-                    <thead>
+                  <table className="w-full table-fixed text-sm border-collapse font-sans tracking-normal">
+                    <thead className="sticky top-0 z-10">
                       <tr className="border-b border-neutral-100 bg-neutral-50">
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700">ID</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700">Creación</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700">Tienda</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700">Estado</th>
+                        <th className="py-2 px-2 w-[44px]" />
+                        <th className="text-left py-2 px-2 text-xs font-semibold text-neutral-700" style={{ whiteSpace: "nowrap" }}>ID</th>
+                        <th className="text-left py-2 px-2 text-xs font-semibold text-neutral-700" style={{ whiteSpace: "nowrap" }}>Creacion</th>
+                        <th className="text-left py-2 px-2 text-xs font-semibold text-neutral-700" style={{ whiteSpace: "nowrap" }}>Seller</th>
+                        <th className="text-left py-2 px-2 text-xs font-semibold text-neutral-700" style={{ whiteSpace: "nowrap" }}>Estado</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr>
-                        <td colSpan={4} className="py-14 text-center text-sm text-neutral-600">
-                          No se encontraron órdenes.
+                        <td colSpan={5} className="text-center py-16">
+                          <Package className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
+                          <p className="text-sm font-semibold text-neutral-700 mb-1">No se encontraron pedidos</p>
+                          <p className="text-xs text-neutral-500 mb-4">Intenta con otros filtros o crea uno nuevo</p>
+                          <Button variant="primary" size="sm">Crear pedido</Button>
                         </td>
                       </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </PreviewCard>
+
+            {/* ── Loading skeleton ── */}
+            <PreviewCard title="Loading skeleton" code={`{/* Skeleton rows while loading */}
+{Array.from({ length: 5 }).map((_, i) => (
+  <tr key={i} className="animate-pulse">
+    <td className="px-2 py-3"><div className="w-3.5 h-3.5 bg-neutral-200 rounded" /></td>
+    <td className="px-2 py-3"><div className="w-16 h-4 bg-neutral-100 rounded" /></td>
+    <td className="px-2 py-3"><div className="w-20 h-4 bg-neutral-100 rounded" /></td>
+    <td className="px-2 py-3"><div className="w-24 h-4 bg-neutral-100 rounded" /></td>
+  </tr>
+))}`}>
+              <div className="border border-neutral-200 rounded-2xl overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full table-fixed text-sm border-collapse font-sans tracking-normal">
+                    <thead className="sticky top-0 z-10">
+                      <tr className="border-b border-neutral-100 bg-neutral-50">
+                        <th className="py-2 px-2 w-[44px]" />
+                        <th className="text-left py-2 px-2 text-xs font-semibold text-neutral-700">ID</th>
+                        <th className="text-left py-2 px-2 text-xs font-semibold text-neutral-700">Creacion</th>
+                        <th className="text-left py-2 px-2 text-xs font-semibold text-neutral-700">Seller</th>
+                        <th className="text-left py-2 px-2 text-xs font-semibold text-neutral-700">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-50">
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <tr key={i} className="animate-pulse">
+                          <td className="px-2 py-3"><div className="w-3.5 h-3.5 bg-neutral-200 rounded mx-auto" /></td>
+                          <td className="px-2 py-3"><div className="w-14 h-4 bg-neutral-100 rounded" /></td>
+                          <td className="px-2 py-3"><div className="w-20 h-4 bg-neutral-100 rounded" /></td>
+                          <td className="px-2 py-3"><div className="w-16 h-4 bg-neutral-100 rounded" /></td>
+                          <td className="px-2 py-3"><div className="w-20 h-5 bg-neutral-100 rounded-full" /></td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>

@@ -12,6 +12,7 @@ import {
   CalendarPlus, Package, Play, ClipboardCheck, SkipForward,
   Eye, Pencil, CircleOff, LockOpen,
   Calendar, Warehouse, Clock, Ban, Check, ClipboardList,
+  ChevronsLeft, ChevronsRight, SquareCheckBig, Printer,
 } from "lucide-react";
 import StatusBadge, { Status } from "@/components/recepciones/StatusBadge";
 import { OR_STATS, QR_STORAGE_KEY } from "./_data";
@@ -871,6 +872,7 @@ function OrdenesPageInner() {
   const [cardMenuId,        setCardMenuId]        = useState<string | null>(null);
   const [bottomMenuOpen,    setBottomMenuOpen]    = useState(false);
   const [cancelTarget,      setCancelTarget]      = useState<string | null>(null);
+  const [selectedIds,       setSelectedIds]       = useState<Set<string>>(new Set());
 
   // ── Role (initialise with SSR-safe default, sync from localStorage on mount) ──
   const [currentRole, setCurrentRole] = useState<Role>("Super Admin");
@@ -1179,7 +1181,7 @@ function OrdenesPageInner() {
   }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes, filterFechaDesde, filterFechaHasta, ordenesEffective, sidebarSucursal, sidebarSeller, sidebarDateFrom, sidebarDateTo]);
 
   // Reset to page 1 whenever filters/tabs/search change
-  useEffect(() => { setPage(1); }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes, filterFechaDesde, filterFechaHasta, pageSize]);
+  useEffect(() => { setPage(1); setSelectedIds(new Set()); }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes, filterFechaDesde, filterFechaHasta, pageSize]);
 
   // Detect tabs overflow → show/hide left/right arrows
   useEffect(() => {
@@ -1357,21 +1359,21 @@ function OrdenesPageInner() {
                 <p className="text-sm font-semibold text-neutral-700 mb-2">Fecha agendada</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">Desde</label>
+                    <label className="text-xs font-medium text-neutral-700 mb-1 block">Desde</label>
                     <input
                       type="date"
                       value={filterFechaDesde}
                       onChange={e => setFilterFechaDesde(e.target.value)}
-                      className="w-full mt-1 px-3 py-2 text-sm border border-neutral-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full h-8 px-3 text-sm border border-neutral-300 rounded-md bg-white text-neutral-900 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">Hasta</label>
+                    <label className="text-xs font-medium text-neutral-700 mb-1 block">Hasta</label>
                     <input
                       type="date"
                       value={filterFechaHasta}
                       onChange={e => setFilterFechaHasta(e.target.value)}
-                      className="w-full mt-1 px-3 py-2 text-sm border border-neutral-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full h-8 px-3 text-sm border border-neutral-300 rounded-md bg-white text-neutral-900 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15"
                     />
                   </div>
                 </div>
@@ -1856,6 +1858,16 @@ function OrdenesPageInner() {
 
             <thead className="sticky top-0 z-10">
               <tr className="border-b border-neutral-100 bg-neutral-50">
+                {/* Fixed: Checkbox */}
+                <th className="py-2 px-2 w-[44px]">
+                  <label className="inline-flex items-center justify-center w-[44px] h-[44px] cursor-pointer -m-3" aria-label="Seleccionar todos">
+                    <input className="sr-only peer" type="checkbox" checked={selectedIds.size === paginatedRows.length && paginatedRows.length > 0} onChange={() => { if (selectedIds.size === paginatedRows.length) { setSelectedIds(new Set()); } else { setSelectedIds(new Set(paginatedRows.map(o => o.id))); } }} aria-checked={selectedIds.size > 0 && selectedIds.size < paginatedRows.length ? "mixed" : selectedIds.size === paginatedRows.length && paginatedRows.length > 0} />
+                    <span className={`flex w-[18px] h-[18px] rounded items-center justify-center flex-shrink-0 transition-colors duration-200 border-[1.5px] ${selectedIds.size > 0 ? "bg-primary-500 border-primary-500" : "bg-white border-neutral-300 peer-hover:border-neutral-400 peer-focus-visible:ring-2 peer-focus-visible:ring-primary-300 peer-focus-visible:ring-offset-1"}`}>
+                      {selectedIds.size === paginatedRows.length && paginatedRows.length > 0 && <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                      {selectedIds.size > 0 && selectedIds.size < paginatedRows.length && <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none"><path d="M3 6h6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>}
+                    </span>
+                  </label>
+                </th>
                 {/* Fixed: ID */}
                 <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 w-[130px]" style={NW}>ID</th>
 
@@ -1913,8 +1925,17 @@ function OrdenesPageInner() {
                     key={`${orden.id}-${i}`}
                     className={`hover:bg-neutral-50/60 transition-colors duration-300 group ${
                       orden.isSubId ? "bg-neutral-50/40" : ""
-                    }`}
+                    } ${selectedIds.has(orden.id) ? "bg-primary-50/40" : ""}`}
                   >
+                    {/* Fixed: Checkbox */}
+                    <td className="px-2 text-center">
+                      <label className="inline-flex items-center justify-center w-[44px] h-[44px] cursor-pointer -m-3" aria-label={`Seleccionar ${orden.id}`}>
+                        <input className="sr-only peer" type="checkbox" checked={selectedIds.has(orden.id)} onChange={() => { setSelectedIds(prev => { const next = new Set(prev); next.has(orden.id) ? next.delete(orden.id) : next.add(orden.id); return next; }); }} />
+                        <span className={`flex w-[18px] h-[18px] rounded items-center justify-center flex-shrink-0 transition-colors duration-200 border-[1.5px] ${selectedIds.has(orden.id) ? "bg-primary-500 border-primary-500" : "bg-white border-neutral-300 peer-hover:border-neutral-400"}`}>
+                          {selectedIds.has(orden.id) && <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        </span>
+                      </label>
+                    </td>
                     {/* Fixed: ID + status on mobile */}
                     <td className="py-3 px-4" style={NW}>
                       <div className="flex flex-col gap-1.5">
@@ -2162,6 +2183,32 @@ function OrdenesPageInner() {
               Escanear QR
             </Button>
           )}
+        </div>
+      )}
+
+      {/* ── Bulk action bar (DS canonical dark) ─────────────────────────── */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <div className="flex items-center gap-3 bg-[#1d1d1f] rounded-2xl px-4 py-2.5 shadow-2xl shadow-black/30 border border-white/10 whitespace-nowrap overflow-x-auto table-scroll">
+            <div className="flex items-center gap-2 pr-3 border-r border-white/15">
+              <SquareCheckBig className="w-4 h-4 text-primary-400 flex-shrink-0" />
+              <span className="text-sm font-semibold text-white tabular-nums">{selectedIds.size}</span>
+              <span className="text-sm text-neutral-400">{selectedIds.size === 1 ? "seleccionada" : "seleccionadas"}</span>
+            </div>
+            <div className="flex items-center gap-0.5">
+              <button title="Exportar selección" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors duration-200 flex-shrink-0 text-neutral-300 hover:bg-white/10 hover:text-white">
+                <Download className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="hidden lg:inline">Exportar</span>
+              </button>
+              <button title="Imprimir etiquetas" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors duration-200 flex-shrink-0 text-neutral-300 hover:bg-white/10 hover:text-white">
+                <Printer className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="hidden lg:inline">Etiquetas</span>
+              </button>
+            </div>
+            <button onClick={() => setSelectedIds(new Set())} className="pl-3 border-l border-white/15 flex-shrink-0" title="Deseleccionar">
+              <X className="w-4 h-4 text-neutral-400 hover:text-white transition-colors" />
+            </button>
+          </div>
         </div>
       )}
     </div>

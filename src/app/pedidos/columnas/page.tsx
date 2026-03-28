@@ -46,6 +46,10 @@ export default function PedidoColumnEditorPage() {
   const initial = readPedidoColStorage();
   const [order,   setOrder]   = useState<PedidoColumnKey[]>(initial.order);
   const [visible, setVisible] = useState<Set<PedidoColumnKey>>(new Set(initial.visible));
+  const [density, setDensity] = useState<"compact" | "comfortable">(() => {
+    if (typeof window === "undefined") return "compact";
+    return (localStorage.getItem("amplifica_pedidos_density") as "compact" | "comfortable") || "compact";
+  });
 
   // DnD state
   const [dragging,    setDragging]    = useState<PedidoColumnKey | null>(null);
@@ -116,7 +120,9 @@ export default function PedidoColumnEditorPage() {
       order,
       visible: [...visible],
     }));
+    localStorage.setItem("amplifica_pedidos_density", density);
     window.dispatchEvent(new CustomEvent(PEDIDO_CHANGE_EVENT));
+    window.dispatchEvent(new CustomEvent("amplifica_pedidos_density_change"));
     router.push("/pedidos");
   };
 
@@ -164,6 +170,29 @@ export default function PedidoColumnEditorPage() {
           <Button variant="primary" size="md" className="h-9" onClick={handleSave} iconLeft={<Check className="w-4 h-4" />}>
             Guardar cambios
           </Button>
+        </div>
+      </div>
+
+      {/* ── Section 0: Row density ── */}
+      <div className="bg-white border border-neutral-200 rounded-xl px-4 py-3 mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-sm font-semibold text-neutral-900">Densidad de filas</h2>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => setDensity("compact")} className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-xs font-medium ${density === "compact" ? "border-primary-500 bg-primary-25 text-primary-900" : "border-neutral-200 text-neutral-600 hover:border-neutral-300"}`}>
+            <div className="flex gap-0.5">
+              <div className="w-5 h-0.5 bg-current rounded-full" />
+              <div className="w-3 h-0.5 bg-current rounded-full opacity-50" />
+            </div>
+            Compacta
+          </button>
+          <button onClick={() => setDensity("comfortable")} className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-xs font-medium ${density === "comfortable" ? "border-primary-500 bg-primary-25 text-primary-900" : "border-neutral-200 text-neutral-600 hover:border-neutral-300"}`}>
+            <div className="flex gap-0.5">
+              <div className="w-5 h-1 bg-current rounded-full" />
+              <div className="w-3 h-1 bg-current rounded-full opacity-50" />
+            </div>
+            Expandida
+          </button>
         </div>
       </div>
 
@@ -303,6 +332,46 @@ export default function PedidoColumnEditorPage() {
           <div className="flex items-center gap-2 text-xs text-neutral-600">
             <LockIcon />
             Columna fija (no movible)
+          </div>
+        </div>
+
+        {/* FI-2: Mini table preview — hidden on mobile */}
+        <div className="hidden sm:block mt-5 pt-4 border-t border-neutral-100">
+          <p className="text-xs font-semibold text-neutral-500 mb-2">Vista previa</p>
+          <div className="border border-neutral-200 rounded-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-[10px]">
+                <thead>
+                  <tr className="bg-neutral-50 border-b border-neutral-100">
+                    <th className="px-3 py-1.5 text-left font-semibold text-neutral-600 whitespace-nowrap">ID</th>
+                    {order.filter(k => visible.has(k)).map(key => {
+                      const col = PEDIDO_MOVABLE_COLS.find(c => c.key === key);
+                      return col ? (
+                        <th key={key} className="px-3 py-1.5 text-left font-semibold text-neutral-600 whitespace-nowrap">{col.label}</th>
+                      ) : null;
+                    })}
+                    <th className="px-3 py-1.5 text-left font-semibold text-neutral-600 whitespace-nowrap">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[1, 2, 3].map(row => (
+                    <tr key={row} className="border-b border-neutral-50">
+                      <td className="px-3 py-1.5 text-neutral-400 whitespace-nowrap">
+                        <span className="bg-neutral-100 rounded px-1.5 py-0.5 font-mono">119680{row}</span>
+                      </td>
+                      {order.filter(k => visible.has(k)).map(key => (
+                        <td key={key} className="px-3 py-1.5 text-neutral-300 whitespace-nowrap">
+                          <span className="inline-block w-12 h-2 bg-neutral-100 rounded" />
+                        </td>
+                      ))}
+                      <td className="px-3 py-1.5 text-neutral-300 whitespace-nowrap">
+                        <span className="inline-block w-4 h-4 bg-neutral-100 rounded" />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

@@ -46,6 +46,10 @@ export default function ColumnEditorPage() {
   const initial = readColStorage();
   const [order,   setOrder]   = useState<ColumnKey[]>(initial.order);
   const [visible, setVisible] = useState<Set<ColumnKey>>(new Set(initial.visible));
+  const [density, setDensity] = useState<"compact" | "comfortable">(() => {
+    if (typeof window === "undefined") return "compact";
+    return (localStorage.getItem("amplifica_recepciones_density") as "compact" | "comfortable") || "compact";
+  });
 
   // DnD state
   const [dragging,   setDragging]   = useState<ColumnKey | null>(null);
@@ -118,7 +122,9 @@ export default function ColumnEditorPage() {
       order,
       visible: [...visible],
     }));
+    localStorage.setItem("amplifica_recepciones_density", density);
     window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
+    window.dispatchEvent(new CustomEvent("amplifica_recepciones_density_change"));
     router.push("/recepciones");
   };
 
@@ -166,6 +172,23 @@ export default function ColumnEditorPage() {
           <Button variant="primary" size="md" className="h-9" onClick={handleSave} iconLeft={<Check className="w-4 h-4" />}>
             Guardar cambios
           </Button>
+        </div>
+      </div>
+
+      {/* ── Section 0: Row density ── */}
+      <div className="bg-white border border-neutral-200 rounded-xl px-4 py-3 mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-sm font-semibold text-neutral-900">Densidad de filas</h2>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => setDensity("compact")} className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-xs font-medium ${density === "compact" ? "border-primary-500 bg-primary-25 text-primary-900" : "border-neutral-200 text-neutral-600 hover:border-neutral-300"}`}>
+            <div className="flex gap-0.5"><div className="w-5 h-0.5 bg-current rounded-full" /><div className="w-3 h-0.5 bg-current rounded-full opacity-50" /></div>
+            Compacta
+          </button>
+          <button onClick={() => setDensity("comfortable")} className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-xs font-medium ${density === "comfortable" ? "border-primary-500 bg-primary-25 text-primary-900" : "border-neutral-200 text-neutral-600 hover:border-neutral-300"}`}>
+            <div className="flex gap-0.5"><div className="w-5 h-1 bg-current rounded-full" /><div className="w-3 h-1 bg-current rounded-full opacity-50" /></div>
+            Expandida
+          </button>
         </div>
       </div>
 
@@ -305,6 +328,30 @@ export default function ColumnEditorPage() {
           <div className="flex items-center gap-2 text-xs text-neutral-600">
             <LockIcon />
             Columna fija (no movible)
+          </div>
+        </div>
+
+        {/* Preview inside column order card — hidden on mobile */}
+        <div className="hidden sm:block mt-4 pt-4 border-t border-neutral-100">
+          <p className="text-xs font-semibold text-neutral-500 mb-2">Vista previa</p>
+          <div className="overflow-x-auto bg-neutral-50 rounded-lg p-3">
+            <div className="flex gap-4 text-[10px] text-neutral-400 items-center">
+              <span className="font-medium text-neutral-600 flex-shrink-0">ID</span>
+              {order.filter(k => visible.has(k)).map(k => {
+                const col = MOVABLE_COLS.find(c => c.key === k);
+                return <span key={k} className="flex-shrink-0">{col?.label ?? k}</span>;
+              })}
+              <span className="font-medium text-neutral-600 flex-shrink-0">Acciones</span>
+            </div>
+            {[1,2,3].map(i => (
+              <div key={i} className="flex gap-4 items-center mt-1.5">
+                <div className="w-12 h-2 bg-neutral-200 rounded-full flex-shrink-0" />
+                {order.filter(k => visible.has(k)).map(k => (
+                  <div key={k} className="w-16 h-2 bg-neutral-100 rounded-full flex-shrink-0" />
+                ))}
+                <div className="w-8 h-2 bg-neutral-100 rounded-full flex-shrink-0" />
+              </div>
+            ))}
           </div>
         </div>
       </div>

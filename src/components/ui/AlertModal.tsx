@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode, ComponentType } from "react";
+import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import Button from "./Button";
 
@@ -69,6 +70,44 @@ export default function AlertModal({
   confirm,
   cancelLabel = "Cancelar",
 }: AlertModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Focus trap & Escape key
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+      }
+      // Simple focus trap
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    // Auto-focus dialog on open
+    requestAnimationFrame(() => {
+      dialogRef.current?.focus();
+    });
+
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   const isDestructive = variant === "danger" || variant === "warning";
@@ -82,7 +121,12 @@ export default function AlertModal({
       onClick={onClose}
     >
       <div
-        className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl p-6"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="alert-modal-title"
+        tabIndex={-1}
+        className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl p-6 outline-none"
         onClick={e => e.stopPropagation()}
       >
         {/* Close button */}
@@ -103,7 +147,7 @@ export default function AlertModal({
         </div>
 
         {/* Title */}
-        <h3 className="text-lg font-bold text-neutral-900 mb-1 text-center sm:text-left">{title}</h3>
+        <h3 id="alert-modal-title" className="text-lg font-bold text-neutral-900 mb-1 text-center sm:text-left">{title}</h3>
 
         {/* Subtitle */}
         {subtitle && (

@@ -181,7 +181,7 @@ export default function EnvioStatusBadge({ status }: { status: EnvioStatus }) {
   return (
     <span
       title={cfg.tooltip}
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full pl-1.5 pr-2 py-0.5 text-xs font-medium leading-none ${cfg.className}`}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full pl-1.5 pr-2 py-1 text-xs font-medium leading-none ${cfg.className}`}
     >
       <Icon className={`w-3.5 h-3.5 ${cfg.iconClass}`} />
       {cfg.label}

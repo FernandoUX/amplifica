@@ -122,8 +122,8 @@ input[type="number"] {
 .tabs-scroll::-webkit-scrollbar,
 .filter-scroll::-webkit-scrollbar,
 .table-scroll::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
 }
 .tabs-scroll::-webkit-scrollbar-track,
 .filter-scroll::-webkit-scrollbar-track,
@@ -162,24 +162,9 @@ input[type="number"] {
 }
 
 /* ── Scroll fade hint (right edge gradient when content overflows) ── */
+/* scroll-fade-right: degradado deshabilitado — el scrollbar horizontal siempre visible */
 .scroll-fade-right {
   position: relative;
-}
-.scroll-fade-right::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 48px;
-  pointer-events: none;
-  background: linear-gradient(to right, transparent, white);
-  opacity: 1;
-  transition: opacity 0.2s ease;
-  z-index: 2;
-}
-.scroll-fade-right.scrolled-end::after {
-  opacity: 0;
 }
 
 /* ── Scan pulse animation for product cards (bounce in from bottom) ── */

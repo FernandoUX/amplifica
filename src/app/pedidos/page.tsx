@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Search, SlidersHorizontal, ChevronDown, ChevronLeft, ChevronRight,
+  Search, SlidersHorizontal, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   MoreVertical, ArrowUpDown, ArrowUp, ArrowDown, Download, Plus,
   Eye, Printer, FileText, Upload, Receipt, Columns3,
   Trash2, X, ShoppingBag, CalendarDays, AlertTriangle, Truck, Store, MapPin,
@@ -31,6 +31,28 @@ const stickyRight: React.CSSProperties = {
   right: 0,
   boxShadow: "-4px 0 8px -2px rgba(0,0,0,0.07)",
 };
+
+function getPageNumbers(current: number, total: number): (number | "...")[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages: (number | "...")[] = [];
+  // First 2
+  for (let i = 1; i <= Math.min(2, total); i++) pages.push(i);
+  // Middle (around current)
+  const mid = new Set<number>();
+  for (let i = current - 1; i <= current + 1; i++) {
+    if (i > 2 && i < total - 1) mid.add(i);
+  }
+  if (mid.size > 0) {
+    if (Math.min(...mid) > 3) pages.push("...");
+    [...mid].sort((a, b) => a - b).forEach(p => pages.push(p));
+    if (Math.max(...mid) < total - 2) pages.push("...");
+  } else {
+    pages.push("...");
+  }
+  // Last 2
+  for (let i = Math.max(total - 1, 3); i <= total; i++) pages.push(i);
+  return pages;
+}
 
 function toggleInSet<T>(setter: React.Dispatch<React.SetStateAction<Set<T>>>, val: T) {
   setter(prev => {
@@ -58,6 +80,32 @@ function searchMatch(p: Pedido, q: string): boolean {
 type SortField = "fechaCreacion" | "id" | null;
 type SortDir = "asc" | "desc";
 
+/** QW-3: Parse fecha strings like "Hoy a las 22:15", "Ayer a las 18:10", "16/03/2026 14:20" to timestamps */
+function parseFechaCreacion(fecha: string): number {
+  const now = new Date();
+  // "Hoy a las HH:MM"
+  const hoyMatch = fecha.match(/^Hoy a las (\d{1,2}):(\d{2})$/i);
+  if (hoyMatch) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Number(hoyMatch[1]), Number(hoyMatch[2]));
+    return d.getTime();
+  }
+  // "Ayer a las HH:MM"
+  const ayerMatch = fecha.match(/^Ayer a las (\d{1,2}):(\d{2})$/i);
+  if (ayerMatch) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, Number(ayerMatch[1]), Number(ayerMatch[2]));
+    return d.getTime();
+  }
+  // "DD/MM/YYYY HH:MM"
+  const fullMatch = fecha.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{1,2}):(\d{2})$/);
+  if (fullMatch) {
+    const d = new Date(Number(fullMatch[3]), Number(fullMatch[2]) - 1, Number(fullMatch[1]), Number(fullMatch[4]), Number(fullMatch[5]));
+    return d.getTime();
+  }
+  // Fallback: try native parse
+  const parsed = Date.parse(fecha);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
 function SortIcon({ field, sortField, sortDir }: { field: SortField; sortField: SortField; sortDir: SortDir }) {
   if (sortField !== field) return <ArrowUpDown className="w-3 h-3 text-neutral-600 inline ml-1 align-middle" />;
   return sortDir === "asc"
@@ -65,31 +113,45 @@ function SortIcon({ field, sortField, sortDir }: { field: SortField; sortField: 
     : <ArrowDown className="w-3 h-3 text-primary-500 inline ml-1 align-middle" />;
 }
 
-// ─── Design-system Checkbox ──────────────────────────────────────────────────
-function Checkbox({ checked, indeterminate, onChange, className = "" }: {
+// ─── Design-system Checkbox (accessible: keyboard + screen reader + 44px touch) ─
+function Checkbox({ checked, indeterminate, onChange, className = "", ariaLabel }: {
   checked: boolean;
   indeterminate?: boolean;
   onChange?: () => void;
   className?: string;
+  ariaLabel?: string;
 }) {
   return (
-    <span
-      onClick={onChange}
-      className={`flex w-3.5 h-3.5 rounded-[3px] items-center justify-center flex-shrink-0 transition-colors duration-200 cursor-pointer border-[1.5px] ${
-        checked || indeterminate ? "bg-primary-500 border-primary-500" : "bg-white border-neutral-300 hover:border-neutral-400"
-      } ${className}`}
+    <label
+      className={`inline-flex items-center justify-center w-[36px] h-[36px] cursor-pointer -m-2 ${className}`}
+      aria-label={ariaLabel}
     >
-      {checked && !indeterminate && (
-        <svg className="w-2 h-2 text-white" viewBox="0 0 12 12" fill="none">
-          <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      )}
-      {indeterminate && (
-        <svg className="w-2 h-2 text-white" viewBox="0 0 12 12" fill="none">
-          <path d="M3 6h6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-        </svg>
-      )}
-    </span>
+      <input
+        type="checkbox"
+        className="sr-only peer"
+        checked={checked}
+        onChange={() => onChange?.()}
+        aria-label={ariaLabel}
+      />
+      <span
+        className={`flex w-[18px] h-[18px] rounded items-center justify-center flex-shrink-0 transition-colors duration-200 border-[1.5px] ${
+          checked || indeterminate
+            ? "bg-primary-500 border-primary-500"
+            : "bg-white border-neutral-300 peer-hover:border-neutral-400 peer-focus-visible:ring-2 peer-focus-visible:ring-primary-300"
+        }`}
+      >
+        {checked && !indeterminate && (
+          <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none">
+            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+        {indeterminate && (
+          <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none">
+            <path d="M3 6h6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+          </svg>
+        )}
+      </span>
+    </label>
   );
 }
 
@@ -106,12 +168,12 @@ function SLABadges({ badges }: { badges: SLABadge[] }) {
           amber: "bg-amber-50 text-amber-700",
         };
         return (
-          <span key={i} className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0 rounded-full whitespace-nowrap w-fit ${colors[b.color] || colors.blue}`}>
+          <span key={i} className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap w-fit ${colors[b.color] || colors.blue}`}>
             <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
               b.color === "blue" ? "bg-blue-400" : b.color === "green" ? "bg-green-400" : b.color === "red" ? "bg-red-400" : "bg-amber-400"
             }`} />
             {b.label}
-            {b.version && <span className="text-[9px] opacity-60 ml-0.5">{b.version}</span>}
+            {b.version && <span className="text-[10px] opacity-70 ml-0.5">{b.version}</span>}
           </span>
         );
       })}
@@ -137,7 +199,7 @@ function FilterSection({
         <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide flex items-center gap-2">
           {title}
           {count > 0 && (
-            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold leading-none">
+            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-primary-25 text-primary-900 text-[10px] font-bold leading-none">
               {count}
             </span>
           )}
@@ -355,9 +417,42 @@ function PedidosPageInner() {
   // ── Column config (Vista Mejorada) ─────────────────────────────────────────
   const { activeCols: mejCols } = usePedidoColumnConfig();
 
+  // ── Row density ──────────────────────────────────────────────────────────
+  const [rowDensity, setRowDensity] = useState<"compact" | "comfortable">("compact");
+  useEffect(() => {
+    const stored = localStorage.getItem("amplifica_pedidos_density") as "compact" | "comfortable";
+    if (stored) setRowDensity(stored);
+    const handler = () => {
+      const val = localStorage.getItem("amplifica_pedidos_density") as "compact" | "comfortable";
+      if (val) setRowDensity(val);
+    };
+    window.addEventListener("amplifica_pedidos_density_change", handler);
+    window.addEventListener("storage", handler);
+    return () => { window.removeEventListener("amplifica_pedidos_density_change", handler); window.removeEventListener("storage", handler); };
+  }, []);
+  const rowPy = rowDensity === "compact" ? "py-1" : "py-3";
+  const thPy = rowDensity === "compact" ? "py-2" : "py-3";
+
+  // ── Toast state ────────────────────────────────────────────────────────────
+  const [toast, setToast] = useState<{ message: string; type?: "info" | "success" | "error" } | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+  const showToast = useCallback((message: string, type: "info" | "success" | "error" = "info") => {
+    setToast({ message, type });
+  }, []);
+
   // ── Shared state ───────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState("Todos");
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  // Debounce search: 300ms delay
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchQuery(searchInput), 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [page, setPage] = useState(1);
@@ -389,7 +484,7 @@ function PedidosPageInner() {
   }, [viewMode]);
 
   // Reset page on filter/tab change
-  useEffect(() => { setPage(1); }, [activeTab, search, filterSellers, filterSucursales, filterCanales, filterMetodos, filterEnvio]);
+  useEffect(() => { setPage(1); }, [activeTab, searchQuery, filterSellers, filterSucursales, filterCanales, filterMetodos, filterEnvio]);
 
   // Close envio dropdown on click outside
   useEffect(() => {
@@ -444,29 +539,43 @@ function PedidosPageInner() {
     if (filterMetodos.size) rows = rows.filter(p => filterMetodos.has(p.metodoEntrega));
     if (filterEnvio.size) rows = rows.filter(p => filterEnvio.has(p.estadoEnvio));
     // Search
-    if (search.trim()) rows = rows.filter(p => searchMatch(p, search.trim()));
+    if (searchQuery.trim()) rows = rows.filter(p => searchMatch(p, searchQuery.trim()));
     // Sort
     if (sortField === "id") {
       rows.sort((a, b) => sortDir === "asc" ? a.id - b.id : b.id - a.id);
     } else if (sortField === "fechaCreacion") {
-      rows.sort((a, b) => sortDir === "asc" ? a.id - b.id : b.id - a.id); // simplification: use id as proxy
+      // QW-3: Parse real dates instead of using ID as proxy
+      rows.sort((a, b) => {
+        const dateA = parseFechaCreacion(a.fechaCreacion);
+        const dateB = parseFechaCreacion(b.fechaCreacion);
+        return sortDir === "asc" ? dateA - dateB : dateB - dateA;
+      });
     }
     return rows;
-  }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterCanales, filterMetodos, filterEnvio]);
+  }, [activeTab, searchQuery, sortField, sortDir, filterSellers, filterSucursales, filterCanales, filterMetodos, filterEnvio]);
 
-  // ── Status counts (for tabs) ───────────────────────────────────────────────
+  // ── Status counts (for tabs) — counts from filtered dataset excluding tab filter ─
   const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = { Todos: PEDIDOS.length };
+    // Apply all filters EXCEPT tab filter
+    let base = [...PEDIDOS];
+    if (filterSellers.size) base = base.filter(p => filterSellers.has(p.seller));
+    if (filterSucursales.size) base = base.filter(p => filterSucursales.has(p.sucursal));
+    if (filterCanales.size) base = base.filter(p => filterCanales.has(p.canalVenta));
+    if (filterMetodos.size) base = base.filter(p => filterMetodos.has(p.metodoEntrega));
+    if (filterEnvio.size) base = base.filter(p => filterEnvio.has(p.estadoEnvio));
+    if (searchQuery.trim()) base = base.filter(p => searchMatch(p, searchQuery.trim()));
+
+    const counts: Record<string, number> = { Todos: base.length };
     for (const tab of TABS_PEDIDOS) {
       if (tab === "Todos") continue;
       if (tab === "Con atraso") {
-        counts[tab] = PEDIDOS.filter(p => p.conAtraso).length;
+        counts[tab] = base.filter(p => p.conAtraso).length;
       } else {
-        counts[tab] = PEDIDOS.filter(p => p.estadoPreparacion === tab).length;
+        counts[tab] = base.filter(p => p.estadoPreparacion === tab).length;
       }
     }
     return counts;
-  }, []);
+  }, [filterSellers, filterSucursales, filterCanales, filterMetodos, filterEnvio, searchQuery]);
 
   // ── Pagination ─────────────────────────────────────────────────────────────
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -654,12 +763,12 @@ function PedidosPageInner() {
               <input
                 type="text"
                 placeholder="Buscar..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
+                value={searchInput}
+                onChange={e => setSearchInput(e.target.value)}
                 className="pl-9 pr-3 h-8 w-48 sm:w-56 bg-neutral-100 border-0 rounded-lg text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
               />
-              {search && (
-                <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
+              {searchInput && (
+                <button onClick={() => { setSearchInput(""); setSearchQuery(""); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
@@ -672,10 +781,10 @@ function PedidosPageInner() {
               <table className="w-full table-auto text-sm border-collapse font-sans tracking-normal">
                 <thead className="sticky top-0 z-10">
                   <tr className="border-b border-neutral-100 bg-neutral-50">
-                    <th className="py-3 px-3 w-[40px]">
-                      <Checkbox checked={allPageSelected} indeterminate={!allPageSelected && somePageSelected} onChange={toggleSelectAll} />
+                    <th className={`${thPy} px-2 w-[40px]`}>
+                      <Checkbox checked={allPageSelected} indeterminate={!allPageSelected && somePageSelected} onChange={toggleSelectAll} ariaLabel="Seleccionar todos los pedidos de esta página" />
                     </th>
-                    <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 w-[90px] cursor-pointer hover:text-neutral-900 select-none" style={NW} onClick={() => toggleSort("id")}>
+                    <th className="text-left ${thPy} px-2 text-xs font-semibold text-neutral-700 w-[90px] cursor-pointer hover:text-neutral-900 select-none" style={NW} onClick={() => toggleSort("id")}>
                       ID <SortIcon field="id" sortField={sortField} sortDir={sortDir} />
                     </th>
                     {COLS_ACTUAL.map(key => (
@@ -683,7 +792,7 @@ function PedidosPageInner() {
                         <th
                           key={key}
                           ref={envioHeaderRef}
-                          className={`text-left py-3 px-4 text-xs font-semibold cursor-pointer select-none hover:bg-neutral-100 transition-colors ${COL_WIDTHS_ACTUAL[key]} ${filterEnvio.size ? "text-primary-600" : "text-neutral-700"}`}
+                          className={`text-left ${thPy} px-2 text-xs font-semibold cursor-pointer select-none hover:bg-neutral-100 transition-colors ${COL_WIDTHS_ACTUAL[key]} ${filterEnvio.size ? "text-primary-600" : "text-neutral-700"}`}
                           style={NW}
                           onClick={() => { setShowEnvioDropdown(prev => !prev); setEnvioDropdownSearch(""); }}
                         >
@@ -696,29 +805,29 @@ function PedidosPageInner() {
                           </span>
                         </th>
                       ) : (
-                        <th key={key} className={`text-left py-3 px-4 text-xs font-semibold text-neutral-700 ${COL_WIDTHS_ACTUAL[key]}`} style={NW}>
+                        <th key={key} className={`text-left ${thPy} px-2 text-xs font-semibold text-neutral-700 ${COL_WIDTHS_ACTUAL[key]}`} style={NW}>
                           {COL_LABELS[key]}
                         </th>
                       )
                     ))}
-                    <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 bg-neutral-50 w-[220px]" style={{ ...NW, ...stickyRight }}>
+                    <th className="text-left ${thPy} px-2 text-xs font-semibold text-neutral-700 bg-neutral-50 w-[220px]" style={{ ...NW, ...stickyRight }}>
                       Acciones
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-50">
                   {paginatedRows.map(p => (
-                    <tr key={p.id} className={`hover:bg-neutral-50/60 transition-colors duration-300 group ${selectedIds.has(p.id) ? "bg-primary-50/40" : ""}`}>
-                      <td className="py-3 px-3">
-                        <Checkbox checked={selectedIds.has(p.id)} onChange={() => toggleSelectOne(p.id)} />
+                    <tr key={p.id} className={`hover:bg-neutral-50/60 transition-colors duration-300 group ${selectedIds.has(p.id) ? "bg-primary-50/40" : ""}`} style={{ height: rowDensity === "compact" ? 40 : 56 }}>
+                      <td className={`${rowPy} px-2`}>
+                        <Checkbox checked={selectedIds.has(p.id)} onChange={() => toggleSelectOne(p.id)} ariaLabel={`Seleccionar pedido ${p.id}`} />
                       </td>
-                      <td className="py-3 px-4">
+                      <td className={`${rowPy} px-2`}>
                         <Link href={`/pedidos/${p.id}`} className="inline-block bg-neutral-100 text-neutral-700 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 text-xs cursor-pointer">
                           {p.id}
                         </Link>
                       </td>
                       {COLS_ACTUAL.map(key => (
-                        <td key={key} className="py-3 px-4 text-neutral-600" style={NW}>
+                        <td key={key} className={`${rowPy} px-2 text-neutral-600`} style={NW}>
                           {key === "estadoPreparacion" ? (
                             <PedidoStatusBadge status={p.estadoPreparacion} />
                           ) : key === "estadoEnvio" ? (
@@ -736,7 +845,7 @@ function PedidosPageInner() {
                           )}
                         </td>
                       ))}
-                      <td className="py-3 px-4 bg-white group-hover:bg-white/80 group-hover:backdrop-blur-[4px] transition-all duration-300" style={{ ...NW, ...stickyRight }}>
+                      <td className={`${rowPy} px-2 bg-white group-hover:bg-white/80 group-hover:backdrop-blur-[4px] transition-all duration-300`} style={{ ...NW, ...stickyRight }}>
                         <div className="flex items-center gap-0.5">
                           {PEDIDO_ACTIONS.map((action) => {
                             const ActionIcon = action.icon!;
@@ -744,6 +853,15 @@ function PedidosPageInner() {
                               <button
                                 key={action.label}
                                 title={action.label}
+                                onClick={() => {
+                                  if (action.label === "Ver detalle") {
+                                    router.push(`/pedidos/${p.id}`);
+                                  } else if (action.label === "Eliminar pedido") {
+                                    showToast(`Se eliminará el pedido ${p.id} (funcionalidad en desarrollo)`, "error");
+                                  } else {
+                                    showToast(`${action.label}: funcionalidad en desarrollo`, "info");
+                                  }
+                                }}
                                 className={`p-1.5 rounded transition-colors ${
                                   action.danger
                                     ? "text-neutral-400 hover:text-red-500 hover:bg-red-50"
@@ -758,10 +876,31 @@ function PedidosPageInner() {
                       </td>
                     </tr>
                   ))}
+                  {/* QW-4: Contextual empty state */}
                   {paginatedRows.length === 0 && (
                     <tr>
-                      <td colSpan={COLS_ACTUAL.length + 2} className="text-center py-16 text-neutral-400 text-sm">
-                        No se encontraron pedidos
+                      <td colSpan={COLS_ACTUAL.length + 3} className="text-center py-16">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center">
+                            <ShoppingBag className="w-6 h-6 text-neutral-400" />
+                          </div>
+                          {searchQuery.trim() ? (
+                            <>
+                              <p className="text-sm text-neutral-500">No se encontraron resultados para &ldquo;{searchQuery}&rdquo;</p>
+                              <button onClick={() => { setSearchInput(""); setSearchQuery(""); }} className="text-sm font-medium text-primary-500 hover:text-primary-600">Limpiar búsqueda</button>
+                            </>
+                          ) : activeTab !== "Todos" ? (
+                            <>
+                              <p className="text-sm text-neutral-500">No hay pedidos en estado &ldquo;{activeTab}&rdquo;</p>
+                              <button onClick={() => setActiveTab("Todos")} className="text-sm font-medium text-primary-500 hover:text-primary-600">Ver todos</button>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-sm text-neutral-500">No hay pedidos registrados</p>
+                              <Button variant="primary" size="sm" iconLeft={<Plus className="w-4 h-4" />} href="/pedidos/crear">Crear pedido</Button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -769,32 +908,33 @@ function PedidosPageInner() {
               </table>
             </div>
 
-            {/* Pagination actual */}
-            <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-white border-t border-neutral-100">
-              <span className="text-sm text-neutral-500 tabular-nums">
-                Mostrando {fromRow}–{toRow} de {filtered.length} registros
-              </span>
+            {/* Pagination DS numerada */}
+            <div className="flex-shrink-0 flex items-center justify-between px-3 py-3 bg-white border-t border-neutral-100">
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1.5 bg-neutral-100 rounded-lg px-3 h-9 text-sm text-neutral-700 cursor-pointer">
+                  <span className="text-neutral-500">Mostrar</span>
+                  <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }} className="bg-transparent font-medium focus:outline-none cursor-pointer">
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </label>
+                <span className="text-sm text-neutral-500 tabular-nums">{fromRow}–{toRow} de {filtered.length}</span>
+              </div>
               <div className="flex items-center gap-1">
-                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={clampedPage <= 1}
-                  className="px-2 py-1 text-sm rounded hover:bg-neutral-100 disabled:text-neutral-300 disabled:cursor-not-allowed">
-                  Anterior
-                </button>
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map(n => (
-                  <button key={n} onClick={() => setPage(n)}
-                    className={`w-8 h-8 text-sm rounded ${n === clampedPage ? "bg-neutral-900 text-white" : "hover:bg-neutral-100 text-neutral-600"}`}>
-                    {n}
-                  </button>
-                ))}
-                {totalPages > 5 && <span className="text-neutral-400 text-sm px-1">...</span>}
-                {totalPages > 5 && (
-                  <button onClick={() => setPage(totalPages)} className="w-8 h-8 text-sm rounded hover:bg-neutral-100 text-neutral-600">
-                    {totalPages}
-                  </button>
-                )}
-                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={clampedPage >= totalPages}
-                  className="px-2 py-1 text-sm rounded hover:bg-neutral-100 disabled:text-neutral-300 disabled:cursor-not-allowed">
-                  Siguiente
-                </button>
+                <button disabled={clampedPage <= 1} onClick={() => setPage(1)} className="flex items-center justify-center w-9 h-9 rounded-lg text-neutral-600 hover:bg-neutral-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" title="Primera página"><ChevronsLeft className="w-4 h-4" /></button>
+                <button disabled={clampedPage <= 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="flex items-center justify-center w-9 h-9 rounded-lg text-neutral-600 hover:bg-neutral-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" title="Anterior"><ChevronLeft className="w-4 h-4" /></button>
+                <div className="hidden sm:flex items-center gap-0.5">
+                  {getPageNumbers(clampedPage, totalPages).map((p, i) =>
+                    p === "..." ? (
+                      <span key={`e${i}`} className="w-9 h-9 flex items-center justify-center text-neutral-400 text-sm">…</span>
+                    ) : (
+                      <button key={p} onClick={() => setPage(p as number)} className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${clampedPage === p ? "bg-primary-25 text-primary-900" : "text-neutral-600 hover:bg-neutral-100"}`}>{p}</button>
+                    )
+                  )}
+                </div>
+                <button disabled={clampedPage >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} className="flex items-center justify-center w-9 h-9 rounded-lg text-neutral-600 hover:bg-neutral-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" title="Siguiente"><ChevronRight className="w-4 h-4" /></button>
+                <button disabled={clampedPage >= totalPages} onClick={() => setPage(totalPages)} className="flex items-center justify-center w-9 h-9 rounded-lg text-neutral-600 hover:bg-neutral-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" title="Última página"><ChevronsRight className="w-4 h-4" /></button>
               </div>
             </div>
           </div>
@@ -912,6 +1052,15 @@ function PedidosPageInner() {
                         <button
                           key={action.label}
                           title={action.label}
+                          onClick={() => {
+                            if (action.label === "Ver detalle") {
+                              router.push(`/pedidos/${p.id}`);
+                            } else if (action.label === "Eliminar pedido") {
+                              showToast(`Se eliminará el pedido ${p.id} (funcionalidad en desarrollo)`, "error");
+                            } else {
+                              showToast(`${action.label}: funcionalidad en desarrollo`, "info");
+                            }
+                          }}
                           className={`p-2 rounded-lg transition-colors ${
                             action.danger
                               ? "text-neutral-400 hover:text-red-500 hover:bg-red-50"
@@ -927,7 +1076,22 @@ function PedidosPageInner() {
               </div>
             ))}
             {paginatedRows.length === 0 && (
-              <div className="text-center py-16 text-neutral-400 text-sm">No se encontraron pedidos</div>
+              <div className="flex flex-col items-center gap-3 py-16">
+                <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center">
+                  <ShoppingBag className="w-6 h-6 text-neutral-400" />
+                </div>
+                {searchQuery.trim() ? (
+                  <>
+                    <p className="text-sm text-neutral-500">No se encontraron resultados para &ldquo;{searchQuery}&rdquo;</p>
+                    <button onClick={() => { setSearchInput(""); setSearchQuery(""); }} className="text-sm font-medium text-primary-500 hover:text-primary-600">Limpiar búsqueda</button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-neutral-500">No hay pedidos registrados</p>
+                    <Button variant="primary" size="sm" iconLeft={<Plus className="w-4 h-4" />} href="/pedidos/crear">Crear pedido</Button>
+                  </>
+                )}
+              </div>
             )}
           </div>
 
@@ -1080,12 +1244,12 @@ function PedidosPageInner() {
                 <input
                   type="text"
                   placeholder="Buscar pedido..."
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
+                  value={searchInput}
+                  onChange={e => setSearchInput(e.target.value)}
                   className="pl-9 pr-3 h-9 w-full sm:w-56 bg-neutral-100 border-0 rounded-lg text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
                 />
-                {search && (
-                  <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
+                {searchInput && (
+                  <button onClick={() => { setSearchInput(""); setSearchQuery(""); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
@@ -1098,7 +1262,7 @@ function PedidosPageInner() {
               >
                 <SlidersHorizontal className="w-4 h-4" />
                 {activeFilterCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-primary-500 text-white text-[10px] font-bold leading-none px-1">
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-primary-25 text-primary-900 text-[10px] font-bold leading-none px-1">
                     {activeFilterCount}
                   </span>
                 )}
@@ -1158,44 +1322,46 @@ function PedidosPageInner() {
               <table className="w-full table-auto text-sm border-collapse font-sans tracking-normal">
                 <thead className="sticky top-0 z-10">
                   <tr className="border-b border-neutral-100 bg-neutral-50">
-                    <th className="py-3 px-3 w-[40px] align-middle">
+                    <th className={`${thPy} px-2 w-[44px] align-middle`}>
                       <Checkbox
                         checked={allPageSelected}
                         indeterminate={somePageSelected && !allPageSelected}
                         onChange={toggleSelectAll}
                         className="mx-auto"
+                        ariaLabel="Seleccionar todos los pedidos de esta página"
                       />
                     </th>
-                    <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 w-[100px] cursor-pointer hover:text-neutral-900 select-none" style={NW} onClick={() => toggleSort("id")}>
+                    <th className="text-left ${thPy} px-2 text-xs font-semibold text-neutral-700 w-[100px] cursor-pointer hover:text-neutral-900 select-none" style={NW} onClick={() => toggleSort("id")}>
                       ID <SortIcon field="id" sortField={sortField} sortDir={sortDir} />
                     </th>
                     {mejCols.map(key => (
-                      <th key={key} className={`text-left py-3 px-4 text-xs font-semibold text-neutral-700 ${COL_WIDTHS_MEJORADA[key]}`} style={NW}>
+                      <th key={key} className={`text-left ${thPy} px-2 text-xs font-semibold text-neutral-700 ${COL_WIDTHS_MEJORADA[key]}`} style={NW}>
                         {COL_LABELS[key]}
                       </th>
                     ))}
-                    <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 bg-neutral-50 w-[100px]" style={{ ...NW, ...stickyRight }}>
+                    <th className="text-left ${thPy} px-2 text-xs font-semibold text-neutral-700 bg-neutral-50 w-[100px]" style={{ ...NW, ...stickyRight }}>
                       Acciones
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-50">
                   {paginatedRows.map(p => (
-                    <tr key={p.id} className={`hover:bg-neutral-50/60 transition-colors duration-300 group ${selectedIds.has(p.id) ? "bg-primary-50/40" : ""}`} style={p.conAtraso ? { boxShadow: "inset 3px 0 0 0 #f87171" } : undefined}>
-                      <td className="py-3 px-3 align-middle">
+                    <tr key={p.id} className={`hover:bg-neutral-50/60 transition-colors duration-300 group ${selectedIds.has(p.id) ? "bg-primary-50/40" : ""}`} style={{ height: rowDensity === "compact" ? 40 : 56, ...(p.conAtraso ? { boxShadow: "inset 3px 0 0 0 #f87171" } : {}) }}>
+                      <td className={`${rowPy} px-2 align-middle`}>
                         <Checkbox
                           checked={selectedIds.has(p.id)}
                           onChange={() => toggleSelectOne(p.id)}
                           className="mx-auto"
+                          ariaLabel={`Seleccionar pedido ${p.id}`}
                         />
                       </td>
-                      <td className="py-3 px-4">
+                      <td className={`${rowPy} px-2`}>
                         <Link href={`/pedidos/${p.id}`} className="inline-block bg-neutral-100 text-neutral-700 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 text-xs font-mono cursor-pointer">
                           {p.id}
                         </Link>
                       </td>
                       {mejCols.map(key => (
-                        <td key={key} className="py-3 px-4 text-neutral-600" style={key === "estadoPreparacion" || key === "estadoEnvio" || key === "entrega" ? undefined : NW}>
+                        <td key={key} className={`${rowPy} px-2 text-neutral-600`} style={key === "estadoPreparacion" || key === "estadoEnvio" || key === "entrega" ? undefined : NW}>
                           {key === "estadoPreparacion" ? (
                             <PedidoStatusBadge status={p.estadoPreparacion} />
                           ) : key === "estadoEnvio" ? (
@@ -1211,15 +1377,39 @@ function PedidosPageInner() {
                           )}
                         </td>
                       ))}
-                      <td className="py-3 px-4 bg-white group-hover:bg-white/80 group-hover:backdrop-blur-[4px] transition-all duration-300" style={{ ...NW, ...stickyRight }}>
+                      <td className={`${rowPy} px-2 bg-white group-hover:bg-white/80 group-hover:backdrop-blur-[4px] transition-all duration-300`} style={{ ...NW, ...stickyRight }}>
                         <MejoradaActionsCell pedido={p} />
                       </td>
                     </tr>
                   ))}
                   {paginatedRows.length === 0 && (
                     <tr>
-                      <td colSpan={mejCols.length + 3} className="text-center py-16 text-neutral-400 text-sm">
-                        No se encontraron pedidos
+                      <td colSpan={mejCols.length + 3} className="text-center py-16">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center">
+                            <ShoppingBag className="w-6 h-6 text-neutral-400" />
+                          </div>
+                          {searchQuery.trim() ? (
+                            <>
+                              <p className="text-sm text-neutral-500">No se encontraron resultados para &ldquo;{searchQuery}&rdquo;</p>
+                              <button onClick={() => { setSearchInput(""); setSearchQuery(""); }} className="text-sm font-medium text-primary-500 hover:text-primary-600">Limpiar búsqueda</button>
+                            </>
+                          ) : activeFilterCount > 0 || activeTab !== "Todos" ? (
+                            <>
+                              <p className="text-sm text-neutral-500">
+                                {activeTab !== "Todos" ? `No hay pedidos en estado "${activeTab}"` : "No hay pedidos que coincidan con tus filtros"}
+                              </p>
+                              <button onClick={() => { if (activeTab !== "Todos") setActiveTab("Todos"); clearAllFilters(); }} className="text-sm font-medium text-primary-500 hover:text-primary-600">
+                                {activeTab !== "Todos" ? "Ver todos" : "Limpiar filtros"}
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-sm text-neutral-500">No hay pedidos registrados</p>
+                              <Button variant="primary" size="sm" iconLeft={<Plus className="w-4 h-4" />} href="/pedidos/crear">Crear pedido</Button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -1227,30 +1417,33 @@ function PedidosPageInner() {
               </table>
             </div>
 
-            {/* Pagination mejorada */}
+            {/* Pagination DS numerada */}
             <div className="flex-shrink-0 flex items-center justify-between px-3 py-3 bg-white border-t border-neutral-100">
-              <label className="flex items-center gap-1.5 bg-neutral-100 rounded-lg px-3 h-[44px] text-sm text-neutral-700 cursor-pointer">
-                <span className="text-neutral-500">Mostrar</span>
-                <select
-                  value={pageSize}
-                  onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
-                  className="bg-transparent font-medium focus:outline-none cursor-pointer"
-                >
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-              </label>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={clampedPage <= 1}
-                  className="flex items-center gap-1 px-3 h-[44px] bg-neutral-100 rounded-lg text-sm text-neutral-700 hover:bg-neutral-200 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors">
-                  <ChevronLeft className="w-4 h-4" /> Anterior
-                </button>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1.5 bg-neutral-100 rounded-lg px-3 h-9 text-sm text-neutral-700 cursor-pointer">
+                  <span className="text-neutral-500">Mostrar</span>
+                  <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }} className="bg-transparent font-medium focus:outline-none cursor-pointer">
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </label>
                 <span className="text-sm text-neutral-500 tabular-nums">{fromRow}–{toRow} de {filtered.length}</span>
-                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={clampedPage >= totalPages}
-                  className="flex items-center gap-1 px-3 h-[44px] bg-neutral-100 rounded-lg text-sm text-neutral-700 hover:bg-neutral-200 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors">
-                  Siguiente <ChevronRight className="w-4 h-4" />
-                </button>
+              </div>
+              <div className="flex items-center gap-1">
+                <button disabled={clampedPage <= 1} onClick={() => setPage(1)} className="flex items-center justify-center w-9 h-9 rounded-lg text-neutral-600 hover:bg-neutral-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" title="Primera página"><ChevronsLeft className="w-4 h-4" /></button>
+                <button disabled={clampedPage <= 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="flex items-center justify-center w-9 h-9 rounded-lg text-neutral-600 hover:bg-neutral-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" title="Anterior"><ChevronLeft className="w-4 h-4" /></button>
+                <div className="hidden sm:flex items-center gap-0.5">
+                  {getPageNumbers(clampedPage, totalPages).map((p, i) =>
+                    p === "..." ? (
+                      <span key={`e${i}`} className="w-9 h-9 flex items-center justify-center text-neutral-400 text-sm">…</span>
+                    ) : (
+                      <button key={p} onClick={() => setPage(p as number)} className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${clampedPage === p ? "bg-primary-25 text-primary-900" : "text-neutral-600 hover:bg-neutral-100"}`}>{p}</button>
+                    )
+                  )}
+                </div>
+                <button disabled={clampedPage >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} className="flex items-center justify-center w-9 h-9 rounded-lg text-neutral-600 hover:bg-neutral-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" title="Siguiente"><ChevronRight className="w-4 h-4" /></button>
+                <button disabled={clampedPage >= totalPages} onClick={() => setPage(totalPages)} className="flex items-center justify-center w-9 h-9 rounded-lg text-neutral-600 hover:bg-neutral-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" title="Última página"><ChevronsRight className="w-4 h-4" /></button>
               </div>
             </div>
           </div>
@@ -1307,7 +1500,31 @@ function PedidosPageInner() {
               </div>
             ))}
             {paginatedRows.length === 0 && (
-              <div className="text-center py-16 text-neutral-400 text-sm">No se encontraron pedidos</div>
+              <div className="flex flex-col items-center gap-3 py-16">
+                <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center">
+                  <ShoppingBag className="w-6 h-6 text-neutral-400" />
+                </div>
+                {searchQuery.trim() ? (
+                  <>
+                    <p className="text-sm text-neutral-500">No se encontraron resultados para &ldquo;{searchQuery}&rdquo;</p>
+                    <button onClick={() => { setSearchInput(""); setSearchQuery(""); }} className="text-sm font-medium text-primary-500 hover:text-primary-600">Limpiar búsqueda</button>
+                  </>
+                ) : activeFilterCount > 0 || activeTab !== "Todos" ? (
+                  <>
+                    <p className="text-sm text-neutral-500">
+                      {activeTab !== "Todos" ? `No hay pedidos en estado "${activeTab}"` : "No hay pedidos que coincidan con tus filtros"}
+                    </p>
+                    <button onClick={() => { if (activeTab !== "Todos") setActiveTab("Todos"); clearAllFilters(); }} className="text-sm font-medium text-primary-500 hover:text-primary-600">
+                      {activeTab !== "Todos" ? "Ver todos" : "Limpiar filtros"}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-neutral-500">No hay pedidos registrados</p>
+                    <Button variant="primary" size="sm" iconLeft={<Plus className="w-4 h-4" />} href="/pedidos/crear">Crear pedido</Button>
+                  </>
+                )}
+              </div>
             )}
           </div>
 
@@ -1386,7 +1603,7 @@ function PedidosPageInner() {
               <h2 className="text-base font-semibold text-neutral-900">Filtros</h2>
               <div className="flex items-center gap-3">
                 {activeFilterCount > 0 && (
-                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary-500 text-white text-[10px] font-bold leading-none">
+                  <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary-25 text-primary-900 text-[10px] font-bold leading-none">
                     {activeFilterCount}
                   </span>
                 )}
@@ -1444,6 +1661,24 @@ function PedidosPageInner() {
                 Aplicar
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Toast notification ──────────────────────────────────────────────── */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-[60] animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div className={`flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium ${
+            toast.type === "error" ? "bg-red-50 text-red-700 border-red-200" :
+            toast.type === "success" ? "bg-green-50 text-green-700 border-green-200" :
+            "bg-white text-neutral-700 border-neutral-200"
+          }`}>
+            {toast.type === "error" && <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />}
+            {toast.type === "success" && <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />}
+            <span>{toast.message}</span>
+            <button onClick={() => setToast(null)} className="ml-2 text-neutral-400 hover:text-neutral-600">
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       )}

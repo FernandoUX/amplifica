@@ -417,6 +417,15 @@ function PedidoDetalleContent() {
   const [statusModalType, setStatusModalType] = useState<"preparacion" | "envio">("preparacion");
   const [statusModalValue, setStatusModalValue] = useState("");
 
+  // SP-2: Edit mode for vista actual fields (read-only by default)
+  const [editModeActual, setEditModeActual] = useState(false);
+  const [editToast, setEditToast] = useState<string | null>(null);
+  useEffect(() => {
+    if (!editToast) return;
+    const t = setTimeout(() => setEditToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [editToast]);
+
   // Address edit state
   const [editingAddress, setEditingAddress] = useState(false);
   const [addressDraft, setAddressDraft] = useState<DireccionEnvio | null>(null);
@@ -522,6 +531,16 @@ function PedidoDetalleContent() {
           <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
           <p className="text-sm font-semibold text-neutral-800">Dirección actualizada</p>
           <button onClick={() => setAddressSavedToast(false)} className="text-neutral-400 hover:text-neutral-600 ml-2">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+      {/* ── Edit toast ── */}
+      {editToast && (
+        <div className="fixed top-6 right-6 z-[60] flex items-center gap-3 bg-white border border-green-200 rounded-xl shadow-xl px-4 py-3 animate-in fade-in slide-in-from-top-2 duration-300">
+          <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+          <p className="text-sm font-semibold text-neutral-800">{editToast}</p>
+          <button onClick={() => setEditToast(null)} className="text-neutral-400 hover:text-neutral-600 ml-2">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -650,9 +669,37 @@ function PedidoDetalleContent() {
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6">
             {/* LEFT: Datos del Pedido + Envío + Método entrega */}
             <div className="space-y-5">
-              {/* Datos del Pedido — with actionable fields */}
+              {/* Datos del Pedido — SP-2: read-only by default, explicit edit mode */}
               <Card size="sm">
-                <CardHeader><CardTitle className="text-base">Datos del Pedido</CardTitle></CardHeader>
+                <CardHeader>
+                  <div className="flex items-center justify-between w-full">
+                    <CardTitle className="text-base">Datos del Pedido</CardTitle>
+                    {!editModeActual ? (
+                      <button
+                        onClick={() => setEditModeActual(true)}
+                        className="flex items-center gap-1 text-xs font-medium text-primary-500 hover:text-primary-600 transition-colors"
+                      >
+                        <Pencil className="w-3 h-3" />
+                        Editar
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => { setEditModeActual(false); }}
+                          className="text-xs font-medium text-neutral-500 hover:text-neutral-700 transition-colors"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={() => { setEditModeActual(false); setEditToast("Cambios guardados exitosamente"); }}
+                          className="text-xs font-medium text-primary-500 hover:text-primary-600 bg-primary-50 px-2 py-1 rounded transition-colors"
+                        >
+                          Guardar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </CardHeader>
                 <CardContent>
                   <div className="divide-y divide-neutral-100">
                     {/* Estado Preparación + next state button */}
@@ -714,13 +761,14 @@ function PedidoDetalleContent() {
                         <Button variant="primary" size="sm" className="text-[10px] flex-shrink-0">Cargar</Button>
                       </div>
                     </div>
-                    {/* Tracking — editable input */}
+                    {/* Tracking — editable only in edit mode */}
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Tracking</p>
                       <input
                         type="text"
                         defaultValue={pedido.cotizacion?.trackingNumber ?? ""}
-                        className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 font-sans focus:outline-none focus:border-primary-400 bg-transparent"
+                        readOnly={!editModeActual}
+                        className={`w-full border-0 border-b px-0 py-1.5 text-sm text-neutral-800 font-sans focus:outline-none bg-transparent ${editModeActual ? "border-neutral-200 focus:border-primary-400" : "border-transparent cursor-default"}`}
                       />
                     </div>
                     {/* ID — read-only */}
@@ -742,27 +790,35 @@ function PedidoDetalleContent() {
                         <input type="text" value={pedido.idOrigen || pedido.idExterno || ""} readOnly className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 font-sans bg-transparent" />
                       </div>
                     )}
-                    {/* Método de Venta — dropdown */}
+                    {/* Método de Venta — editable only in edit mode */}
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Método de Venta</p>
-                      <select className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 bg-transparent focus:outline-none focus:border-primary-400 appearance-none cursor-pointer">
-                        <option>{pedido.canalVenta ?? "—"}</option>
-                        <option>Shopify</option>
-                        <option>MercadoLibre</option>
-                        <option>Falabella</option>
-                        <option>Woocommerce</option>
-                      </select>
+                      {editModeActual ? (
+                        <select className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 bg-transparent focus:outline-none focus:border-primary-400 appearance-none cursor-pointer">
+                          <option>{pedido.canalVenta ?? "—"}</option>
+                          <option>Shopify</option>
+                          <option>MercadoLibre</option>
+                          <option>Falabella</option>
+                          <option>Woocommerce</option>
+                        </select>
+                      ) : (
+                        <p className="py-1.5 text-sm text-neutral-800">{pedido.canalVenta ?? "—"}</p>
+                      )}
                     </div>
-                    {/* Método de Pago — dropdown */}
+                    {/* Método de Pago — editable only in edit mode */}
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Método de Pago</p>
-                      <select className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 bg-transparent focus:outline-none focus:border-primary-400 appearance-none cursor-pointer">
-                        <option>{pedido.metodoPago ?? "Selecciona un método"}</option>
-                        <option>Transferencia</option>
-                        <option>Tarjeta de crédito</option>
-                        <option>Tarjeta de débito</option>
-                        <option>Efectivo</option>
-                      </select>
+                      {editModeActual ? (
+                        <select className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 bg-transparent focus:outline-none focus:border-primary-400 appearance-none cursor-pointer">
+                          <option>{pedido.metodoPago ?? "Selecciona un método"}</option>
+                          <option>Transferencia</option>
+                          <option>Tarjeta de crédito</option>
+                          <option>Tarjeta de débito</option>
+                          <option>Efectivo</option>
+                        </select>
+                      ) : (
+                        <p className="py-1.5 text-sm text-neutral-800">{pedido.metodoPago ?? "—"}</p>
+                      )}
                     </div>
                     {/* Fecha — warning style */}
                     <div className="py-2.5">
@@ -771,18 +827,19 @@ function PedidoDetalleContent() {
                         <p className="text-sm text-red-700 font-sans">{pedido.fechaCreacion}</p>
                       </div>
                     </div>
-                    {/* N° Etiqueta Manual */}
+                    {/* N° Etiqueta Manual — editable only in edit mode */}
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">N° de Etiqueta Manual</p>
                       <input
                         type="text"
                         defaultValue={pedido.cotizacion?.trackingNumber ?? ""}
-                        className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 font-sans focus:outline-none focus:border-primary-400 bg-transparent"
+                        readOnly={!editModeActual}
+                        className={`w-full border-0 border-b px-0 py-1.5 text-sm text-neutral-800 font-sans focus:outline-none bg-transparent ${editModeActual ? "border-neutral-200 focus:border-primary-400" : "border-transparent cursor-default"}`}
                       />
                     </div>
-                    {/* Muestra promocional — interactive checkbox */}
+                    {/* Muestra promocional — editable only in edit mode */}
                     <div className="py-2.5 flex items-center gap-2">
-                      <input type="checkbox" defaultChecked={pedido.muestraPromocional ?? false} className="w-4 h-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-200" />
+                      <input type="checkbox" defaultChecked={pedido.muestraPromocional ?? false} disabled={!editModeActual} className="w-4 h-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-200 disabled:opacity-50" />
                       <span className="text-sm text-neutral-600">Este pedido es una muestra promocional</span>
                     </div>
                   </div>
@@ -796,26 +853,30 @@ function PedidoDetalleContent() {
                   <div className="divide-y divide-neutral-100">
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Nombre Destinatario</p>
-                      <input type="text" defaultValue={pedido.destinatario.nombre} className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 focus:outline-none focus:border-primary-400 bg-transparent" />
+                      <input type="text" defaultValue={pedido.destinatario.nombre} readOnly={!editModeActual} className={`w-full border-0 border-b px-0 py-1.5 text-sm text-neutral-800 focus:outline-none bg-transparent ${editModeActual ? "border-neutral-200 focus:border-primary-400" : "border-transparent cursor-default"}`} />
                     </div>
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Correo Destinatario</p>
-                      <input type="email" defaultValue={pedido.destinatario.email || ""} placeholder="correo@ejemplo.cl" className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 focus:outline-none focus:border-primary-400 bg-transparent" />
+                      <input type="email" defaultValue={pedido.destinatario.email || ""} placeholder="correo@ejemplo.cl" readOnly={!editModeActual} className={`w-full border-0 border-b px-0 py-1.5 text-sm text-neutral-800 focus:outline-none bg-transparent ${editModeActual ? "border-neutral-200 focus:border-primary-400" : "border-transparent cursor-default"}`} />
                     </div>
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Teléfono Destinatario</p>
-                      <input type="tel" defaultValue={pedido.destinatario.telefono || ""} placeholder="+56 9..." className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 focus:outline-none focus:border-primary-400 bg-transparent" />
+                      <input type="tel" defaultValue={pedido.destinatario.telefono || ""} placeholder="+56 9..." readOnly={!editModeActual} className={`w-full border-0 border-b px-0 py-1.5 text-sm text-neutral-800 focus:outline-none bg-transparent ${editModeActual ? "border-neutral-200 focus:border-primary-400" : "border-transparent cursor-default"}`} />
                     </div>
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Paquete</p>
-                      <select defaultValue={pedido.paquete} className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 bg-transparent focus:outline-none focus:border-primary-400 appearance-none cursor-pointer">
-                        <option>{pedido.paquete}</option>
-                        <option>Caja Ultra Chica</option>
-                        <option>Caja Chica</option>
-                        <option>Caja Mediana</option>
-                        <option>Caja Grande</option>
-                        <option>Sobre</option>
-                      </select>
+                      {editModeActual ? (
+                        <select defaultValue={pedido.paquete} className="w-full border-0 border-b border-neutral-200 px-0 py-1.5 text-sm text-neutral-800 bg-transparent focus:outline-none focus:border-primary-400 appearance-none cursor-pointer">
+                          <option>{pedido.paquete}</option>
+                          <option>Caja Ultra Chica</option>
+                          <option>Caja Chica</option>
+                          <option>Caja Mediana</option>
+                          <option>Caja Grande</option>
+                          <option>Sobre</option>
+                        </select>
+                      ) : (
+                        <p className="py-1.5 text-sm text-neutral-800">{pedido.paquete}</p>
+                      )}
                     </div>
                     <div className="py-2.5">
                       <p className="text-[10px] text-neutral-400 mb-0.5">Volumen Total</p>
@@ -1948,6 +2009,22 @@ function PedidoDetalleContent() {
                   autoFocus
                 />
               </div>
+              {/* FI-4: Popular tag suggestions */}
+              {!tagSearch && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  <span className="text-[10px] text-neutral-400 mr-1 self-center">Populares:</span>
+                  {["Prioridad alta", "Frágil", "Problema entrega", "Reagendado", "En espera seller"].filter(t => !selectedTags.includes(t)).map(tag => (
+                    <button
+                      key={tag}
+                      onClick={() => toggleTag(tag)}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-neutral-100 text-neutral-600 hover:bg-primary-50 hover:text-primary-600 transition-colors"
+                    >
+                      <Plus className="w-2.5 h-2.5" />
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Tag list */}
@@ -1985,7 +2062,7 @@ function PedidoDetalleContent() {
                 size="md"
                 className="w-full"
                 disabled={selectedTags.length === 0}
-                onClick={() => { setTagsModalOpen(false); setTagSearch(""); alert(`Tags agregados: ${selectedTags.join(", ")} (mock)`); setSelectedTags([]); }}
+                onClick={() => { setTagsModalOpen(false); setTagSearch(""); setEditToast(`Tags guardados: ${selectedTags.join(", ")}`); setSelectedTags([]); }}
               >
                 Guardar {selectedTags.length > 0 && `(${selectedTags.length})`}
               </Button>

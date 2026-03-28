@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { type Role, can } from "@/lib/roles";
 
-type Child = { label: string; href: string };
+type Child = { label: string; href: string; groupLabel?: string; badge?: string };
 type MenuItem = {
   label: string;
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
@@ -27,15 +27,26 @@ type MenuItem = {
 };
 
 const MENU: MenuItem[] = [
-  { label: "Dashboard",        icon: ChartLine,   href: "/dashboard" },
+  { label: "Inicio",            icon: ChartLine,   href: "/inicio" },
   {
     label: "Pedidos", icon: ShoppingBag, href: "/pedidos",
     hasChildren: true,
     children: [
-      { label: "Lista de pedidos", href: "/pedidos" },
+      { label: "Lista de pedidos", href: "/pedidos", groupLabel: "B2C" },
+      { label: "Lista B2B", href: "/pedidos-b2b", groupLabel: "B2B", badge: "NUEVO" },
+      { label: "Redistribuciones", href: "/pedidos-b2b/redistribuciones" },
     ],
   },
-  { label: "Devoluciones",     icon: RefreshCw,    href: "/devoluciones", hasChildren: true },
+  {
+    label: "Devoluciones", icon: RefreshCw, href: "/devoluciones",
+    hasChildren: true,
+    children: [
+      { label: "Devoluciones",           href: "/devoluciones" },
+      { label: "Entregas",              href: "/devoluciones/entregas" },
+      { label: "Paquetes desconocidos", href: "/devoluciones/paquetes-desconocidos" },
+      { label: "Transferencias",        href: "/devoluciones/transferencias" },
+    ],
+  },
   { label: "Inventario",       icon: Package,      href: "/inventario",   hasChildren: true },
   {
     label: "Recepciones", icon: Warehouse, href: "/recepciones",
@@ -62,8 +73,10 @@ export default function SidebarNav({ collapsed, onNavigate, currentRole }: Sideb
     // Auto-open menu that contains the current path
     const initial: string[] = [];
     for (const item of MENU) {
-      if (item.hasChildren && (pathname === item.href || pathname.startsWith(item.href + "/"))) {
-        initial.push(item.label);
+      if (item.hasChildren) {
+        const matchesParent = pathname === item.href || pathname.startsWith(item.href + "/");
+        const matchesChild = item.children?.some(c => pathname === c.href || pathname.startsWith(c.href + "/"));
+        if (matchesParent || matchesChild) initial.push(item.label);
       }
     }
     if (initial.length === 0) initial.push("Recepciones");
@@ -129,21 +142,33 @@ export default function SidebarNav({ collapsed, onNavigate, currentRole }: Sideb
 
                   {isOpen && !collapsed && item.children && (
                     <ul className="space-y-0.5 pl-4 pr-1">
-                      {item.children.map(child => (
-                        <li key={child.href}>
-                          <Link
-                            href={child.href}
-                            onClick={onNavigate}
-                            className={`block px-3 py-1.5 rounded-lg text-[length:var(--sidebar-font-mobile)] lg:text-[length:var(--sidebar-font)] font-medium transition-colors duration-200 ${
-                              pathname === child.href
-                                ? "text-white bg-white/10"
-                                : "text-white/40 hover:text-white/70 hover:bg-white/5"
-                            }`}
-                          >
-                            {child.label}
-                          </Link>
-                        </li>
-                      ))}
+                      {item.children.map((child, ci) => {
+                        const isActive = pathname === child.href || pathname.startsWith(child.href + "/");
+                        const showGroup = child.groupLabel && (ci === 0 || item.children![ci - 1]?.groupLabel !== child.groupLabel);
+                        return (
+                          <li key={child.href}>
+                            {showGroup && (
+                              <p className="text-[9px] font-semibold text-white/25 uppercase tracking-widest px-3 pt-2 pb-0.5 flex items-center gap-1.5">
+                                {child.groupLabel}
+                                {child.badge && (
+                                  <span className="bg-primary-500 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-full leading-none">{child.badge}</span>
+                                )}
+                              </p>
+                            )}
+                            <Link
+                              href={child.href}
+                              onClick={onNavigate}
+                              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[length:var(--sidebar-font-mobile)] lg:text-[length:var(--sidebar-font)] font-medium transition-colors duration-200 ${
+                                isActive
+                                  ? "text-white bg-white/10"
+                                  : "text-white/40 hover:text-white/70 hover:bg-white/5"
+                              }`}
+                            >
+                              {child.label}
+                            </Link>
+                          </li>
+                        );
+                      })}
                     </ul>
                   )}
                 </div>

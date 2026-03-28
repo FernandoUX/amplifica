@@ -153,6 +153,57 @@ function CrearPedidoContent() {
     return () => window.removeEventListener("amplifica-filter-change", read);
   }, []);
 
+  // ── SP-1: Draft persistence in sessionStorage ──────────────────────────
+  const DRAFT_KEY = "amplifica_pedido_wizard_draft";
+
+  // Restore draft on mount
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (draft.clientType) setClientType(draft.clientType);
+      if (draft.b2c) setB2c(draft.b2c);
+      if (draft.b2b) setB2b(draft.b2b);
+      if (draft.products?.length) setProducts(draft.products);
+      if (draft.notas) setNotas(draft.notas);
+      if (draft.configCanal) setConfigCanal(draft.configCanal);
+      if (draft.configPago) setConfigPago(draft.configPago);
+      if (draft.configIdPedido) setConfigIdPedido(draft.configIdPedido);
+      if (draft.configInfoAdicional) setConfigInfoAdicional(draft.configInfoAdicional);
+      if (draft.configTipoEntrega) setConfigTipoEntrega(draft.configTipoEntrega);
+      if (draft.configPaquete) setConfigPaquete(draft.configPaquete);
+      if (draft.tipoEnvio) setTipoEnvio(draft.tipoEnvio);
+      if (draft.shipWeight) setShipWeight(draft.shipWeight);
+      if (draft.shipVolume) setShipVolume(draft.shipVolume);
+      if (draft.shipBultos) setShipBultos(draft.shipBultos);
+    } catch { /* ignore corrupt draft */ }
+  }, []);
+
+  // Save draft on field changes
+  useEffect(() => {
+    const draft = {
+      clientType, b2c, b2b, products, notas, configCanal, configPago,
+      configIdPedido, configInfoAdicional, configTipoEntrega, configPaquete,
+      tipoEnvio, shipWeight, shipVolume, shipBultos,
+    };
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  }, [clientType, b2c, b2b, products, notas, configCanal, configPago, configIdPedido, configInfoAdicional, configTipoEntrega, configPaquete, tipoEnvio, shipWeight, shipVolume, shipBultos]);
+
+  // Beforeunload protection when form has data
+  useEffect(() => {
+    const isDirty = !!clientType || products.length > 0 || notas.length > 0;
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [clientType, products, notas]);
+
+  // Clear draft helper (call on successful submit)
+  const clearDraft = useCallback(() => {
+    sessionStorage.removeItem(DRAFT_KEY);
+  }, []);
+
   return (
     <>
       {/* ProductsModal */}
@@ -284,7 +335,7 @@ function CrearPedidoContent() {
           {/* Footer */}
           <div className="flex items-center justify-between pt-4 border-t border-neutral-200">
             <Button variant="secondary" href="/pedidos">Cancelar</Button>
-            <Button variant="primary" disabled={!canConfirm}>Crear Pedido</Button>
+            <Button variant="primary" disabled={!canConfirm} onClick={clearDraft}>Crear Pedido</Button>
           </div>
         </div>
       )}
@@ -727,7 +778,7 @@ function CrearPedidoContent() {
             </div>
 
             {/* CTAs */}
-            <Button variant="primary" size="lg" className="w-full" disabled={!canConfirm} iconLeft={<CheckCircle2 className="w-4 h-4" />}>Confirmar Pedido</Button>
+            <Button variant="primary" size="lg" className="w-full" disabled={!canConfirm} onClick={clearDraft} iconLeft={<CheckCircle2 className="w-4 h-4" />}>Confirmar Pedido</Button>
 
             {!canConfirm && (
               <div className="bg-neutral-50 rounded-lg px-3 py-2.5 space-y-1.5">

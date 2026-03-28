@@ -93,7 +93,7 @@ export default function StatusBadge({ status }: { status: Status }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full pl-1.5 pr-2 py-0.5 text-xs font-medium leading-none ${config.className}`}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full pl-1.5 pr-2 py-1 text-xs font-medium leading-none ${config.className}`}
     >
       {IconComp && <IconComp className="w-3.5 h-3.5 flex-shrink-0" />}
       {config.label}

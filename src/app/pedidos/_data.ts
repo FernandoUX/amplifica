@@ -253,6 +253,31 @@ export type Notificacion = {
   htmlPreview?: string;
 };
 
+export type FacturacionB2B = {
+  razonSocial: string;
+  rut: string;
+  giro: string;
+  condicionPago: "30_dias" | "60_dias" | "90_dias" | "contado";
+  estadoFactura: "pendiente" | "emitida" | "pagada";
+  numeroFactura?: string;
+  facturaUrl?: string;
+  montoNeto: number;
+  iva: number;
+  montoTotal: number;
+};
+
+export type PagoStatus = "pagado" | "pendiente" | "reembolsado" | "parcial";
+
+export type Documento = {
+  id: string;
+  tipo: "factura" | "guia_despacho" | "certificado" | "otro";
+  nombre: string;
+  url: string;
+  fecha: string;
+  fechaSubida?: string;
+  subidoPor: string;
+};
+
 export type PedidoDetalle = Pedido & {
   destinatario: DireccionEnvio;
   cotizacion: CotizacionEnvio | null;
