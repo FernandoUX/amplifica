@@ -5,13 +5,21 @@
       "name": "amplifica-dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 3000
+      "port": 3000,
+      "autoPort": true
     },
     {
-      "name": "amplifica-prod",
+      "name": "fullfilment-ampli",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "start"],
-      "port": 3000
+      "runtimeArgs": ["run", "dev:fullfilment"],
+      "port": 3010
+    },
+    {
+      "name": "amplifica-admin-saas",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:admin-saas"],
+      "port": 3020,
+      "autoPort": true
     }
   ]
 }

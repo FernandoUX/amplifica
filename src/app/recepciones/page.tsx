@@ -2,22 +2,41 @@
 
 import Link from "next/link";
 import { createPortal } from "react-dom";
-import { useState, useMemo, useEffect, Suspense, useRef } from "react";
+import { useState, useMemo, useEffect, Suspense, useRef, useCallback } from "react";
 import { useColumnConfig, type ColumnKey } from "@/hooks/useColumnConfig";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
-  Download01, Sliders01, LayoutGrid01, SearchLg,
-  DotsVertical, CheckCircle, AlertTriangle, XCircle, ClockRefresh, InfoCircle, X,
-  SwitchVertical01, ArrowUp, ArrowDown, Plus,
-  CalendarPlus01, PackageCheck, Play, ClipboardCheck, FastForward,
-  Eye, Edit01, SlashCircle01, LockUnlocked01,
-} from "@untitled-ui/icons-react";
+  Download, SlidersHorizontal, Columns3, Search, QrCode,
+  MoreVertical, CheckCircle2, AlertTriangle, XCircle, TimerReset, X,
+  ArrowUpDown, ArrowUp, ArrowDown, Plus, Minus, ChevronDown, ChevronLeft, ChevronRight,
+  CalendarPlus, Package, Play, ClipboardCheck, SkipForward,
+  Eye, Pencil, CircleOff, LockOpen,
+  Calendar, Warehouse, Clock, Ban, Check, ClipboardList,
+  ChevronsLeft, ChevronsRight, SquareCheckBig, Printer,
+} from "lucide-react";
 import StatusBadge, { Status } from "@/components/recepciones/StatusBadge";
+import { OR_STATS, QR_STORAGE_KEY } from "./_data";
+import Button from "@/components/ui/Button";
+import QrScannerModal from "@/components/recepciones/QrScannerModal";
+import PageInfoModal from "@/components/ui/PageInfoModal";
+import AlertModal from "@/components/ui/AlertModal";
+import FormField from "@/components/ui/FormField";
+import { playScanSuccessSound, playScanErrorSound } from "@/lib/scan-sounds";
+import { type Role, getRole, can } from "@/lib/roles";
+
+// ─── Icon lookup (tree-shaking safe) ──────────────────────────────────────────
+type TagIconKey = "check" | "alert" | "x" | "clock";
+const TAG_ICON_MAP: Record<TagIconKey, React.ComponentType<{ className?: string }>> = {
+  check: CheckCircle2,
+  alert: AlertTriangle,
+  x:     XCircle,
+  clock: TimerReset,
+};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 /** Feature 4: multi-label resultado tags (aparecen solo en "Completada") */
 type ResultTag = {
-  Icon: React.ComponentType<{ className?: string }>;
+  icon: TagIconKey;
   iconClass: string;
   label: string;
   className: string;
@@ -33,8 +52,14 @@ type Orden = {
   estado: Status;
   skus: number;
   uTotales: string;
+  progreso?: { contadas: number; total: number };  // contadas/total units
+  sesiones?: number;      // number of counting sessions
   tags?: ResultTag[];     // Feature 4: tags de resultado (Completada)
   isSubId?: boolean;      // Feature 2: sub-ID (RO-XXX-P1)
+  pallets?: number;       // Seller-declared pallets (for "Programado" ORs)
+  bultos?: number;        // Seller-declared bultos (for "Programado" ORs)
+  comentarios?: string;   // Optional comment entered when creating the OR (read-only in modals)
+  guiaDespacho?: string;  // Número de guía de despacho del seller
 };
 
 type SortField = "creacion" | "fechaAgendada" | null;
@@ -49,13 +74,13 @@ function makeTags(opts: {
 }): ResultTag[] {
   const tags: ResultTag[] = [];
   if (opts.sinDiferencias)
-    tags.push({ Icon: CheckCircle,    iconClass: "text-green-600",  label: `${opts.sinDiferencias.toLocaleString("es-CL")} sin diferencias`, className: "bg-green-50 text-green-700 border border-green-200" });
+    tags.push({ icon: "check", iconClass: "text-green-600",  label: `${opts.sinDiferencias.toLocaleString("es-CL")} sin diferencias`, className: "bg-green-50 text-green-700 border border-green-200" });
   if (opts.conDiferencias)
-    tags.push({ Icon: AlertTriangle,  iconClass: "text-amber-500",  label: `${opts.conDiferencias} con diferencias`,      className: "bg-amber-50 text-amber-700 border border-amber-200" });
+    tags.push({ icon: "alert", iconClass: "text-amber-500",  label: `${opts.conDiferencias} con diferencias`,      className: "bg-amber-50 text-amber-700 border border-amber-200" });
   if (opts.noPickeables)
-    tags.push({ Icon: XCircle,        iconClass: "text-red-500",    label: `${opts.noPickeables} no pickeables`,          className: "bg-red-50 text-red-600 border border-red-200" });
+    tags.push({ icon: "x",     iconClass: "text-red-500",    label: `${opts.noPickeables} no pickeables`,          className: "bg-red-50 text-red-600 border border-red-200" });
   if (opts.pendiente)
-    tags.push({ Icon: ClockRefresh,   iconClass: "text-orange-500", label: "Pendiente de aprobación",                     className: "bg-orange-50 text-orange-600 border border-orange-200" });
+    tags.push({ icon: "clock", iconClass: "text-orange-500", label: "Pendiente de aprobación",                     className: "bg-orange-50 text-orange-600 border border-orange-200" });
   return tags;
 }
 
@@ -63,48 +88,120 @@ function makeTags(opts: {
 const TAG_FILTER_OPTIONS: {
   label: string;
   key: string;
-  Icon: React.ComponentType<{ className?: string }>;
+  icon: TagIconKey;
   iconClass: string;
 }[] = [
-  { label: "Sin diferencias",         key: "sin diferencias",         Icon: CheckCircle,   iconClass: "text-green-600" },
-  { label: "Con diferencias",         key: "con diferencias",         Icon: AlertTriangle, iconClass: "text-amber-500" },
-  { label: "No pickeables",           key: "no pickeables",           Icon: XCircle,       iconClass: "text-red-500"   },
-  { label: "Pendiente de aprobación", key: "pendiente de aprobación", Icon: ClockRefresh,  iconClass: "text-orange-500"},
+  { label: "Sin diferencias",         key: "sin diferencias",         icon: "check", iconClass: "text-green-600" },
+  { label: "Con diferencias",         key: "con diferencias",         icon: "alert", iconClass: "text-amber-500" },
+  { label: "No pickeables",           key: "no pickeables",           icon: "x",     iconClass: "text-red-500"   },
+  { label: "Pendiente de aprobación", key: "pendiente de aprobación", icon: "clock", iconClass: "text-orange-500"},
 ];
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const ORDENES: Orden[] = [
-  // Creado — sin fecha agendada aún
-  { id: "RO-BARRA-191", creacion: "01/03/2026", fechaAgendada: "—", seller: "100 Aventuras", sucursal: "Quilicura", estado: "Creado", skus: 5, uTotales: "100" },
+  // ─── Creado — sin fecha agendada aún (10) ──────────────────────────────────
+  { id: "RO-BARRA-301", creacion: "10/03/2026", fechaAgendada: "—", seller: "Extra Life", sucursal: "Quilicura", estado: "Creado", skus: 8, uTotales: "320" },
+  { id: "RO-BARRA-302", creacion: "11/03/2026", fechaAgendada: "—", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Creado", skus: 5, uTotales: "180" },
+  { id: "RO-BARRA-303", creacion: "12/03/2026", fechaAgendada: "—", seller: "GoHard", sucursal: "La Reina", estado: "Creado", skus: 14, uTotales: "1.050", comentarios: "Primer envío del seller, coordinar recepción con KAM Carolina." },
+  { id: "RO-BARRA-304", creacion: "13/03/2026", fechaAgendada: "—", seller: "Bekoko", sucursal: "Providencia", estado: "Creado", skus: 3, uTotales: "90" },
+  { id: "RO-BARRA-305", creacion: "14/03/2026", fechaAgendada: "—", seller: "Mundo Fungi", sucursal: "Las Condes", estado: "Creado", skus: 7, uTotales: "420" },
+  { id: "RO-BARRA-306", creacion: "15/03/2026", fechaAgendada: "—", seller: "Xclusive", sucursal: "Lo Barnechea", estado: "Creado", skus: 12, uTotales: "640" },
+  { id: "RO-BARRA-307", creacion: "16/03/2026", fechaAgendada: "—", seller: "Boqa", sucursal: "Quilicura", estado: "Creado", skus: 4, uTotales: "150" },
+  { id: "RO-BARRA-308", creacion: "17/03/2026", fechaAgendada: "—", seller: "Mind Nutrition", sucursal: "Santiago Centro", estado: "Creado", skus: 18, uTotales: "1.200", comentarios: "Seller solicita recepción urgente esta semana." },
+  { id: "RO-BARRA-309", creacion: "18/03/2026", fechaAgendada: "—", seller: "Basics", sucursal: "La Reina", estado: "Creado", skus: 6, uTotales: "280" },
+  { id: "RO-BARRA-310", creacion: "19/03/2026", fechaAgendada: "—", seller: "Your Goal", sucursal: "Providencia", estado: "Creado", skus: 10, uTotales: "520" },
 
-  // Programado
-  { id: "RO-BARRA-183", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "100 Aventuras", sucursal: "Quilicura", estado: "Programado", skus: 320, uTotales: "2.550" },
-  { id: "RO-BARRA-182", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", fechaExtra: "Expirado hace 4 horas", seller: "100 Aventuras", sucursal: "La Reina", estado: "Programado", skus: 320, uTotales: "2.550" },
-  { id: "RO-BARRA-190", creacion: "17/02/2026", fechaAgendada: "21/02/2026 09:00", fechaExtra: "Expira en 28 minutos", seller: "Naturela", sucursal: "Lo Barnechea", estado: "Programado", skus: 15, uTotales: "450" },
+  // ─── Programado (10) ───────────────────────────────────────────────────────
+  { id: "RO-BARRA-311", creacion: "05/03/2026", fechaAgendada: "10/03/2026 09:00", seller: "Extra Life", sucursal: "La Reina", estado: "Programado", skus: 22, uTotales: "1.800", pallets: 6, bultos: 20, comentarios: "Llegará en camión blanco patente XXNN33, preguntar por Carlos.", guiaDespacho: "GD-2026-009101" },
+  { id: "RO-BARRA-312", creacion: "06/03/2026", fechaAgendada: "11/03/2026 14:30", fechaExtra: "Expirado hace 4 horas", seller: "Le Vice", sucursal: "Lo Barnechea", estado: "Programado", skus: 15, uTotales: "450", pallets: 3, bultos: 12, guiaDespacho: "GD-2026-009205" },
+  { id: "RO-BARRA-313", creacion: "07/03/2026", fechaAgendada: "12/03/2026 08:00", seller: "Saint Venik", sucursal: "Quilicura", estado: "Programado", skus: 9, uTotales: "380", pallets: 2, bultos: 8, guiaDespacho: "GD-2026-009312" },
+  { id: "RO-BARRA-314", creacion: "08/03/2026", fechaAgendada: "13/03/2026 10:00", fechaExtra: "Expira en 28 minutos", seller: "GoHard", sucursal: "Santiago Centro", estado: "Programado", skus: 28, uTotales: "2.400", pallets: 8, bultos: 30, comentarios: "Incluye 4 pallets de proteína que requieren temperatura controlada.", guiaDespacho: "GD-2026-009418" },
+  { id: "RO-BARRA-315", creacion: "09/03/2026", fechaAgendada: "14/03/2026 16:00", seller: "MamáMía", sucursal: "Providencia", estado: "Programado", skus: 5, uTotales: "200", pallets: 1, bultos: 4, guiaDespacho: "GD-2026-009520" },
+  { id: "RO-BARRA-316", creacion: "10/03/2026", fechaAgendada: "15/03/2026 09:30", seller: "Teregott", sucursal: "Las Condes", estado: "Programado", skus: 11, uTotales: "680", pallets: 3, bultos: 10, guiaDespacho: "GD-2026-009630" },
+  { id: "RO-BARRA-317", creacion: "11/03/2026", fechaAgendada: "16/03/2026 11:00", seller: "Xclusive", sucursal: "Lo Barnechea", estado: "Programado", skus: 42, uTotales: "3.200", pallets: 12, bultos: 40, comentarios: "Carga incluye mochilas de temporada, priorizar descarga.", guiaDespacho: "GD-2026-009745" },
+  { id: "RO-BARRA-318", creacion: "12/03/2026", fechaAgendada: "17/03/2026 08:30", seller: "Boqa", sucursal: "Quilicura", estado: "Programado", skus: 7, uTotales: "540", pallets: 2, bultos: 8, guiaDespacho: "GD-2026-009851" },
+  { id: "RO-BARRA-319", creacion: "13/03/2026", fechaAgendada: "18/03/2026 15:00", seller: "Mind Nutrition", sucursal: "Santiago Centro", estado: "Programado", skus: 18, uTotales: "1.400", pallets: 5, bultos: 18, comentarios: "Segundo envío del mes, verificar contra OC anterior.", guiaDespacho: "GD-2026-009960" },
+  { id: "RO-BARRA-320", creacion: "14/03/2026", fechaAgendada: "19/03/2026 10:00", seller: "Your Goal", sucursal: "La Reina", estado: "Programado", skus: 24, uTotales: "1.950", pallets: 7, bultos: 22, guiaDespacho: "GD-2026-010074" },
 
-  // Recepcionado en bodega
-  { id: "RO-BARRA-180", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "Naturela", sucursal: "Santiago Centro", estado: "Recepcionado en bodega", skus: 2, uTotales: "200" },
+  // ─── Recepcionado en bodega (10) ───────────────────────────────────────────
+  { id: "RO-BARRA-321", creacion: "24/02/2026", fechaAgendada: "28/02/2026 09:00", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Recepcionado en bodega", skus: 10, uTotales: "520", pallets: 3, bultos: 10, comentarios: "Mercancía frágil, manipular con cuidado. Entregar en andén 3." },
+  { id: "RO-BARRA-322", creacion: "25/02/2026", fechaAgendada: "01/03/2026 14:00", seller: "Bekoko", sucursal: "Providencia", estado: "Recepcionado en bodega", skus: 6, uTotales: "240", pallets: 1, bultos: 5 },
+  { id: "RO-BARRA-323", creacion: "26/02/2026", fechaAgendada: "02/03/2026 10:30", seller: "Mundo Fungi", sucursal: "La Reina", estado: "Recepcionado en bodega", skus: 8, uTotales: "380", pallets: 2, bultos: 8 },
+  { id: "RO-BARRA-324", creacion: "27/02/2026", fechaAgendada: "03/03/2026 08:00", seller: "Extra Life", sucursal: "Las Condes", estado: "Recepcionado en bodega", skus: 16, uTotales: "1.100", pallets: 4, bultos: 14, comentarios: "Entregar a operador Juan Pérez en andén 2." },
+  { id: "RO-BARRA-325", creacion: "28/02/2026", fechaAgendada: "04/03/2026 11:30", seller: "Teregott", sucursal: "Lo Barnechea", estado: "Recepcionado en bodega", skus: 4, uTotales: "160", pallets: 1, bultos: 4 },
+  { id: "RO-BARRA-326", creacion: "01/03/2026", fechaAgendada: "05/03/2026 09:00", seller: "Basics", sucursal: "Quilicura", estado: "Recepcionado en bodega", skus: 20, uTotales: "1.600", pallets: 6, bultos: 18 },
+  { id: "RO-BARRA-327", creacion: "02/03/2026", fechaAgendada: "06/03/2026 15:00", seller: "GoHard", sucursal: "Santiago Centro", estado: "Recepcionado en bodega", skus: 12, uTotales: "850", pallets: 3, bultos: 10 },
+  { id: "RO-BARRA-328", creacion: "03/03/2026", fechaAgendada: "07/03/2026 10:00", seller: "Xclusive", sucursal: "Providencia", estado: "Recepcionado en bodega", skus: 9, uTotales: "430", pallets: 2, bultos: 7, comentarios: "Productos frágiles, manipular con cuidado." },
+  { id: "RO-BARRA-329", creacion: "04/03/2026", fechaAgendada: "08/03/2026 08:30", seller: "Your Goal", sucursal: "La Reina", estado: "Recepcionado en bodega", skus: 14, uTotales: "980", pallets: 4, bultos: 12 },
+  { id: "RO-BARRA-330", creacion: "05/03/2026", fechaAgendada: "09/03/2026 14:00", seller: "MamáMía", sucursal: "Las Condes", estado: "Recepcionado en bodega", skus: 3, uTotales: "120", pallets: 1, bultos: 4 },
 
-  // En proceso de conteo
-  { id: "RO-BARRA-184", creacion: "15/02/2026", fechaAgendada: "19/02/2026 10:00", seller: "100 Aventuras", sucursal: "Quilicura", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
-  { id: "RO-BARRA-179", creacion: "14/02/2026", fechaAgendada: "18/02/2026 09:00", seller: "SportZone", sucursal: "La Reina", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
+  // ─── En proceso de conteo (10) ─────────────────────────────────────────────
+  { id: "RO-BARRA-331", creacion: "18/02/2026", fechaAgendada: "22/02/2026 09:00", seller: "Extra Life", sucursal: "Quilicura", estado: "En proceso de conteo", skus: 8, uTotales: "600" },
+  { id: "RO-BARRA-332", creacion: "19/02/2026", fechaAgendada: "23/02/2026 10:00", seller: "Le Vice", sucursal: "La Reina", estado: "En proceso de conteo", skus: 5, uTotales: "350" },
+  { id: "RO-BARRA-333", creacion: "20/02/2026", fechaAgendada: "24/02/2026 14:00", seller: "GoHard", sucursal: "Santiago Centro", estado: "En proceso de conteo", skus: 12, uTotales: "1.200" },
+  { id: "RO-BARRA-334", creacion: "21/02/2026", fechaAgendada: "25/02/2026 08:30", seller: "Bekoko", sucursal: "Lo Barnechea", estado: "En proceso de conteo", skus: 4, uTotales: "180" },
+  { id: "RO-BARRA-335", creacion: "22/02/2026", fechaAgendada: "26/02/2026 11:00", seller: "Mundo Fungi", sucursal: "Providencia", estado: "En proceso de conteo", skus: 6, uTotales: "480", comentarios: "Conteo parcial, faltan 4 SKUs por verificar." },
+  { id: "RO-BARRA-336", creacion: "23/02/2026", fechaAgendada: "27/02/2026 09:30", seller: "Mind Nutrition", sucursal: "Las Condes", estado: "En proceso de conteo", skus: 15, uTotales: "1.050" },
+  { id: "RO-BARRA-337", creacion: "24/02/2026", fechaAgendada: "28/02/2026 15:00", seller: "Basics", sucursal: "Quilicura", estado: "En proceso de conteo", skus: 10, uTotales: "780" },
+  { id: "RO-BARRA-338", creacion: "25/02/2026", fechaAgendada: "01/03/2026 10:00", seller: "Your Goal", sucursal: "Santiago Centro", estado: "En proceso de conteo", skus: 20, uTotales: "1.500" },
+  { id: "RO-BARRA-339", creacion: "26/02/2026", fechaAgendada: "02/03/2026 08:00", seller: "Saint Venik", sucursal: "La Reina", estado: "En proceso de conteo", skus: 3, uTotales: "140" },
+  { id: "RO-BARRA-340", creacion: "27/02/2026", fechaAgendada: "03/03/2026 14:30", seller: "Teregott", sucursal: "Providencia", estado: "En proceso de conteo", skus: 7, uTotales: "320" },
 
-  // Feature 2 — Parcialmente recepcionada: padre + sub-IDs
-  { id: "RO-BARRA-185",    creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "SportZone", sucursal: "Lo Barnechea", estado: "Parcialmente recepcionada", skus: 320, uTotales: "2.550" },
-  { id: "RO-BARRA-185-P1", creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "SportZone", sucursal: "Lo Barnechea", estado: "Completada", skus: 160, uTotales: "1.200", isSubId: true,
-    tags: makeTags({ sinDiferencias: 1150, conDiferencias: 50 }) },
-  { id: "RO-BARRA-185-P2", creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "SportZone", sucursal: "Lo Barnechea", estado: "En proceso de conteo", skus: 160, uTotales: "1.350", isSubId: true },
+  // ─── Pendiente de aprobación (10) ──────────────────────────────────────────
+  { id: "RO-BARRA-341", creacion: "10/02/2026", fechaAgendada: "14/02/2026 09:00", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Pendiente de aprobación", skus: 8, uTotales: "1.200",
+    tags: makeTags({ conDiferencias: 20 }) },
+  { id: "RO-BARRA-342", creacion: "11/02/2026", fechaAgendada: "15/02/2026 10:30", seller: "GoHard", sucursal: "La Reina", estado: "Pendiente de aprobación", skus: 12, uTotales: "2.400",
+    tags: makeTags({ conDiferencias: 45, noPickeables: 12 }) },
+  { id: "RO-BARRA-343", creacion: "12/02/2026", fechaAgendada: "16/02/2026 14:00", seller: "Bekoko", sucursal: "Providencia", estado: "Pendiente de aprobación", skus: 4, uTotales: "180",
+    tags: makeTags({ conDiferencias: 8 }) },
+  { id: "RO-BARRA-344", creacion: "13/02/2026", fechaAgendada: "17/02/2026 08:00", seller: "Extra Life", sucursal: "Quilicura", estado: "Pendiente de aprobación", skus: 18, uTotales: "1.500",
+    tags: makeTags({ conDiferencias: 30, noPickeables: 5 }) },
+  { id: "RO-BARRA-345", creacion: "14/02/2026", fechaAgendada: "18/02/2026 11:00", seller: "Xclusive", sucursal: "Las Condes", estado: "Pendiente de aprobación", skus: 6, uTotales: "340",
+    tags: makeTags({ conDiferencias: 12 }) },
+  { id: "RO-BARRA-346", creacion: "15/02/2026", fechaAgendada: "19/02/2026 09:30", seller: "Boqa", sucursal: "Lo Barnechea", estado: "Pendiente de aprobación", skus: 3, uTotales: "150",
+    tags: makeTags({ conDiferencias: 6, noPickeables: 2 }) },
+  { id: "RO-BARRA-347", creacion: "16/02/2026", fechaAgendada: "20/02/2026 15:00", seller: "Mundo Fungi", sucursal: "Santiago Centro", estado: "Pendiente de aprobación", skus: 10, uTotales: "680",
+    tags: makeTags({ conDiferencias: 15 }) },
+  { id: "RO-BARRA-348", creacion: "17/02/2026", fechaAgendada: "21/02/2026 10:00", seller: "Mind Nutrition", sucursal: "Quilicura", estado: "Pendiente de aprobación", skus: 14, uTotales: "1.050",
+    tags: makeTags({ conDiferencias: 22, noPickeables: 8 }) },
+  { id: "RO-BARRA-349", creacion: "18/02/2026", fechaAgendada: "22/02/2026 08:30", seller: "Basics", sucursal: "La Reina", estado: "Pendiente de aprobación", skus: 7, uTotales: "480",
+    tags: makeTags({ conDiferencias: 10 }) },
+  { id: "RO-BARRA-350", creacion: "19/02/2026", fechaAgendada: "23/02/2026 14:00", seller: "Your Goal", sucursal: "Providencia", estado: "Pendiente de aprobación", skus: 16, uTotales: "1.300",
+    tags: makeTags({ conDiferencias: 35, noPickeables: 10 }) },
 
-  // Cancelada
-  { id: "RO-BARRA-188", creacion: "12/02/2026", fechaAgendada: "16/02/2026 11:30", seller: "100 Aventuras", sucursal: "Santiago Centro", estado: "Cancelada", skus: 320, uTotales: "2.550" },
+  // ─── Completada (10) ───────────────────────────────────────────────────────
+  { id: "RO-BARRA-351", creacion: "05/01/2026", fechaAgendada: "09/01/2026 09:00", seller: "Extra Life", sucursal: "Las Condes", estado: "Completada", skus: 10, uTotales: "750", pallets: 3, bultos: 10,
+    tags: makeTags({ sinDiferencias: 750 }) },
+  { id: "RO-BARRA-352", creacion: "08/01/2026", fechaAgendada: "12/01/2026 10:30", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Completada", skus: 6, uTotales: "480", pallets: 2, bultos: 6,
+    tags: makeTags({ sinDiferencias: 480 }) },
+  { id: "RO-BARRA-353", creacion: "12/01/2026", fechaAgendada: "16/01/2026 14:00", seller: "GoHard", sucursal: "Quilicura", estado: "Completada", skus: 20, uTotales: "2.100", pallets: 7, bultos: 24,
+    tags: makeTags({ conDiferencias: 35, noPickeables: 8 }) },
+  { id: "RO-BARRA-354", creacion: "15/01/2026", fechaAgendada: "19/01/2026 08:00", seller: "Bekoko", sucursal: "Providencia", estado: "Completada", skus: 3, uTotales: "120", pallets: 1, bultos: 4,
+    tags: makeTags({ sinDiferencias: 120 }) },
+  { id: "RO-BARRA-355", creacion: "20/01/2026", fechaAgendada: "24/01/2026 11:30", seller: "MamáMía", sucursal: "Lo Barnechea", estado: "Completada", skus: 4, uTotales: "200", pallets: 1, bultos: 5,
+    tags: makeTags({ sinDiferencias: 200 }) },
+  { id: "RO-BARRA-356", creacion: "25/01/2026", fechaAgendada: "29/01/2026 09:00", seller: "Teregott", sucursal: "La Reina", estado: "Completada", skus: 8, uTotales: "560", pallets: 2, bultos: 8,
+    tags: makeTags({ conDiferencias: 18 }) },
+  { id: "RO-BARRA-357", creacion: "28/01/2026", fechaAgendada: "01/02/2026 15:00", seller: "Xclusive", sucursal: "Santiago Centro", estado: "Completada", skus: 15, uTotales: "1.360", pallets: 5, bultos: 16,
+    tags: makeTags({ sinDiferencias: 1360 }) },
+  { id: "RO-BARRA-358", creacion: "02/02/2026", fechaAgendada: "06/02/2026 10:00", seller: "Boqa", sucursal: "Quilicura", estado: "Completada", skus: 5, uTotales: "300", pallets: 1, bultos: 5,
+    tags: makeTags({ sinDiferencias: 300 }) },
+  { id: "RO-BARRA-359", creacion: "05/02/2026", fechaAgendada: "09/02/2026 08:30", seller: "Mind Nutrition", sucursal: "Las Condes", estado: "Completada", skus: 12, uTotales: "980", pallets: 4, bultos: 12,
+    tags: makeTags({ conDiferencias: 25, noPickeables: 6 }) },
+  { id: "RO-BARRA-360", creacion: "08/02/2026", fechaAgendada: "12/02/2026 14:00", seller: "Your Goal", sucursal: "Providencia", estado: "Completada", skus: 18, uTotales: "1.500", pallets: 5, bultos: 18,
+    tags: makeTags({ sinDiferencias: 1500 }) },
 
-  // Feature 4 — Completadas con tags de resultado
-  { id: "RO-BARRA-186", creacion: "11/02/2026", fechaAgendada: "15/02/2026 08:00", seller: "100 Aventuras", sucursal: "Quilicura", estado: "Completada", skus: 320, uTotales: "2.550",
-    tags: makeTags({ sinDiferencias: 2510, conDiferencias: 20, noPickeables: 20 }) },
-  { id: "RO-BARRA-187", creacion: "10/02/2026", fechaAgendada: "14/02/2026 13:00", seller: "Naturela", sucursal: "La Reina", estado: "Completada", skus: 320, uTotales: "2.550",
-    tags: makeTags({ conDiferencias: 20, pendiente: true }) },
-  { id: "RO-BARRA-189", creacion: "09/02/2026", fechaAgendada: "13/02/2026 15:30", seller: "Naturela", sucursal: "Santiago Centro", estado: "Completada", skus: 320, uTotales: "2.550",
-    tags: makeTags({ sinDiferencias: 2550 }) },
+  // ─── Cancelado (10) ────────────────────────────────────────────────────────
+  { id: "RO-BARRA-361", creacion: "03/01/2026", fechaAgendada: "07/01/2026 09:00", seller: "Saint Venik", sucursal: "Quilicura", estado: "Cancelado", skus: 5, uTotales: "200", comentarios: "Seller canceló envío por falta de stock." },
+  { id: "RO-BARRA-362", creacion: "10/01/2026", fechaAgendada: "14/01/2026 14:00", seller: "Le Vice", sucursal: "La Reina", estado: "Cancelado", skus: 7, uTotales: "350" },
+  { id: "RO-BARRA-363", creacion: "15/01/2026", fechaAgendada: "19/01/2026 10:30", seller: "Bekoko", sucursal: "Santiago Centro", estado: "Cancelado", skus: 4, uTotales: "160", comentarios: "Proveedor no se presentó en la fecha acordada." },
+  { id: "RO-BARRA-364", creacion: "20/01/2026", fechaAgendada: "24/01/2026 08:00", seller: "MamáMía", sucursal: "Providencia", estado: "Cancelado", skus: 3, uTotales: "100" },
+  { id: "RO-BARRA-365", creacion: "25/01/2026", fechaAgendada: "29/01/2026 11:00", seller: "Teregott", sucursal: "Las Condes", estado: "Cancelado", skus: 6, uTotales: "280", comentarios: "Productos dañados en tránsito, seller prefirió cancelar." },
+  { id: "RO-BARRA-366", creacion: "28/01/2026", fechaAgendada: "01/02/2026 09:30", seller: "Extra Life", sucursal: "Lo Barnechea", estado: "Cancelado", skus: 10, uTotales: "620" },
+  { id: "RO-BARRA-367", creacion: "02/02/2026", fechaAgendada: "06/02/2026 14:00", seller: "GoHard", sucursal: "Quilicura", estado: "Cancelado", skus: 8, uTotales: "450", comentarios: "Error en orden de compra, se generará nueva OR." },
+  { id: "RO-BARRA-368", creacion: "06/02/2026", fechaAgendada: "10/02/2026 10:00", seller: "Xclusive", sucursal: "Santiago Centro", estado: "Cancelado", skus: 12, uTotales: "800" },
+  { id: "RO-BARRA-369", creacion: "10/02/2026", fechaAgendada: "14/02/2026 15:00", seller: "Basics", sucursal: "La Reina", estado: "Cancelado", skus: 9, uTotales: "540", comentarios: "Seller solicitó reprogramación, se canceló esta OR." },
+  { id: "RO-BARRA-370", creacion: "14/02/2026", fechaAgendada: "18/02/2026 08:30", seller: "Your Goal", sucursal: "Providencia", estado: "Cancelado", skus: 14, uTotales: "920" },
 ];
 
 // ─── Tabs — alineados con estados del Notion spec ─────────────────────────────
@@ -112,26 +209,60 @@ const TABS = [
   "Todas",
   "Creado",
   "Programado",
-  "Recepcionado en bodega",
+  "Recepción en bodega",
   "En proceso de conteo",
-  "Parcialmente recepcionada",
+  "Pendiente de aprobación",
   "Completada",
   "Cancelada",
 ] as const;
 
 const TAB_STATUS: Record<string, Status | null> = {
-  "Todas":                      null,
-  "Creado":                     "Creado",
-  "Programado":                 "Programado",
-  "Recepcionado en bodega":     "Recepcionado en bodega",
-  "En proceso de conteo":       "En proceso de conteo",
-  "Parcialmente recepcionada":  "Parcialmente recepcionada",
-  "Completada":                 "Completada",
-  "Cancelada":                  "Cancelada",
+  "Todas":                        null,
+  "Creado":                       "Creado",
+  "Programado":                   "Programado",
+  "Recepción en bodega":          "Recepcionado en bodega",
+  "En proceso de conteo":         "En proceso de conteo",
+  "Pendiente de aprobación":      "Pendiente de aprobación",
+  "Completada":                   "Completada",
+  "Cancelada":                    "Cancelado",
+};
+
+// Badge colors per tab — matches StatusBadge colors
+const TAB_BADGE_COLORS: Record<string, { active: string; inactive: string }> = {
+  "Todas":                   { active: "bg-primary-100 text-primary-700", inactive: "bg-neutral-200/70 text-neutral-500" },
+  "Creado":                  { active: "bg-neutral-200 text-neutral-700", inactive: "bg-neutral-200/70 text-neutral-500" },
+  "Programado":              { active: "bg-sky-100 text-sky-700",         inactive: "bg-neutral-200/70 text-neutral-500" },
+  "Recepción en bodega":     { active: "bg-indigo-100 text-indigo-700",   inactive: "bg-neutral-200/70 text-neutral-500" },
+  "En proceso de conteo":    { active: "bg-primary-100 text-primary-700", inactive: "bg-neutral-200/70 text-neutral-500" },
+  "Pendiente de aprobación": { active: "bg-orange-100 text-orange-700",   inactive: "bg-neutral-200/70 text-neutral-500" },
+  "Completada":              { active: "bg-green-100 text-green-700",     inactive: "bg-neutral-200/70 text-neutral-500" },
+  "Cancelada":               { active: "bg-neutral-200 text-neutral-700", inactive: "bg-neutral-200/70 text-neutral-500" },
+};
+
+// ─── Tab icon mapping ────────────────────────────────────────────────────────
+const TAB_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  "Creado":                  Plus,
+  "Programado":              Calendar,
+  "Recepción en bodega":     Warehouse,
+  "En proceso de conteo":    ClipboardList,
+  "Pendiente de aprobación": Clock,
+  "Completada":              Check,
+  "Cancelada":               Ban,
+};
+
+const TAB_ICON_ACTIVE_CLASS: Record<string, string> = {
+  "Creado":                  "text-neutral-600",
+  "Programado":              "text-sky-500",
+  "Recepción en bodega":     "text-indigo-500",
+  "En proceso de conteo":    "text-primary-500",
+  "Pendiente de aprobación": "text-orange-500",
+  "Completada":              "text-green-600",
+  "Cancelada":               "text-neutral-500",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const NW: React.CSSProperties = { whiteSpace: "nowrap" };
+
 
 function parseDate(str: string): number {
   if (str === "—") return 0;
@@ -144,10 +275,10 @@ function parseDate(str: string): number {
 function SortIcon({ field, sortField, sortDir }: {
   field: SortField; sortField: SortField; sortDir: SortDir;
 }) {
-  if (sortField !== field) return <SwitchVertical01 className="w-3 h-3 text-gray-400 inline ml-1 align-middle" />;
+  if (sortField !== field) return <ArrowUpDown className="w-3 h-3 text-neutral-600 inline ml-1 align-middle" />;
   return sortDir === "asc"
-    ? <ArrowUp   className="w-3 h-3 text-indigo-500 inline ml-1 align-middle" />
-    : <ArrowDown className="w-3 h-3 text-indigo-500 inline ml-1 align-middle" />;
+    ? <ArrowUp   className="w-3 h-3 text-primary-500 inline ml-1 align-middle" />
+    : <ArrowDown className="w-3 h-3 text-primary-500 inline ml-1 align-middle" />;
 }
 
 // Sticky shadow for the Acciones column
@@ -160,8 +291,9 @@ const stickyRight: React.CSSProperties = {
 // ─── Badge helper for fechaExtra ──────────────────────────────────────────────
 function fechaExtraClass(label: string): string {
   const lower = label.toLowerCase();
-  if (lower.startsWith("expirado")) return "bg-red-50 text-red-500";
-  return "bg-orange-50 text-orange-500";
+  if (lower.startsWith("expirado")) return "text-red-600";
+  if (lower.includes("minutos") || lower.includes("min ")) return "text-amber-600";
+  return "text-orange-500";
 }
 
 // ─── Feature 1 · Feature Antigua — Contextual actions per status ──────────────
@@ -170,74 +302,372 @@ type MenuItem = {
   icon?: React.ComponentType<{ className?: string }>;
   danger?: boolean;
   href?: string;
+  onClick?: () => void;
 };
 type PrimaryAction = {
   tooltip: string;                                         // 1-2 words shown on hover
   icon: React.ComponentType<{ className?: string }>;
   href?: string;                                           // navigation target (uses Link)
+  showLabel?: boolean;                                     // show text label next to icon
 };
 type ActionConfig = { primary?: PrimaryAction; menu: MenuItem[] };
 
-function getActions(estado: Status): ActionConfig {
+function getActions(estado: Status, id: string, orden?: Orden, onCancel?: (id: string) => void, role?: Role): ActionConfig {
+  const r = role ?? "Super Admin";
+  const cancelItem: MenuItem = { label: "Cancelar", icon: CircleOff, danger: true, onClick: () => onCancel?.(id) };
+  const canCancelRole = can(r, "or:cancel");
+
   switch (estado) {
-    case "Creado":
+    case "Creado": {
+      const params = new URLSearchParams({ startStep: "2", mode: "completar", orId: id });
+      if (orden?.sucursal) params.set("sucursal", orden.sucursal);
+      if (orden?.seller)   params.set("seller", orden.seller);
+      const menu: MenuItem[] = [
+        { label: "Ver",      icon: Eye,    href: `/recepciones/${id}` },
+        { label: "Editar",   icon: Pencil, href: `/recepciones/${id}` },
+      ];
+      if (canCancelRole) menu.push(cancelItem);
       return {
-        primary: { tooltip: "Agendar", icon: CalendarPlus01, href: "/recepciones/crear?startStep=2" },
-        menu: [
-          { label: "Ver",      icon: Eye },
-          { label: "Editar",   icon: Edit01 },
-          { label: "Cancelar", icon: SlashCircle01, danger: true },
-        ],
+        primary: can(r, "or:complete") ? { tooltip: "Completar", icon: CalendarPlus, href: `/recepciones/crear?${params}` } : undefined,
+        menu,
       };
-    case "Programado":
+    }
+    case "Programado": {
+      const menu: MenuItem[] = [
+        { label: "Ver",       icon: Eye,    href: `/recepciones/${encodeURIComponent(id)}` },
+        { label: "Editar",    icon: Pencil, href: `/recepciones/${encodeURIComponent(id)}` },
+      ];
+      if (can(r, "or:complete")) menu.push({ label: "Reagendar", icon: CalendarPlus, href: "/recepciones/crear?startStep=3&mode=reagendar" });
+      if (canCancelRole) menu.push(cancelItem);
       return {
-        primary: { tooltip: "Recibir", icon: PackageCheck },
-        menu: [
-          { label: "Ver",       icon: Eye },
-          { label: "Editar",    icon: Edit01 },
-          { label: "Reagendar", icon: CalendarPlus01, href: "/recepciones/crear?startStep=3&mode=reagendar" },
-          { label: "Cancelar",  icon: SlashCircle01, danger: true },
-        ],
+        primary: can(r, "or:receive") ? { tooltip: "Recibir", icon: Package } : undefined,
+        menu,
       };
-    case "Recepcionado en bodega":
+    }
+    case "Recepcionado en bodega": {
+      const menu: MenuItem[] = [
+        { label: "Ver",      icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
+      ];
+      if (canCancelRole) menu.push(cancelItem);
       return {
-        primary: { tooltip: "Empezar", icon: Play },
-        menu: [
-          { label: "Ver",      icon: Eye },
-          { label: "Editar",   icon: Edit01 },
-          { label: "Cancelar", icon: SlashCircle01, danger: true },
-        ],
+        primary: can(r, "session:start") ? { tooltip: "Empezar conteo", icon: Play, href: `/recepciones/${encodeURIComponent(id)}` } : { tooltip: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
+        menu,
       };
+    }
     case "En proceso de conteo":
       return {
-        primary: { tooltip: "Resumir", icon: ClipboardCheck },
+        primary: can(r, "session:start") ? { tooltip: "Continuar", icon: ClipboardCheck, href: `/recepciones/${encodeURIComponent(id)}` } : { tooltip: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
         menu: [
-          { label: "Ver", icon: Eye },
+          { label: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
         ],
       };
-    case "Parcialmente recepcionada":
+    case "Pendiente de aprobación": {
+      const menu: MenuItem[] = [
+        { label: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
+      ];
+      if (can(r, "or:approve")) {
+        menu.push({ label: "Aprobar con diferencias", icon: CheckCircle2 });
+        menu.push({ label: "Devolver a conteo",       icon: LockOpen });
+      }
       return {
-        primary: { tooltip: "Continuar", icon: FastForward },
-        menu: [
-          { label: "Resumir picking",  icon: ClipboardCheck },
-          { label: "Liberar picking",  icon: LockUnlocked01 },
-          { label: "Ver",              icon: Eye },
-        ],
+        primary: { tooltip: can(r, "or:approve") ? "Revisar" : "Ver", icon: can(r, "or:approve") ? ClipboardCheck : Eye, href: `/recepciones/${encodeURIComponent(id)}` },
+        menu,
       };
-    default: // Completada, Cancelada
-      return { menu: [{ label: "Ver", icon: Eye }] };
+    }
+    case "Completada":
+      return {
+        primary: { tooltip: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
+        menu: [],
+      };
+    default: // Cancelado
+      return { menu: [{ label: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` }] };
   }
 }
 
+// ─── Stepper ([-] value [+]) ──────────────────────────────────────────────────
+function Stepper({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  return (
+    <div className="flex flex-col items-center">
+      <p className="text-sm font-semibold text-neutral-700 mb-1.5">{label}</p>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => onChange(Math.max(0, value - 1))}
+          className="w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700 transition-colors active:scale-95"
+        >
+          <Minus className="w-4 h-4" />
+        </button>
+        <input
+          type="number"
+          min={0}
+          value={value}
+          onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v) && v >= 0) onChange(v); }}
+          className="w-14 px-1 py-1 text-center text-sm font-bold text-neutral-900 bg-white border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-200 tabular-nums"
+        />
+        <button
+          type="button"
+          onClick={() => onChange(value + 1)}
+          className="w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700 transition-colors active:scale-95"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Recibir Modal ────────────────────────────────────────────────────────────
+type ScanStatus = "ok" | "duplicate" | "unknown";
+type ScanEntry = { code: string; type: "Pallet" | "Bulto"; status: ScanStatus };
+
+function RecebirModal({ orden, onCancel, onConfirm }: {
+  orden: Orden;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const declaredPallets = orden.pallets ?? 0;
+  const declaredBultos  = orden.bultos  ?? 0;
+
+  // Registros escaneados
+  const [entries, setEntries] = useState<ScanEntry[]>([]);
+  const [showDiffAlert, setShowDiffAlert] = useState(false);
+
+  // Solo contar entries válidos (ok) para progreso
+  const validEntries     = entries.filter(e => e.status === "ok");
+  const palletsRecibidos = validEntries.filter(e => e.type === "Pallet").length;
+  const bultosRecibidos  = validEntries.filter(e => e.type === "Bulto").length;
+
+  const palletsPct = declaredPallets > 0 ? Math.min(100, (palletsRecibidos / declaredPallets) * 100) : 0;
+  const bultosPct  = declaredBultos  > 0 ? Math.min(100, (bultosRecibidos  / declaredBultos)  * 100) : 0;
+
+  // Diferencias
+  const palletsDiff = palletsRecibidos - declaredPallets;
+  const bultosDiff  = bultosRecibidos  - declaredBultos;
+  const coincide    = palletsDiff === 0 && bultosDiff === 0;
+  const hasDiff     = validEntries.length > 0 && !coincide;
+
+  // Texto de diferencias para la alerta
+  const diffParts: string[] = [];
+  if (palletsDiff !== 0) diffParts.push(`${palletsDiff > 0 ? "+" : ""}${palletsDiff} pallet${Math.abs(palletsDiff) !== 1 ? "s" : ""}`);
+  if (bultosDiff !== 0)  diffParts.push(`${bultosDiff > 0 ? "+" : ""}${bultosDiff} bulto${Math.abs(bultosDiff) !== 1 ? "s" : ""}`);
+
+  const handleConfirm = () => {
+    if (hasDiff) {
+      setShowDiffAlert(true);
+    } else {
+      onConfirm();
+    }
+  };
+
+  // Mock scan — simula ~80% ok, ~10% duplicado, ~10% desconocido
+  const handleScan = (type: "Pallet" | "Bulto") => {
+    const prefix = type === "Pallet" ? "PLT" : "BLT";
+    const next = entries.filter(e => e.type === type && e.status === "ok").length + 1;
+    const code = `${prefix}-${String(next).padStart(3, "0")}`;
+    const rand = Math.random();
+
+    if (rand < 0.1) {
+      // Simular código desconocido
+      const unknownCode = `UNK-${String(Math.floor(Math.random() * 999)).padStart(3, "0")}`;
+      setEntries(prev => [...prev, { code: unknownCode, type, status: "unknown" }]);
+      playScanErrorSound();
+    } else if (rand < 0.2 && entries.some(e => e.type === type && e.status === "ok")) {
+      // Simular duplicado — reusar último código válido
+      const lastValid = [...entries].reverse().find(e => e.type === type && e.status === "ok");
+      if (lastValid) {
+        setEntries(prev => [...prev, { code: lastValid.code, type, status: "duplicate" }]);
+        playScanErrorSound();
+      } else {
+        setEntries(prev => [...prev, { code, type, status: "ok" }]);
+        playScanSuccessSound();
+      }
+    } else {
+      setEntries(prev => [...prev, { code, type, status: "ok" }]);
+      playScanSuccessSound();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-0 sm:px-4">
+      <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-xl h-[80vh] sm:h-auto sm:max-h-[90vh] flex flex-col overflow-hidden">
+
+        {/* ── Header ──────────────────────────────────────────── */}
+        <div className="flex items-start justify-between px-5 pt-5 pb-3 flex-shrink-0">
+          <div>
+            <p className="text-xs font-medium text-neutral-500">Recepción</p>
+            <h3 className="text-base font-bold text-neutral-900 font-sans leading-tight">{orden.id}</h3>
+            <p className="text-xs font-semibold text-neutral-700 mt-0.5">{orden.seller}</p>
+          </div>
+          <button onClick={onCancel} className="text-neutral-600 hover:text-neutral-600 transition-colors duration-300 ml-4 flex-shrink-0 mt-0.5">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* ── Carga esperada (progress bars en grid) — fixed ─── */}
+        <div className="px-5 pb-4 pt-1 flex-shrink-0">
+          <div className="grid grid-cols-2 gap-4">
+            {/* Pallets */}
+            <div>
+              <div className="flex items-baseline justify-between mb-1">
+                <p className="text-xs font-semibold text-neutral-500">Pallets</p>
+                <p className="text-xs tabular-nums">
+                  <span className="font-bold text-neutral-900">{palletsRecibidos}</span>
+                  <span className="text-neutral-600 mx-0.5">/</span>
+                  <span className="text-neutral-600">{declaredPallets}</span>
+                </p>
+              </div>
+              <div className="w-full h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${palletsPct >= 100 ? "bg-green-500" : "bg-primary-500"}`}
+                  style={{ width: `${palletsPct}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Bultos */}
+            <div>
+              <div className="flex items-baseline justify-between mb-1">
+                <p className="text-xs font-semibold text-neutral-500">Bultos</p>
+                <p className="text-xs tabular-nums">
+                  <span className="font-bold text-neutral-900">{bultosRecibidos}</span>
+                  <span className="text-neutral-600 mx-0.5">/</span>
+                  <span className="text-neutral-600">{declaredBultos}</span>
+                </p>
+              </div>
+              <div className="w-full h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${bultosPct >= 100 ? "bg-green-500" : "bg-primary-500"}`}
+                  style={{ width: `${bultosPct}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Divider ─ */}
+        <div className="border-t border-neutral-100 flex-shrink-0" />
+
+        {/* ── Escanear QR (cámara simulada + botones) — fixed ── */}
+        <div className="px-5 py-4 space-y-3 flex-shrink-0">
+          <p className="text-xs font-semibold text-neutral-500">Escanear QR</p>
+
+          {/* Cámara simulada — compacta + botones integrados */}
+          <div className="w-full bg-neutral-900 rounded-xl flex flex-col items-center overflow-hidden">
+            <div className="w-full h-[200px] flex flex-col items-center justify-center gap-2 relative">
+              <div className="absolute inset-4 border-2 border-white/15 rounded-lg" />
+              <QrCode className="w-8 h-8 text-white/40 relative z-10" />
+              <p className="text-[11px] text-white/40 relative z-10">Escanea QR de pallet o bulto</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 w-full px-3 pb-3">
+              <button onClick={() => handleScan("Bulto")} className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-[0.8125rem] sm:text-xs font-medium rounded-lg bg-neutral-800 text-neutral-100 hover:text-white transition-colors active:scale-[0.97]">
+                <QrCode className="w-3.5 h-3.5" />
+                Escanear bulto
+              </button>
+              <button onClick={() => handleScan("Pallet")} className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-[0.8125rem] sm:text-xs font-medium rounded-lg bg-neutral-800 text-neutral-100 hover:text-white transition-colors active:scale-[0.97]">
+                <QrCode className="w-3.5 h-3.5" />
+                Escanear pallet
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Divider ─ */}
+        <div className="border-t border-neutral-100 flex-shrink-0" />
+
+        {/* ── Carga registrada — scrollable ─────────────────── */}
+        <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0">
+          <p className="text-xs font-semibold text-neutral-500 mb-2">Carga registrada</p>
+          {entries.length === 0 ? (
+            <p className="text-xs text-neutral-600">Sin registros escaneados</p>
+          ) : (
+            <div className="space-y-1.5">
+              {[...entries].reverse().map((entry, i) => (
+                <div key={`${entry.code}-${i}`} className={`flex items-center gap-1.5 rounded-md px-1.5 py-0.5 ${i === 0 ? "bg-neutral-50" : ""}`}>
+                  {entry.status === "ok" && (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                      <p className="text-xs text-neutral-700">
+                        <span className="font-medium">{entry.type}</span>{" "}
+                        <span className="font-sans font-semibold text-neutral-800">{entry.code}</span>{" "}
+                        <span className="text-neutral-500">registrado</span>
+                      </p>
+                    </>
+                  )}
+                  {entry.status === "duplicate" && (
+                    <>
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                      <p className="text-xs text-amber-600 font-medium">Código ya escaneado</p>
+                    </>
+                  )}
+                  {entry.status === "unknown" && (
+                    <>
+                      <XCircle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
+                      <p className="text-xs text-red-600 font-medium">Código no pertenece a esta orden</p>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Status + Footer ─────────────────────────────────── */}
+        <div className="border-t border-neutral-100 px-5 pt-3 pb-8 flex-shrink-0 space-y-2.5">
+          {/* Status message */}
+          {entries.length > 0 && (
+            coincide ? (
+              <div className="flex items-center gap-1.5 justify-center">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                <p className="text-xs font-medium text-green-600">Coincide con la orden</p>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 justify-center">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                <p className="text-xs font-medium text-amber-600">
+                  Diferencia con lo esperado
+                </p>
+              </div>
+            )
+          )}
+
+          <Button variant="primary" size="md" onClick={handleConfirm} disabled={validEntries.length === 0} className="w-full" iconLeft={<CheckCircle2 className="w-4 h-4" />}>
+            Confirmar recepción
+          </Button>
+        </div>
+
+        {/* ── Alerta de diferencias ───────────────────────────── */}
+        <AlertModal
+          open={showDiffAlert}
+          onClose={() => setShowDiffAlert(false)}
+          icon={AlertTriangle}
+          variant="warning"
+          title="Recepción con diferencias"
+          confirm={{
+            label: "Confirmar",
+            onClick: () => { setShowDiffAlert(false); onConfirm(); },
+          }}
+        >
+          <p>
+            ¿Estás seguro de finalizar la recepción a bodega con{" "}
+            <span className="font-semibold text-neutral-900">{diffParts.join(" y ")}</span>
+            {" "}de diferencia?
+          </p>
+        </AlertModal>
+
+      </div>
+    </div>
+  );
+}
+
 // ─── Actions cell ─────────────────────────────────────────────────────────────
-function ActionsCell({ orden }: { orden: Orden }) {
+function ActionsCell({ orden, onPrimaryAction, onCancel, role }: { orden: Orden; onPrimaryAction?: () => void; onCancel?: (id: string) => void; role?: Role }) {
   const router        = useRouter();
   const [menuPos,    setMenuPos]    = useState<{ top: number; right: number } | null>(null);
   const [tipVisible, setTipVisible] = useState(false);
   const [mounted,    setMounted]    = useState(false);
   const dotsRef       = useRef<HTMLButtonElement>(null);
   const primaryWrap   = useRef<HTMLDivElement>(null);
-  const { primary, menu } = getActions(orden.estado);
+  const { primary, menu } = getActions(orden.estado, orden.id, orden, onCancel, role);
   const Icon = primary?.icon;
 
   // Portal only works client-side
@@ -266,7 +696,7 @@ function ActionsCell({ orden }: { orden: Orden }) {
       })()
     : null;
 
-  const btnCls = "flex items-center justify-center p-1.5 border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 text-gray-600 rounded-lg transition-colors";
+  const btnCls = "flex items-center justify-center p-1.5 font-medium whitespace-nowrap transition-colors duration-200 outline-none select-none rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200";
 
   return (
     <div className="flex items-center gap-1">
@@ -276,27 +706,33 @@ function ActionsCell({ orden }: { orden: Orden }) {
           onMouseEnter={() => setTipVisible(true)}
           onMouseLeave={() => setTipVisible(false)}
         >
-          {primary.href ? (
+          {primary.showLabel ? (
+            <Button variant="secondary" size="sm" href={primary.href} iconLeft={<Icon className="w-3.5 h-3.5" />}>
+              {primary.tooltip}
+            </Button>
+          ) : primary.href ? (
             <Link href={primary.href} className={btnCls}>
               <Icon className="w-4 h-4" />
             </Link>
           ) : (
-            <button className={btnCls}>
+            <button className={btnCls} onClick={onPrimaryAction}>
               <Icon className="w-4 h-4" />
             </button>
           )}
         </div>
       )}
 
-      <button
-        ref={dotsRef}
-        onClick={toggleMenu}
-        className={`p-1.5 rounded-lg transition-colors ${
-          menuPos ? "bg-gray-100 text-gray-700" : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-        }`}
-      >
-        <DotsVertical className="w-4 h-4" />
-      </button>
+      {menu.length > 0 && (
+        <button
+          ref={dotsRef}
+          onMouseDown={toggleMenu}
+          className={`p-1.5 rounded-lg transition-colors duration-300 ${
+            menuPos ? "bg-neutral-100 text-neutral-700" : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-600"
+          }`}
+        >
+          <MoreVertical className="w-4 h-4" />
+        </button>
+      )}
 
       {/* ── Tooltip — portal to body so sticky/overflow never clips it ── */}
       {mounted && tipPos && primary && createPortal(
@@ -310,10 +746,10 @@ function ActionsCell({ orden }: { orden: Orden }) {
             pointerEvents: "none",
           }}
         >
-          <div className="bg-gray-900 text-white text-xs font-medium px-2 py-1 rounded-lg" style={NW}>
+          <div className="bg-neutral-900 text-white text-xs font-medium px-2 py-1 rounded-lg" style={NW}>
             {primary.tooltip}
           </div>
-          <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-gray-900" />
+          <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-neutral-900" />
         </div>,
         document.body
       )}
@@ -322,7 +758,7 @@ function ActionsCell({ orden }: { orden: Orden }) {
       {mounted && menuPos && createPortal(
         <div
           style={{ position: "fixed", top: menuPos.top, right: menuPos.right, zIndex: 2147483647 }}
-          className="bg-white border border-gray-200 rounded-xl shadow-xl py-1.5 min-w-[192px]"
+          className="bg-white border border-neutral-200 rounded-xl shadow-xl py-1.5 min-w-[192px]"
           onMouseDown={e => e.stopPropagation()}
         >
           {menu.map((item, i) => {
@@ -331,13 +767,13 @@ function ActionsCell({ orden }: { orden: Orden }) {
             return (
               <button
                 key={item.label}
-                onClick={() => { setMenuPos(null); if (item.href) router.push(item.href); }}
-                className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-colors ${
-                  item.danger ? "text-red-500 hover:bg-red-50" : "text-gray-700 hover:bg-gray-50"
-                } ${hasSeparator ? "border-t border-gray-100 mt-1 pt-2.5" : ""}`}
+                onClick={() => { setMenuPos(null); if (item.href) router.push(item.href); item.onClick?.(); }}
+                className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-colors duration-300 ${
+                  item.danger ? "text-red-500 hover:bg-red-50" : "text-neutral-700 hover:bg-neutral-50"
+                } ${hasSeparator ? "border-t border-neutral-100 mt-1 pt-2.5" : ""}`}
               >
                 {ItemIcon && (
-                  <ItemIcon className={`w-4 h-4 flex-shrink-0 ${item.danger ? "text-red-400" : "text-gray-400"}`} />
+                  <ItemIcon className={`w-4 h-4 flex-shrink-0 ${item.danger ? "text-red-400" : "text-neutral-600"}`} />
                 )}
                 {item.label}
               </button>
@@ -350,41 +786,62 @@ function ActionsCell({ orden }: { orden: Orden }) {
   );
 }
 
-// ─── Filter Section component ─────────────────────────────────────────────────
+// ─── Filter Section component (accordion) ────────────────────────────────────
 function FilterSection({
   title,
   options,
   selected,
   onToggle,
   renderOption,
+  defaultOpen = true,
 }: {
   title: string;
   options: string[];
   selected: Set<string>;
   onToggle: (val: string) => void;
   renderOption?: (val: string) => React.ReactNode;
+  defaultOpen?: boolean;
 }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const scrollable = options.length >= 4;
+  const count = selected.size;
   return (
     <div>
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{title}</p>
-      <div className="space-y-1">
-        {options.map(opt => (
-          <label
-            key={opt}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors group"
-          >
-            <input
-              type="checkbox"
-              checked={selected.has(opt)}
-              onChange={() => onToggle(opt)}
-              className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-            />
-            {renderOption ? renderOption(opt) : (
-              <span className="text-sm text-gray-700">{opt}</span>
-            )}
-          </label>
-        ))}
-      </div>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center justify-between w-full group"
+      >
+        <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide flex items-center gap-2">
+          {title}
+          {count > 0 && (
+            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold leading-none">
+              {count}
+            </span>
+          )}
+        </span>
+        <ChevronDown className={`w-3.5 h-3.5 text-neutral-600 transition-transform duration-200 ${open ? "" : "-rotate-90"}`} />
+      </button>
+      {open && (
+        <div className={`space-y-1 mt-2 ${scrollable ? "overflow-y-auto max-h-[176px] pr-1 filter-scroll" : ""}`}>
+          {options.map(opt => (
+            <label
+              key={opt}
+              className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-neutral-50 transition-colors duration-300 group"
+            >
+              <input
+                type="checkbox"
+                checked={selected.has(opt)}
+                onChange={() => onToggle(opt)}
+                className="w-4 h-4 rounded border-neutral-300 text-primary-500 focus:ring-primary-500 cursor-pointer"
+              />
+              {renderOption ? renderOption(opt) : (
+                <span className="text-sm text-neutral-700">{opt}</span>
+              )}
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -398,24 +855,166 @@ function OrdenesPageInner() {
   const { colOrder, colVisible } = useColumnConfig();
   const activeColumns = colOrder.filter(k => colVisible.includes(k));
 
-  const [activeTab,   setActiveTab]   = useState<string>("Todas");
-  const [showToast,   setShowToast]   = useState(false);
-  const [toastMsg,    setToastMsg]    = useState({ title: "", subtitle: "" });
-  const [showInfo,    setShowInfo]    = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
-  const [search,      setSearch]      = useState("");
+  const tabsScrollRef = useRef<HTMLDivElement>(null);
+  const tabsDragRef   = useRef({ active: false, startX: 0, scrollLeft: 0, moved: false });
+  const [showLeftArrow, setShowLeftArrow]   = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
+
+  const [activeTab,         setActiveTab]         = useState<string>("Todas");
+  const [showToast,         setShowToast]         = useState(false);
+  const [toastMsg,          setToastMsg]          = useState({ title: "", subtitle: "" });
+  const [showFilters,       setShowFilters]       = useState(false);
+  const [search,            setSearch]            = useState("");
+  const [orStatusOverrides, setOrStatusOverrides] = useState<Record<string, { estado: Status; fechaAgendada?: string }>>({});
+  const [recibirOrden,      setRecibirOrden]      = useState<Orden | null>(null);
+  const [createdOrs,        setCreatedOrs]        = useState<Orden[]>([]);
+  const [showQrScanner,     setShowQrScanner]     = useState(false);
+  const [cardMenuId,        setCardMenuId]        = useState<string | null>(null);
+  const [bottomMenuOpen,    setBottomMenuOpen]    = useState(false);
+  const [cancelTarget,      setCancelTarget]      = useState<string | null>(null);
+  const [selectedIds,       setSelectedIds]       = useState<Set<string>>(new Set());
+
+  // ── Role (initialise with SSR-safe default, sync from localStorage on mount) ──
+  const [currentRole, setCurrentRole] = useState<Role>("Super Admin");
+  useEffect(() => {
+    setCurrentRole(getRole());
+    const sync = () => setCurrentRole(getRole());
+    window.addEventListener("amplifica-role-change", sync);
+    return () => window.removeEventListener("amplifica-role-change", sync);
+  }, []);
+
+  const canCreate  = can(currentRole, "or:create");
+  const canScanQr  = can(currentRole, "or:scan_qr");
+  const canReceive = can(currentRole, "or:receive");
+
+  // Close card menu / bottom menu on outside click
+  useEffect(() => {
+    if (!cardMenuId && !bottomMenuOpen) return;
+    const close = () => { setCardMenuId(null); setBottomMenuOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [cardMenuId, bottomMenuOpen]);
+
+  // ── Purge stale localStorage + read overrides (single atomic effect) ──
+  useEffect(() => {
+    // Step 1: version check — purge if stale
+    const DATA_VERSION = "v4-70ors";
+    try {
+      const ver = localStorage.getItem("amplifica_data_version");
+      if (ver !== DATA_VERSION) {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith("amplifica_or_") || key.startsWith("amplifica_") || key === QR_STORAGE_KEY)) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+        localStorage.setItem("amplifica_data_version", DATA_VERSION);
+        // After purge, no overrides or created ORs exist — skip reading
+        return;
+      }
+    } catch { /* ignore */ }
+
+    // Step 2: read overrides (only if version matched — data is fresh)
+    const overrides: Record<string, { estado: Status; fechaAgendada?: string }> = {};
+
+    for (const orden of ORDENES) {
+      try {
+        const stored = localStorage.getItem(`amplifica_or_${orden.id}`);
+        if (stored) {
+          const parsed = JSON.parse(stored) as { estado: Status; fechaAgendada?: string };
+          if (parsed.estado) overrides[orden.id] = parsed;
+        }
+      } catch { /* ignore */ }
+    }
+
+    try {
+      const raw = localStorage.getItem("amplifica_created_ors");
+      if (raw) {
+        const parsed = JSON.parse(raw) as Orden[];
+        for (const or of parsed) {
+          try {
+            const stored = localStorage.getItem(`amplifica_or_${or.id}`);
+            if (stored) {
+              const p = JSON.parse(stored) as { estado: Status; fechaAgendada?: string };
+              if (p.estado) overrides[or.id] = p;
+            }
+          } catch { /* ignore */ }
+        }
+        setCreatedOrs(parsed);
+      }
+    } catch { /* ignore */ }
+
+    setOrStatusOverrides(overrides);
+
+    try {
+      const pending = localStorage.getItem("amplifica_pending_toast");
+      if (pending) {
+        const { title, subtitle } = JSON.parse(pending) as { title: string; subtitle: string };
+        localStorage.removeItem("amplifica_pending_toast");
+        setToastMsg({ title, subtitle });
+        setShowToast(true);
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   // ── Filter state ──
   const [filterSellers,    setFilterSellers]    = useState<Set<string>>(new Set());
   const [filterSucursales, setFilterSucursales] = useState<Set<string>>(new Set());
   const [filterTagTypes,   setFilterTagTypes]   = useState<Set<string>>(new Set());
+  const [filterFechaDesde, setFilterFechaDesde] = useState("");
+  const [filterFechaHasta, setFilterFechaHasta] = useState("");
+
+  // Merge created ORs with static data (dedup by id), apply localStorage overrides, and enrich with OR_STATS
+  const ordenesEffective = useMemo(() => {
+    const seen = new Set<string>();
+    const merged = [...createdOrs, ...ORDENES].filter(o => {
+      if (seen.has(o.id)) return false;
+      seen.add(o.id);
+      return true;
+    });
+    return merged.map(o => {
+      const override = orStatusOverrides[o.id];
+      const enriched = override ? { ...o, estado: override.estado, ...(override.fechaAgendada ? { fechaAgendada: override.fechaAgendada } : {}) } : { ...o };
+      const stats = OR_STATS[o.id];
+      if (stats && !enriched.progreso) {
+        enriched.progreso = { contadas: stats.contadas, total: stats.total };
+      }
+      if (stats && enriched.sesiones === undefined) {
+        enriched.sesiones = stats.sesiones;
+      }
+      return enriched;
+    });
+  }, [orStatusOverrides, createdOrs]);
+
+  // ── QR scanner helpers ──
+  const getOrInfo = useCallback((orId: string) => {
+    const o = ordenesEffective.find(x => x.id === orId);
+    if (!o) return undefined;
+    return { id: o.id, seller: o.seller, sucursal: o.sucursal, fechaAgendada: o.fechaAgendada, estado: o.estado, skus: o.skus, uTotales: o.uTotales, pallets: o.pallets, bultos: o.bultos };
+  }, [ordenesEffective]);
+
+  const handleQrConfirm = useCallback((orId: string, labelCount: number) => {
+    localStorage.setItem(`amplifica_or_${orId}`, JSON.stringify({ estado: "Recepcionado en bodega" }));
+    setOrStatusOverrides(prev => ({ ...prev, [orId]: { estado: "Recepcionado en bodega" as Status } }));
+    setToastMsg({
+      title: "Orden recepcionada en bodega",
+      subtitle: `${orId} — ${labelCount} etiqueta${labelCount !== 1 ? "s" : ""} QR enviada${labelCount !== 1 ? "s" : ""} a impresión`,
+    });
+    setShowToast(true);
+  }, []);
+
+  const handleQrStartConteo = useCallback((orId: string) => {
+    router.push(`/recepciones/${encodeURIComponent(orId)}`);
+  }, [router]);
 
   // ── Filter options (unique values from data) ──
-  const allSellers    = useMemo(() => [...new Set(ORDENES.map(o => o.seller))].sort(), []);
-  const allSucursales = useMemo(() => [...new Set(ORDENES.map(o => o.sucursal))].sort(), []);
+  const allSellers    = useMemo(() => [...new Set(ordenesEffective.map(o => o.seller))].sort(),    [ordenesEffective]);
+  const allSucursales = useMemo(() => [...new Set(ordenesEffective.map(o => o.sucursal))].sort(), [ordenesEffective]);
 
   // ── Active filter count (for badge) ──
-  const activeFilterCount = filterSellers.size + filterSucursales.size + filterTagTypes.size;
+  const activeFilterCount = filterTagTypes.size + (filterFechaDesde ? 1 : 0) + (filterFechaHasta ? 1 : 0);
 
   // ── Toggle helper ──
   const toggleInSet = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, val: string) => {
@@ -427,9 +1026,9 @@ function OrdenesPageInner() {
   };
 
   const clearAllFilters = () => {
-    setFilterSellers(new Set());
-    setFilterSucursales(new Set());
     setFilterTagTypes(new Set());
+    setFilterFechaDesde("");
+    setFilterFechaHasta("");
   };
 
   // Mostrar toast al volver de crear o reagendar
@@ -442,12 +1041,38 @@ function OrdenesPageInner() {
       setToastMsg({ title: "Orden de recepción reagendada", subtitle: "La fecha y hora han sido actualizadas" });
       setShowToast(true);
       router.replace("/recepciones");
+    } else if (searchParams.get("completed") === "1") {
+      setToastMsg({ title: "Orden completada", subtitle: "La orden ha sido completada y programada correctamente" });
+      setShowToast(true);
+      router.replace("/recepciones");
     }
   }, [searchParams, router]);
 
+  // ── Sidebar global filters (synced via localStorage) ──
+  const [sidebarSucursal, setSidebarSucursal] = useState<string | null>(null);
+  const [sidebarSeller, setSidebarSeller]     = useState<string | null>(null);
+  const [sidebarDateFrom, setSidebarDateFrom] = useState<string | null>(null);
+  const [sidebarDateTo, setSidebarDateTo]     = useState<string | null>(null);
+
+  useEffect(() => {
+    const sync = () => {
+      const s = localStorage.getItem("amplifica_filter_sucursal");
+      const t = localStorage.getItem("amplifica_filter_seller");
+      const df = localStorage.getItem("amplifica_filter_date_from");
+      const dt = localStorage.getItem("amplifica_filter_date_to");
+      setSidebarSucursal(s || null);
+      setSidebarSeller(t || null);
+      setSidebarDateFrom(df || null);
+      setSidebarDateTo(dt || null);
+    };
+    sync();
+    window.addEventListener("amplifica-filter-change", sync);
+    return () => window.removeEventListener("amplifica-filter-change", sync);
+  }, []);
+
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDir,   setSortDir]   = useState<SortDir>("asc");
-  const [pageSize,  setPageSize]  = useState(10);
+  const [pageSize,  setPageSize]  = useState(20);
   const [page,      setPage]      = useState(1);
 
   const toggleSort = (field: SortField) => {
@@ -455,10 +1080,47 @@ function OrdenesPageInner() {
     else { setSortField(field); setSortDir("asc"); }
   };
 
+  // ── Counts per status tab (respects sidebar filters but NOT active tab) ──
+  const statusCounts = useMemo(() => {
+    let rows = [...ordenesEffective];
+    if (sidebarSucursal) rows = rows.filter(o => o.sucursal === sidebarSucursal);
+    if (sidebarSeller)   rows = rows.filter(o => o.seller === sidebarSeller);
+    if (sidebarDateFrom || sidebarDateTo) {
+      rows = rows.filter(o => {
+        const [d, m, y] = o.creacion.split("/").map(Number);
+        const iso = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        if (sidebarDateFrom && iso < sidebarDateFrom) return false;
+        if (sidebarDateTo   && iso > sidebarDateTo)   return false;
+        return true;
+      });
+    }
+    const counts: Record<string, number> = {};
+    for (const tab of TABS) {
+      const statusVal = TAB_STATUS[tab];
+      counts[tab] = statusVal ? rows.filter(o => o.estado === statusVal).length : rows.length;
+    }
+    return counts;
+  }, [ordenesEffective, sidebarSucursal, sidebarSeller, sidebarDateFrom, sidebarDateTo]);
+
   const filtered = useMemo(() => {
-    let rows = [...ORDENES];
+    let rows = [...ordenesEffective];
     const statusFilter = TAB_STATUS[activeTab];
     if (statusFilter) rows = rows.filter(o => o.estado === statusFilter);
+
+    // ── Sidebar global filters ──
+    if (sidebarSucursal) rows = rows.filter(o => o.sucursal === sidebarSucursal);
+    if (sidebarSeller)   rows = rows.filter(o => o.seller === sidebarSeller);
+
+    // ── Sidebar date range filter (creacion is DD/MM/YYYY, localStorage is YYYY-MM-DD) ──
+    if (sidebarDateFrom || sidebarDateTo) {
+      rows = rows.filter(o => {
+        const [d, m, y] = o.creacion.split("/").map(Number);
+        const iso = `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+        if (sidebarDateFrom && iso < sidebarDateFrom) return false;
+        if (sidebarDateTo   && iso > sidebarDateTo)   return false;
+        return true;
+      });
+    }
 
     // ── Apply multiselect filters ──
     if (filterSellers.size > 0)    rows = rows.filter(o => filterSellers.has(o.seller));
@@ -468,6 +1130,20 @@ function OrdenesPageInner() {
         [...filterTagTypes].some(ft => t.label.toLowerCase().includes(ft))
       ) ?? false
     );
+
+    // ── Fecha agendada range filter ──
+    if (filterFechaDesde || filterFechaHasta) {
+      rows = rows.filter(o => {
+        if (o.fechaAgendada === "—" || o.fechaAgendada === "Sin agendar") return false;
+        const parts = o.fechaAgendada.split(" ")[0].split("/").map(Number);
+        if (parts.length < 3) return false;
+        const [d, m, y] = parts;
+        const iso = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        if (filterFechaDesde && iso < filterFechaDesde) return false;
+        if (filterFechaHasta && iso > filterFechaHasta) return false;
+        return true;
+      });
+    }
 
     const q = search.trim().toLowerCase();
     if (q) {
@@ -486,16 +1162,64 @@ function OrdenesPageInner() {
     }
     if (sortField) {
       rows.sort((a, b) => {
-        const da = parseDate(sortField === "creacion" ? a.creacion : a.fechaAgendada);
-        const db = parseDate(sortField === "creacion" ? b.creacion : b.fechaAgendada);
+        const fieldA = sortField === "creacion" ? a.creacion : a.fechaAgendada;
+        const fieldB = sortField === "creacion" ? b.creacion : b.fechaAgendada;
+        // "Sin agendar" (—) always goes to the end regardless of sort direction
+        if (sortField === "fechaAgendada") {
+          const aEmpty = fieldA === "—" || fieldA === "Sin agendar";
+          const bEmpty = fieldB === "—" || fieldB === "Sin agendar";
+          if (aEmpty && !bEmpty) return 1;
+          if (!aEmpty && bEmpty) return -1;
+          if (aEmpty && bEmpty) return 0;
+        }
+        const da = parseDate(fieldA);
+        const db = parseDate(fieldB);
         return sortDir === "asc" ? da - db : db - da;
       });
     }
     return rows;
-  }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes]);
+  }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes, filterFechaDesde, filterFechaHasta, ordenesEffective, sidebarSucursal, sidebarSeller, sidebarDateFrom, sidebarDateTo]);
 
   // Reset to page 1 whenever filters/tabs/search change
-  useEffect(() => { setPage(1); }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes, pageSize]);
+  useEffect(() => { setPage(1); setSelectedIds(new Set()); }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes, filterFechaDesde, filterFechaHasta, pageSize]);
+
+  // Detect tabs overflow → show/hide left/right arrows
+  useEffect(() => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    const update = () => {
+      setShowLeftArrow(el.scrollLeft > 4);
+      setShowRightArrow(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+    };
+    update();
+    el.addEventListener("scroll", update);
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", update);
+      ro.disconnect();
+    };
+  }, []);
+
+  // Drag-to-scroll for tabs
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const d = tabsDragRef.current;
+      if (!d.active || !tabsScrollRef.current) return;
+      const dx = e.clientX - d.startX;
+      if (Math.abs(dx) > 4) {
+        d.moved = true;
+        tabsScrollRef.current.scrollLeft = d.scrollLeft - dx;
+      }
+    };
+    const onUp = () => { tabsDragRef.current.active = false; };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    return () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+  }, []);
 
   // ── Paginated slice ──
   const totalPages   = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -505,53 +1229,92 @@ function OrdenesPageInner() {
   const fromRow      = filtered.length === 0 ? 0 : startIdx + 1;
   const toRow        = Math.min(startIdx + pageSize, filtered.length);
 
+
   return (
-    <div className="p-6 min-w-0">
+    <div className="p-4 lg:p-6 min-w-0 pb-36 sm:pb-0 max-w-[1680px] mx-auto sm:flex sm:flex-col sm:h-[98dvh] sm:overflow-hidden">
 
       {/* Toast */}
       {showToast && (
-        <div className="fixed top-5 right-5 z-50 bg-white border border-green-200 rounded-xl shadow-xl p-4 flex items-start gap-3 max-w-xs">
-          <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-gray-800">{toastMsg.title}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{toastMsg.subtitle}</p>
+        <div className="fixed top-5 left-4 right-4 sm:left-auto sm:right-5 sm:w-auto z-50 bg-white border border-green-200 rounded-xl shadow-xl p-4 flex items-start gap-3 sm:max-w-xs">
+          <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-neutral-800">{toastMsg.title}</p>
+            <p className="text-xs text-neutral-500 mt-0.5">{toastMsg.subtitle}</p>
           </div>
-          <button onClick={() => setShowToast(false)} className="text-gray-400 hover:text-gray-600 flex-shrink-0">
+          <button onClick={() => setShowToast(false)} className="text-neutral-600 hover:text-neutral-600 flex-shrink-0">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* ── Info modal ── */}
-      {showInfo && (
+      {/* ── Recibir OR modal ── */}
+      {recibirOrden && (
+        <RecebirModal
+          orden={recibirOrden}
+          onCancel={() => setRecibirOrden(null)}
+          onConfirm={() => {
+            const targetId = recibirOrden.id;
+            const newStatus: Status = "Recepcionado en bodega";
+            try {
+              localStorage.setItem(`amplifica_or_${targetId}`, JSON.stringify({ estado: newStatus }));
+            } catch { /* ignore */ }
+            setOrStatusOverrides(prev => ({ ...prev, [targetId]: { estado: newStatus } }));
+            setRecibirOrden(null);
+            setToastMsg({
+              title: "Orden recepcionada en bodega",
+              subtitle: `${targetId} fue recibida y está lista para el conteo`,
+            });
+            setShowToast(true);
+          }}
+        />
+      )}
+
+      {/* ── Cancel OR modal ── */}
+      {cancelTarget && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ background: "rgba(0,0,0,0.35)" }}
-          onMouseDown={() => setShowInfo(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ background: "rgba(0,0,0,0.4)" }}
+          onClick={() => setCancelTarget(null)}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4"
-            onMouseDown={e => e.stopPropagation()}
+            className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6"
+            onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <InfoCircle className="w-5 h-5 text-indigo-600" />
-                </div>
-                <h2 className="text-base font-semibold text-gray-900">Órdenes de Recepción</h2>
-              </div>
-              <button onClick={() => setShowInfo(false)} className="text-gray-400 hover:text-gray-600 flex-shrink-0 mt-0.5">
+            <div className="flex justify-end mb-2">
+              <button onClick={() => setCancelTarget(null)} className="text-neutral-600 hover:text-neutral-600 transition-colors duration-300">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              Las <strong>Órdenes de Recepción (OR)</strong> gestionan la entrada de mercancía al centro de distribución. Cada OR registra el proceso completo: desde la programación de fecha de entrega hasta la verificación del inventario recibido.
+            <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-4 mx-auto">
+              <CircleOff className="w-7 h-7 text-red-500" />
+            </div>
+            <h3 className="text-lg font-bold text-neutral-900 text-center mb-1">¿Cancelar esta orden?</h3>
+            <p className="text-sm text-neutral-500 text-center mb-6">
+              La orden <span className="font-semibold text-neutral-700">{cancelTarget}</span> se cancelará de forma permanente. Esta acción no se puede deshacer.
             </p>
-            <ul className="mt-3 space-y-1.5 text-sm text-gray-500">
-              <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" /> Programa citas de descarga con horario</li>
-              <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" /> Declara SKUs y unidades antes de la recepción</li>
-              <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" /> Rastrea diferencias y productos no pickeables</li>
-            </ul>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  try {
+                    localStorage.setItem(`amplifica_or_${cancelTarget}`, JSON.stringify({ estado: "Cancelado" }));
+                  } catch { /* ignore */ }
+                  setOrStatusOverrides(prev => ({ ...prev, [cancelTarget]: { estado: "Cancelado" as Status } }));
+                  setToastMsg({ title: "Orden cancelada", subtitle: `${cancelTarget} fue cancelada correctamente` });
+                  setShowToast(true);
+                  setCancelTarget(null);
+                }}
+                className="w-full h-11 flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg transition-colors duration-300"
+              >
+                <CircleOff className="w-4 h-4" />
+                Sí, cancelar orden
+              </button>
+              <button
+                onClick={() => setCancelTarget(null)}
+                className="w-full h-11 flex items-center justify-center text-neutral-600 text-sm font-medium hover:bg-neutral-50 rounded-lg transition-colors duration-300"
+              >
+                Volver
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -568,21 +1331,21 @@ function OrdenesPageInner() {
             onMouseDown={e => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Sliders01 className="w-4 h-4 text-gray-600" />
+                <div className="w-8 h-8 bg-neutral-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <SlidersHorizontal className="w-4 h-4 text-neutral-600" />
                 </div>
-                <h2 className="text-base font-semibold text-gray-900">Filtros</h2>
+                <h2 className="text-base font-semibold text-neutral-900">Filtros</h2>
                 {activeFilterCount > 0 && (
-                  <span className="inline-flex items-center justify-center w-5 h-5 bg-indigo-600 text-white text-[10px] font-bold rounded-full">
+                  <span className="inline-flex items-center justify-center w-5 h-5 bg-primary-500 text-white text-[10px] font-bold rounded-full">
                     {activeFilterCount}
                   </span>
                 )}
               </div>
               <button
                 onClick={() => setShowFilters(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-neutral-600 hover:text-neutral-600 transition-colors duration-300"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -590,23 +1353,32 @@ function OrdenesPageInner() {
 
             {/* Body */}
             <div className="p-5 space-y-5 overflow-y-auto max-h-[60vh]">
-              {/* Seller */}
-              <FilterSection
-                title="Seller"
-                options={allSellers}
-                selected={filterSellers}
-                onToggle={v => toggleInSet(setFilterSellers, v)}
-              />
-
-              {/* Sucursales */}
-              <FilterSection
-                title="Sucursal"
-                options={allSucursales}
-                selected={filterSucursales}
-                onToggle={v => toggleInSet(setFilterSucursales, v)}
-              />
-
               {/* Tags de resultado */}
+              {/* Fecha agendada */}
+              <div>
+                <p className="text-sm font-semibold text-neutral-700 mb-2">Fecha agendada</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-neutral-700 mb-1 block">Desde</label>
+                    <input
+                      type="date"
+                      value={filterFechaDesde}
+                      onChange={e => setFilterFechaDesde(e.target.value)}
+                      className="w-full h-8 px-3 text-sm border border-neutral-300 rounded-md bg-white text-neutral-900 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-neutral-700 mb-1 block">Hasta</label>
+                    <input
+                      type="date"
+                      value={filterFechaHasta}
+                      onChange={e => setFilterFechaHasta(e.target.value)}
+                      className="w-full h-8 px-3 text-sm border border-neutral-300 rounded-md bg-white text-neutral-900 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <FilterSection
                 title="Estado de productos"
                 options={TAG_FILTER_OPTIONS.map(t => t.key)}
@@ -614,12 +1386,12 @@ function OrdenesPageInner() {
                 onToggle={v => toggleInSet(setFilterTagTypes, v)}
                 renderOption={key => {
                   const opt = TAG_FILTER_OPTIONS.find(t => t.key === key);
-                  if (!opt) return <span className="text-sm text-gray-700">{key}</span>;
-                  const OptIcon = opt.Icon;
+                  if (!opt) return <span className="text-sm text-neutral-700">{key}</span>;
+                  const OptIcon = TAG_ICON_MAP[opt.icon];
                   return (
                     <span className="flex items-center gap-2">
-                      <OptIcon className={`w-4 h-4 flex-shrink-0 ${opt.iconClass}`} />
-                      <span className="text-sm text-gray-700">{opt.label}</span>
+                      {OptIcon && <OptIcon className={`w-4 h-4 flex-shrink-0 ${opt.iconClass}`} />}
+                      <span className="text-sm text-neutral-700">{opt.label}</span>
                     </span>
                   );
                 }}
@@ -627,17 +1399,17 @@ function OrdenesPageInner() {
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100 bg-gray-50">
+            <div className="flex items-center justify-between px-5 py-4 border-t border-neutral-100 bg-neutral-50">
               <button
                 onClick={clearAllFilters}
-                className="text-sm text-gray-500 hover:text-gray-700 font-medium transition-colors disabled:opacity-40"
+                className="text-sm text-neutral-500 hover:text-neutral-700 font-medium transition-colors duration-300 disabled:opacity-40"
                 disabled={activeFilterCount === 0}
               >
                 Limpiar filtros
               </button>
               <button
                 onClick={() => setShowFilters(false)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                className="bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors duration-300"
               >
                 Aplicar
               </button>
@@ -647,55 +1419,159 @@ function OrdenesPageInner() {
       )}
 
       {/* Page header */}
-      <div className="flex items-center justify-between mb-5 gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-5 gap-3 sm:gap-4 sm:flex-shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          <h1 className="text-2xl font-bold text-gray-900" style={NW}>Órdenes de Recepción</h1>
-          <button
-            onClick={() => setShowInfo(true)}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <InfoCircle className="w-5 h-5" />
-          </button>
+          <h1 className="text-xl sm:text-2xl font-bold text-neutral-900" style={NW}>Órdenes de Recepción</h1>
+          <PageInfoModal
+            title="Órdenes de Recepción"
+            description={<>Las <strong>Órdenes de Recepción (OR)</strong> gestionan la entrada de mercancía al centro de distribución. Cada OR registra el proceso completo: desde la programación de fecha de entrega hasta la verificación del inventario recibido.</>}
+            features={[
+              "Programa citas de descarga con horario",
+              "Declara SKUs y unidades antes de la recepción",
+              "Rastrea diferencias y productos no pickeables",
+            ]}
+          />
+          {/* Dots menu — mobile only (Exportar + Recepción sin agenda) */}
+          <div className="relative sm:hidden ml-auto">
+            <button
+              onMouseDown={e => e.stopPropagation()}
+              onClick={() => setBottomMenuOpen(prev => !prev)}
+              className={`inline-flex items-center justify-center p-1.5 rounded-lg transition-colors duration-200 ${
+                bottomMenuOpen ? "bg-neutral-100 text-neutral-700" : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-600"
+              }`}
+            >
+              <MoreVertical className="w-5 h-5" />
+            </button>
+            {bottomMenuOpen && (
+              <div
+                onMouseDown={e => e.stopPropagation()}
+                className="absolute top-full right-0 mt-1 bg-white border border-neutral-200 rounded-xl shadow-xl py-1.5 min-w-[200px] z-50"
+              >
+                <button
+                  onClick={() => { setBottomMenuOpen(false); /* export logic */ }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors duration-300"
+                >
+                  <Download className="w-4 h-4 flex-shrink-0 text-neutral-600" />
+                  Exportar
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm text-gray-600 font-medium transition-colors"
-            style={NW}
-          >
-            <Download01 className="w-4 h-4" /> Exportar
-          </button>
-          <button
-            className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm text-gray-600 font-medium transition-colors"
-            style={NW}
-          >
-            Recepción sin agenda
-          </button>
-          <Link
-            href="/recepciones/crear"
-            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-            style={NW}
-          >
-            <Plus className="w-4 h-4" /> Crear OR
-          </Link>
+        <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+          <div>
+            <Button variant="tertiary" iconLeft={<Download className="w-4 h-4" />}>
+              Exportar
+            </Button>
+          </div>
+          {canScanQr && (
+            <div>
+              <Button variant={canCreate ? "secondary" : "primary"} iconLeft={<QrCode className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
+                Escanear QR
+              </Button>
+            </div>
+          )}
+          {canCreate && (
+            <Button variant="primary" href="/recepciones/crear" iconLeft={<Plus className="w-4 h-4" />}>
+              Crear recepción
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-3 mb-4 min-w-0">
-        {/* ── Tabs with horizontal scroll ── */}
-        <div className="tabs-scroll flex items-center gap-1 flex-1 min-w-0 overflow-x-auto pb-0.5">
-          {TABS.map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              style={NW}
-              className={`px-3 py-1.5 rounded-lg text-sm transition-colors flex-shrink-0 ${
-                activeTab === tab ? "bg-gray-900 text-white font-medium" : "text-gray-600 hover:bg-gray-100"
-              }`}
+      <div className="flex items-center gap-2 sm:gap-3 mb-4 min-w-0 sm:flex-shrink-0">
+        {/* ── Tabs: select on mobile, pill scroll on desktop ── */}
+        <div className="relative flex-1 min-w-0">
+          {/* Mobile: select dropdown */}
+          <div className="sm:hidden">
+            <select
+              value={activeTab}
+              onChange={e => setActiveTab(e.target.value)}
+              className="w-full appearance-none bg-neutral-100 border border-neutral-200 rounded-lg px-3 py-2 pr-8 text-sm text-neutral-700 font-medium focus:outline-none focus:ring-2 focus:ring-primary-200"
             >
-              {tab}
-            </button>
-          ))}
+              {TABS.map(tab => (
+                <option key={tab} value={tab}>{tab}{statusCounts[tab] > 0 ? ` (${statusCounts[tab]})` : ""}</option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
+          </div>
+
+          {/* Desktop: pill tabs with horizontal scroll */}
+          <div
+            ref={tabsScrollRef}
+            className="hidden sm:flex tabs-scroll items-center gap-0.5 overflow-x-auto px-0.5 bg-neutral-100 rounded-lg select-none h-9"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+            onMouseDown={e => {
+              const el = tabsScrollRef.current;
+              if (!el) return;
+              tabsDragRef.current = { active: true, startX: e.clientX, scrollLeft: el.scrollLeft, moved: false };
+            }}
+            onClickCapture={e => {
+              if (tabsDragRef.current.moved) {
+                e.stopPropagation();
+                tabsDragRef.current.moved = false;
+              }
+            }}
+          >
+            {TABS.map(tab => {
+              const isActive = activeTab === tab;
+              const TabIcon = TAB_ICON_MAP[tab];
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  style={{ whiteSpace: "nowrap", letterSpacing: "-0.02em" }}
+                  className={`px-2.5 gap-1.5 rounded-md text-[13px] leading-tight transition-all duration-200 flex-shrink-0 flex items-center h-8 ${
+                    isActive ? "bg-white text-neutral-900 font-medium shadow-sm" : "text-neutral-500 hover:text-neutral-700"
+                  }`}
+                >
+                  {TabIcon && <TabIcon className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? (TAB_ICON_ACTIVE_CLASS[tab] ?? "text-neutral-500") : "text-neutral-400"}`} />}
+                  {tab}
+                  {statusCounts[tab] > 0 && (() => {
+                    const colors = TAB_BADGE_COLORS[tab] || TAB_BADGE_COLORS["Todas"];
+                    const neutralCls = "bg-neutral-200/70 text-neutral-500";
+                    const badgeCls = !isActive
+                      ? neutralCls
+                      : tab === "Todas"
+                        ? "bg-primary-500 text-white"
+                        : colors.active;
+                    return (
+                      <span className={`ml-0.5 text-[10px] tabular-nums rounded-full min-w-[18px] h-[18px] inline-flex items-center justify-center px-1 font-medium font-sans ${badgeCls}`}>
+                        {statusCounts[tab]}
+                      </span>
+                    );
+                  })()}
+                </button>
+              );
+            })}
+          </div>
+          {/* Left arrow */}
+          {showLeftArrow && (
+            <>
+              <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-neutral-100 to-transparent hidden sm:block rounded-l-xl" />
+              <button
+                onClick={() => tabsScrollRef.current?.scrollBy({ left: -200, behavior: "smooth" })}
+                className="hidden sm:flex absolute inset-y-0 left-0 items-center justify-center w-8 text-neutral-500 hover:text-neutral-900 transition-colors duration-300"
+                aria-label="Tabs anteriores"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </>
+          )}
+          {/* Right arrow */}
+          {showRightArrow && (
+            <>
+              <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-neutral-100 to-transparent hidden sm:block rounded-r-xl" />
+              <button
+                onClick={() => tabsScrollRef.current?.scrollBy({ left: 200, behavior: "smooth" })}
+                className="hidden sm:flex absolute inset-y-0 right-0 items-center justify-center w-8 text-neutral-500 hover:text-neutral-900 transition-colors duration-300"
+                aria-label="Ver más tabs"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </>
+          )}
         </div>
 
         {/* Right controls */}
@@ -703,16 +1579,16 @@ function OrdenesPageInner() {
           {/* ── Filters button — opens filter modal ── */}
           <button
             onClick={() => setShowFilters(true)}
-            className={`relative p-2 border rounded-lg transition-colors ${
+            className={`relative h-9 w-9 flex items-center justify-center border border-transparent rounded-lg transition-colors duration-300 ${
               activeFilterCount > 0
-                ? "border-indigo-300 bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
-                : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                ? "bg-primary-50 text-primary-500 hover:bg-primary-100"
+                : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
             }`}
           >
-            <Sliders01 className="w-4 h-4" />
+            <SlidersHorizontal className="w-4 h-4" />
             {activeFilterCount > 0 && (
               <span
-                className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-indigo-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center"
+                className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-primary-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center"
                 style={{ lineHeight: 1 }}
               >
                 {activeFilterCount}
@@ -720,116 +1596,326 @@ function OrdenesPageInner() {
             )}
           </button>
 
-          <Link
-            href="/recepciones/columnas"
-            className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center justify-center transition-colors"
-            title="Editor de columnas"
-          >
-            <LayoutGrid01 className="w-4 h-4 text-gray-500" />
-          </Link>
-
-          <div className="relative">
-            <SearchLg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          <div className="hidden sm:block relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
             <input
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar en órdenes"
-              className="pl-9 pr-8 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 w-52"
+              placeholder="Buscar OR..."
+              className="pl-9 pr-8 py-2 h-9 bg-neutral-100 rounded-lg text-sm text-neutral-700 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200 w-52"
             />
             {search && (
-              <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-600 hover:text-neutral-600">
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
+
+          <Link
+            href="/recepciones/columnas"
+            className="hidden sm:flex h-9 w-9 bg-neutral-100 rounded-lg hover:bg-neutral-200 items-center justify-center transition-colors duration-300"
+            title="Editor de columnas"
+          >
+            <Columns3 className="w-4 h-4 text-neutral-500" />
+          </Link>
         </div>
+      </div>
+
+      {/* Mobile search — full width below toolbar */}
+      <div className="sm:hidden relative mb-3">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600 pointer-events-none" />
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Buscar OR..."
+          className="w-full pl-9 pr-8 py-2.5 bg-neutral-100 rounded-lg text-sm text-neutral-700 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200"
+        />
+        {search && (
+          <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-600 hover:text-neutral-600">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       {/* Active filter chips */}
       {activeFilterCount > 0 && (
         <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <span className="text-xs text-gray-500 font-medium">Filtros activos:</span>
-          {[...filterSellers].map(s => (
-            <span key={s} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full font-medium">
-              {s}
-              <button onClick={() => toggleInSet(setFilterSellers, s)} className="ml-0.5 text-indigo-400 hover:text-indigo-600">
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
-          {[...filterSucursales].map(s => (
-            <span key={s} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full font-medium">
-              {s}
-              <button onClick={() => toggleInSet(setFilterSucursales, s)} className="ml-0.5 text-indigo-400 hover:text-indigo-600">
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
+          <span className="text-xs text-neutral-500 font-medium">Filtros activos:</span>
           {[...filterTagTypes].map(k => {
             const opt = TAG_FILTER_OPTIONS.find(t => t.key === k);
-            const ChipIcon = opt?.Icon;
+            const ChipIcon = opt ? TAG_ICON_MAP[opt.icon] : null;
             return (
-              <span key={k} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full font-medium">
+              <span key={k} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-primary-50 text-primary-600 border border-primary-200 rounded-full font-medium">
                 {ChipIcon && <ChipIcon className={`w-3 h-3 ${opt?.iconClass}`} />}
                 {opt?.label ?? k}
-                <button onClick={() => toggleInSet(setFilterTagTypes, k)} className="ml-0.5 text-indigo-400 hover:text-indigo-600">
+                <button onClick={() => toggleInSet(setFilterTagTypes, k)} className="ml-0.5 text-primary-400 hover:text-primary-500">
                   <X className="w-3 h-3" />
                 </button>
               </span>
             );
           })}
-          <button onClick={clearAllFilters} className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2">
+          <button onClick={clearAllFilters} className="text-xs text-neutral-600 hover:text-neutral-600 underline underline-offset-2">
             Limpiar todo
           </button>
         </div>
       )}
 
-      {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <div className="overflow-x-auto w-full">
-          <table className="text-sm border-collapse" style={{ width: "max-content", minWidth: "100%" }}>
+      {/* ── Mobile card view ── */}
+      <div className="sm:hidden flex flex-col gap-3">
+        {filtered.length === 0 ? (
+          <div className="bg-white border border-neutral-200 rounded-2xl py-14 text-center text-sm text-neutral-600">
+            No se encontraron órdenes{search ? ` para "${search}"` : ""}.
+          </div>
+        ) : (
+          paginatedRows.map((orden, i) => {
+            const actions = getActions(orden.estado, orden.id, orden, setCancelTarget, currentRole);
+            const PrimaryIcon = actions.primary?.icon;
+            return (
+              <div
+                key={`card-${orden.id}-${i}`}
+                className="bg-white border border-neutral-200 rounded-2xl p-4"
+              >
+                {/* Row 1: ID + Status */}
+                <div className="flex items-center justify-between gap-2 mb-2.5">
+                  <Link
+                    href={`/recepciones/${encodeURIComponent(orden.id)}`}
+                    className="inline-block bg-neutral-100 text-neutral-700 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 font-medium w-fit text-xs transition-colors"
+                  >
+                    {orden.id}
+                  </Link>
+                  <StatusBadge status={orden.estado} />
+                </div>
 
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
+                {/* Row 2: Tienda + Sucursal */}
+                <div className="flex items-center gap-3 text-sm mb-2">
+                  <span className="text-neutral-800 font-medium truncate">{orden.seller}</span>
+                  <span className="text-neutral-300">·</span>
+                  <span className="text-neutral-500 truncate">{orden.sucursal}</span>
+                </div>
+
+                {/* Row 3: Fecha agendada */}
+                <div className="flex items-center gap-2 text-xs text-neutral-500 mb-2.5">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-neutral-600 flex-shrink-0">
+                    <rect x="1" y="2" width="12" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
+                    <path d="M1 5.5h12" stroke="currentColor" strokeWidth="1.2"/>
+                    <path d="M4.5 1v2M9.5 1v2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                  </svg>
+                  {orden.fechaAgendada === "—" ? (
+                    <span className="text-neutral-600">Sin agendar</span>
+                  ) : (
+                    <span className="text-neutral-600">{orden.fechaAgendada}</span>
+                  )}
+                  {orden.fechaExtra && (
+                    <span className={`text-[11px] font-medium ${fechaExtraClass(orden.fechaExtra)}`}>
+                      {orden.fechaExtra}
+                    </span>
+                  )}
+                </div>
+
+                {/* Row 4: SKUs + Unidades + Sesiones */}
+                <div className="flex items-center gap-4 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-neutral-600">SKUs</span>
+                    <span className="text-neutral-700 font-semibold tabular-nums">{orden.skus}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-neutral-600">Unidades</span>
+                    <span className="text-neutral-700 font-semibold tabular-nums">{orden.uTotales}</span>
+                  </div>
+                  {orden.sesiones && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-neutral-600">Sesiones</span>
+                      <span className="text-neutral-700 font-semibold tabular-nums">{orden.sesiones}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Progreso (if any) */}
+                {orden.progreso && (() => {
+                  const pct = Math.round((orden.progreso.contadas / orden.progreso.total) * 100);
+                  const isComplete = pct >= 100;
+                  return (
+                    <div className="mt-2 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-[11px] font-sans font-medium tabular-nums tracking-normal ${isComplete ? "text-green-600" : "text-neutral-500"}`}>
+                          {orden.progreso.contadas.toLocaleString("es-CL")}/{orden.progreso.total.toLocaleString("es-CL")}
+                        </span>
+                        <span className={`text-[11px] font-sans font-medium tabular-nums tracking-normal ${isComplete ? "text-green-600" : "text-neutral-500"}`}>
+                          {pct}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${isComplete ? "bg-green-500" : "bg-primary-500"}`}
+                          style={{ width: `${Math.min(pct, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Tags (if any) */}
+                {orden.tags && orden.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2.5">
+                    {orden.tags.map((tag, ti) => {
+                      const TagIcon = TAG_ICON_MAP[tag.icon];
+                      if (!TagIcon) return null;
+                      return (
+                        <span
+                          key={tag.label ?? ti}
+                          className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-medium w-fit ${tag.className}`}
+                        >
+                          <TagIcon className={`w-3 h-3 flex-shrink-0 ${tag.iconClass}`} />
+                          {tag.label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Actions footer */}
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-neutral-100">
+                  {actions.primary && PrimaryIcon && (
+                    actions.primary.href ? (
+                      <Link
+                        href={actions.primary.href}
+                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors duration-200"
+                      >
+                        <PrimaryIcon className="w-4 h-4" />
+                        {actions.primary.tooltip}
+                      </Link>
+                    ) : (
+                      <button
+                        onClick={orden.estado === "Programado" ? () => setRecibirOrden(orden) : undefined}
+                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors duration-200"
+                      >
+                        <PrimaryIcon className="w-4 h-4" />
+                        {actions.primary.tooltip}
+                      </button>
+                    )
+                  )}
+                  {/* When only "Ver" action → show "Ver detalle" button; otherwise dots menu */}
+                  {!actions.primary && actions.menu.length === 1 && actions.menu[0].label === "Ver" ? (
+                    <Link
+                      href={actions.menu[0].href || `/recepciones/${encodeURIComponent(orden.id)}`}
+                      className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors duration-200"
+                    >
+                      <Eye className="w-4 h-4" />
+                      Ver detalle
+                    </Link>
+                  ) : (
+                    <div className="relative">
+                      <button
+                        onMouseDown={e => { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation(); }}
+                        onClick={() => setCardMenuId(prev => prev === orden.id ? null : orden.id)}
+                        className={`p-2 rounded-lg transition-colors duration-200 ${
+                          cardMenuId === orden.id ? "bg-neutral-100 text-neutral-700" : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-600"
+                        }`}
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                      {cardMenuId === orden.id && (
+                        <div onMouseDown={e => e.stopPropagation()} className="absolute bottom-full right-0 mb-1 bg-white border border-neutral-200 rounded-xl shadow-xl py-1.5 min-w-[192px] z-50">
+                          {actions.menu.map((item, mi) => {
+                            const ItemIcon = item.icon;
+                            const hasSep = mi > 0 && actions.menu[mi - 1]?.danger !== item.danger;
+                            return (
+                              <button
+                                key={item.label}
+                                onClick={() => { setCardMenuId(null); if (item.href) router.push(item.href); item.onClick?.(); }}
+                                className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-colors duration-300 ${
+                                  item.danger ? "text-red-500 hover:bg-red-50" : "text-neutral-700 hover:bg-neutral-50"
+                                } ${hasSep ? "border-t border-neutral-100 mt-1 pt-2.5" : ""}`}
+                              >
+                                {ItemIcon && <ItemIcon className={`w-4 h-4 flex-shrink-0 ${item.danger ? "text-red-400" : "text-neutral-600"}`} />}
+                                {item.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Table (desktop) — flex column so header + pagination stay visible, body scrolls */}
+      <div className="hidden sm:flex flex-col flex-1 min-h-0 bg-white border border-neutral-200 rounded-2xl overflow-hidden relative">
+        <div
+          className="overflow-x-auto overflow-y-auto flex-1 min-h-0 w-full table-scroll scroll-fade-right"
+          style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+          onScroll={e => {
+            const el = e.currentTarget;
+            el.classList.toggle("scrolled-end", el.scrollLeft + el.clientWidth >= el.scrollWidth - 2);
+          }}>
+          <table className="w-full table-fixed text-sm border-collapse font-sans tracking-normal">
+
+            <thead className="sticky top-0 z-10">
+              <tr className="border-b border-neutral-100 bg-neutral-50">
+                {/* Fixed: Checkbox */}
+                <th className="py-2 px-2 w-[44px]">
+                  <label className="inline-flex items-center justify-center w-[44px] h-[44px] cursor-pointer -m-3" aria-label="Seleccionar todos">
+                    <input className="sr-only peer" type="checkbox" checked={selectedIds.size === paginatedRows.length && paginatedRows.length > 0} onChange={() => { if (selectedIds.size === paginatedRows.length) { setSelectedIds(new Set()); } else { setSelectedIds(new Set(paginatedRows.map(o => o.id))); } }} aria-checked={selectedIds.size > 0 && selectedIds.size < paginatedRows.length ? "mixed" : selectedIds.size === paginatedRows.length && paginatedRows.length > 0} />
+                    <span className={`flex w-[18px] h-[18px] rounded items-center justify-center flex-shrink-0 transition-colors duration-200 border-[1.5px] ${selectedIds.size > 0 ? "bg-primary-500 border-primary-500" : "bg-white border-neutral-300 peer-hover:border-neutral-400 peer-focus-visible:ring-2 peer-focus-visible:ring-primary-300 peer-focus-visible:ring-offset-1"}`}>
+                      {selectedIds.size === paginatedRows.length && paginatedRows.length > 0 && <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                      {selectedIds.size > 0 && selectedIds.size < paginatedRows.length && <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none"><path d="M3 6h6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>}
+                    </span>
+                  </label>
+                </th>
                 {/* Fixed: ID */}
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide" style={NW}>ID</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 w-[130px]" style={NW}>ID</th>
 
                 {/* Dynamic columns */}
                 {activeColumns.map(key => {
+                  const COL_WIDTHS: Record<ColumnKey, string> = {
+                    creacion: "min-w-[110px] w-[110px]", fechaAgendada: "min-w-[160px] w-[160px]",
+                    seller: "w-[110px]", sucursal: "w-[110px]", estado: "min-w-[210px] w-[210px]",
+                    progreso: "w-[130px]", sesiones: "w-[75px]",
+                    skus: "w-[60px]", uTotales: "w-[85px]", tags: "min-w-[180px] w-[180px]",
+                  };
+                  const w = COL_WIDTHS[key];
                   if (key === "creacion") return (
-                    <th key="creacion" className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:text-gray-700 select-none" style={NW} onClick={() => toggleSort("creacion")}>
+                    <th key="creacion" className={`text-left py-3 px-4 text-xs font-semibold text-neutral-700 cursor-pointer hover:text-neutral-900 select-none ${w}`} style={NW} onClick={() => toggleSort("creacion")}>
                       Creación <SortIcon field="creacion" sortField={sortField} sortDir={sortDir} />
                     </th>
                   );
                   if (key === "fechaAgendada") return (
-                    <th key="fechaAgendada" className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:text-gray-700 select-none" style={NW} onClick={() => toggleSort("fechaAgendada")}>
-                      F. Agendada <SortIcon field="fechaAgendada" sortField={sortField} sortDir={sortDir} />
+                    <th key="fechaAgendada" className={`text-left py-3 px-4 text-xs font-semibold text-neutral-700 cursor-pointer hover:text-neutral-900 select-none ${w}`} style={NW} onClick={() => toggleSort("fechaAgendada")}>
+                      F. agendada <SortIcon field="fechaAgendada" sortField={sortField} sortDir={sortDir} />
                     </th>
                   );
                   const LABELS: Record<ColumnKey, string> = {
-                    creacion: "Creación", fechaAgendada: "F. Agendada",
-                    seller: "Seller", sucursal: "Sucursal", estado: "Estado",
-                    skus: "SKUs", uTotales: "Unidades", tags: "Tags de Resultado",
+                    creacion: "Creación", fechaAgendada: "F. agendada",
+                    seller: "Tienda", sucursal: "Sucursal", estado: "Estado",
+                    progreso: "Progreso", sesiones: "Sesiones",
+                    skus: "SKUs", uTotales: "U. totales", tags: "Estado productos",
                   };
+                  const CENTER_COLS: ColumnKey[] = ["sesiones", "skus"];
+                  const align = CENTER_COLS.includes(key) ? "text-center" : "text-left";
                   return (
-                    <th key={key} className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide" style={NW}>
+                    <th key={key} className={`${align} py-3 px-4 text-xs font-semibold text-neutral-700 ${w}`} style={NW}>
                       {LABELS[key]}
                     </th>
                   );
                 })}
 
                 {/* Fixed: Acciones */}
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide bg-gray-50" style={{ ...NW, ...stickyRight }}>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-neutral-700 bg-neutral-50 w-[100px]" style={{ ...NW, ...stickyRight }}>
                   Acciones
                 </th>
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-neutral-50">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={activeColumns.length + 2} className="py-14 text-center text-sm text-gray-400" style={NW}>
+                  <td colSpan={activeColumns.length + 2} className="py-14 text-center text-sm text-neutral-600" style={NW}>
                     No se encontraron órdenes{search ? ` para "${search}"` : ""}.
                   </td>
                 </tr>
@@ -837,30 +1923,44 @@ function OrdenesPageInner() {
                 paginatedRows.map((orden, i) => (
                   <tr
                     key={`${orden.id}-${i}`}
-                    className={`hover:bg-gray-50/60 transition-colors group ${
-                      orden.isSubId ? "bg-gray-50/40" : ""
-                    }`}
+                    className={`hover:bg-neutral-50/60 transition-colors duration-300 group ${
+                      orden.isSubId ? "bg-neutral-50/40" : ""
+                    } ${selectedIds.has(orden.id) ? "bg-primary-50/40" : ""}`}
                   >
-                    {/* Fixed: ID */}
+                    {/* Fixed: Checkbox */}
+                    <td className="px-2 text-center">
+                      <label className="inline-flex items-center justify-center w-[44px] h-[44px] cursor-pointer -m-3" aria-label={`Seleccionar ${orden.id}`}>
+                        <input className="sr-only peer" type="checkbox" checked={selectedIds.has(orden.id)} onChange={() => { setSelectedIds(prev => { const next = new Set(prev); next.has(orden.id) ? next.delete(orden.id) : next.add(orden.id); return next; }); }} />
+                        <span className={`flex w-[18px] h-[18px] rounded items-center justify-center flex-shrink-0 transition-colors duration-200 border-[1.5px] ${selectedIds.has(orden.id) ? "bg-primary-500 border-primary-500" : "bg-white border-neutral-300 peer-hover:border-neutral-400"}`}>
+                          {selectedIds.has(orden.id) && <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        </span>
+                      </label>
+                    </td>
+                    {/* Fixed: ID + status on mobile */}
                     <td className="py-3 px-4" style={NW}>
-                      {orden.isSubId ? (
-                        <span className="flex items-center gap-1">
-                          <span className="text-gray-300 text-sm select-none pl-1">└</span>
-                          <span
-                            className="inline-block bg-gray-100 text-gray-500 rounded px-2 py-0.5"
-                            style={{ fontFamily: "var(--font-atkinson)", fontSize: "11px" }}
+                      <div className="flex flex-col gap-1.5">
+                        {orden.isSubId ? (
+                          <span className="flex items-center gap-1">
+                            <span className="text-neutral-300 text-sm select-none pl-1">└</span>
+                            <Link
+                              href={`/recepciones/${encodeURIComponent(orden.id)}`}
+                              className="inline-block bg-neutral-100 text-neutral-500 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 w-fit text-[11px] font-mono transition-colors"
+                            >
+                              {orden.id}
+                            </Link>
+                          </span>
+                        ) : (
+                          <Link
+                            href={`/recepciones/${encodeURIComponent(orden.id)}`}
+                            className="inline-block bg-neutral-100 text-neutral-700 hover:text-primary-700 hover:bg-primary-50 rounded px-2 py-0.5 w-fit text-xs font-mono transition-colors"
                           >
                             {orden.id}
-                          </span>
+                          </Link>
+                        )}
+                        <span className="sm:hidden">
+                          <StatusBadge status={orden.estado} />
                         </span>
-                      ) : (
-                        <span
-                          className="inline-block bg-gray-100 text-gray-700 rounded px-2 py-0.5"
-                          style={{ fontFamily: "var(--font-atkinson)", fontSize: "12px" }}
-                        >
-                          {orden.id}
-                        </span>
-                      )}
+                      </div>
                     </td>
 
                     {/* Dynamic columns */}
@@ -868,22 +1968,22 @@ function OrdenesPageInner() {
                       switch (key) {
                         case "creacion":
                           return (
-                            <td key="creacion" className="py-3 px-4 text-gray-600" style={NW}>
+                            <td key="creacion" className="py-3 px-4 text-neutral-600" style={NW}>
                               {orden.creacion}
                             </td>
                           );
                         case "fechaAgendada":
                           return (
                             <td key="fechaAgendada" className="py-3 px-4">
-                              <p className="text-gray-700" style={NW}>
+                              <p className="text-neutral-700" style={NW}>
                                 {orden.fechaAgendada === "—"
-                                  ? <span className="text-gray-400">Sin agendar</span>
+                                  ? <span className="text-neutral-600">Sin agendar</span>
                                   : orden.fechaAgendada
                                 }
                               </p>
                               {orden.fechaExtra && (
-                                <p className="mt-0.5" style={NW}>
-                                  <span className={`inline text-xs font-medium px-1.5 py-0.5 rounded ${fechaExtraClass(orden.fechaExtra)}`}>
+                                <p style={NW}>
+                                  <span className={`inline text-[11px] font-medium ${fechaExtraClass(orden.fechaExtra)}`}>
                                     {orden.fechaExtra}
                                   </span>
                                 </p>
@@ -892,13 +1992,13 @@ function OrdenesPageInner() {
                           );
                         case "seller":
                           return (
-                            <td key="seller" className="py-3 px-4 text-gray-600" style={NW}>
+                            <td key="seller" className="py-3 px-4 text-neutral-600" style={NW}>
                               {orden.seller}
                             </td>
                           );
                         case "sucursal":
                           return (
-                            <td key="sucursal" className="py-3 px-4 text-gray-600" style={NW}>
+                            <td key="sucursal" className="py-3 px-4 text-neutral-600" style={NW}>
                               {orden.sucursal}
                             </td>
                           );
@@ -910,14 +2010,41 @@ function OrdenesPageInner() {
                           );
                         case "skus":
                           return (
-                            <td key="skus" className="py-3 px-4 text-gray-700 tabular-nums" style={NW}>
+                            <td key="skus" className="py-3 px-4 text-neutral-700 font-mono tabular-nums text-center" style={NW}>
                               {orden.skus}
                             </td>
                           );
                         case "uTotales":
                           return (
-                            <td key="uTotales" className="py-3 px-4 text-gray-700 tabular-nums" style={NW}>
+                            <td key="uTotales" className="py-3 px-4 text-neutral-700 tabular-nums" style={NW}>
                               {orden.uTotales}
+                            </td>
+                          );
+                        case "progreso":
+                          return (
+                            <td key="progreso" className="py-3 px-4" style={NW}>
+                              {orden.progreso ? (() => {
+                                const pct = Math.round((orden.progreso.contadas / orden.progreso.total) * 100);
+                                const isComplete = pct >= 100;
+                                return (
+                                  <span className={`text-xs font-medium tabular-nums ${isComplete ? "text-green-600" : "text-neutral-600"}`}>
+                                    {orden.progreso.contadas.toLocaleString("es-CL")}/{orden.progreso.total.toLocaleString("es-CL")}
+                                    {` (${pct}%)`}
+                                  </span>
+                                );
+                              })() : (
+                                <span className="text-neutral-300 text-xs">—</span>
+                              )}
+                            </td>
+                          );
+                        case "sesiones":
+                          return (
+                            <td key="sesiones" className="py-3 px-4 text-neutral-700 tabular-nums text-center" style={NW}>
+                              {orden.sesiones ? (
+                                <span>{orden.sesiones}</span>
+                              ) : (
+                                <span className="text-neutral-300 text-xs">—</span>
+                              )}
                             </td>
                           );
                         case "tags":
@@ -925,12 +2052,13 @@ function OrdenesPageInner() {
                             <td key="tags" className="py-3 px-4">
                               {orden.tags && orden.tags.length > 0 ? (
                                 <div className="flex flex-col gap-1">
-                                  {orden.tags.map(tag => {
-                                    const TagIcon = tag.Icon;
+                                  {orden.tags.map((tag, ti) => {
+                                    const TagIcon = TAG_ICON_MAP[tag.icon];
+                                    if (!TagIcon) return null;
                                     return (
                                       <span
-                                        key={tag.label}
-                                        className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded font-medium ${tag.className}`}
+                                        key={tag.label ?? ti}
+                                        className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded font-medium w-fit ${tag.className}`}
                                         style={NW}
                                       >
                                         <TagIcon className={`w-3 h-3 flex-shrink-0 ${tag.iconClass}`} />
@@ -940,7 +2068,7 @@ function OrdenesPageInner() {
                                   })}
                                 </div>
                               ) : (
-                                <span className="text-gray-300 text-xs">—</span>
+                                <span className="text-neutral-300 text-xs">—</span>
                               )}
                             </td>
                           );
@@ -951,10 +2079,15 @@ function OrdenesPageInner() {
 
                     {/* Fixed: Acciones */}
                     <td
-                      className="py-3 px-4 bg-white group-hover:bg-gray-50/60"
+                      className="py-3 px-4 bg-white group-hover:bg-neutral-50/60"
                       style={{ ...NW, ...stickyRight }}
                     >
-                      <ActionsCell orden={orden} />
+                      <ActionsCell
+                        orden={orden}
+                        onPrimaryAction={orden.estado === "Programado" && canReceive ? () => setRecibirOrden(orden) : undefined}
+                        onCancel={setCancelTarget}
+                        role={currentRole}
+                      />
                     </td>
                   </tr>
                 ))
@@ -963,46 +2096,121 @@ function OrdenesPageInner() {
           </table>
         </div>
 
-        {/* Pagination */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500" style={NW}>Mostrar</span>
+        {/* Desktop Pagination — pinned at bottom of table container */}
+        <div className="flex-shrink-0 flex items-center justify-between px-3 py-3 bg-white border-t border-neutral-100">
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-1.5 bg-neutral-100 rounded-lg px-3 h-9 text-sm text-neutral-700 cursor-pointer">
+            <span className="text-neutral-500">Mostrar</span>
             <select
               value={pageSize}
               onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
-              className="border border-gray-200 rounded-lg px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              className="bg-transparent font-medium focus:outline-none cursor-pointer"
             >
-              <option value={10}>10</option>
-              <option value={25}>25</option>
+              <option value={20}>20</option>
               <option value={50}>50</option>
+              <option value={100}>100</option>
             </select>
-            <span className="text-sm text-gray-400" style={NW}>
-              {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={clampedPage <= 1}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              style={NW}
-            >
-              ← Anterior
-            </button>
-            <span className="text-sm text-gray-500 tabular-nums" style={NW}>
-              {fromRow}–{toRow} de {filtered.length}
-            </span>
-            <button
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={clampedPage >= totalPages}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              style={NW}
-            >
-              Siguiente →
+          </label>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={clampedPage <= 1}
+            className="px-3 h-9 bg-neutral-100 rounded-lg text-sm text-neutral-700 hover:bg-neutral-200 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300 flex items-center gap-1.5"
+            style={NW}
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Anterior
+          </button>
+          <span className="text-sm text-neutral-500 tabular-nums" style={NW}>
+            {fromRow}–{toRow} de {filtered.length}
+          </span>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={clampedPage >= totalPages}
+            className="px-3 h-9 bg-neutral-100 rounded-lg text-sm text-neutral-700 hover:bg-neutral-200 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300 flex items-center gap-1.5"
+            style={NW}
+          >
+            Siguiente
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+        </div>
+      </div>
+
+      {/* Mobile pagination */}
+      <div className="sm:hidden flex items-center justify-between mt-3 pb-8">
+        <span className="text-xs text-neutral-600 tabular-nums">
+          {fromRow}–{toRow} de {filtered.length}
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={clampedPage <= 1}
+            className="p-2 bg-white border border-neutral-200 rounded-lg text-neutral-700 hover:bg-neutral-50 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={clampedPage >= totalPages}
+            className="p-2 bg-white border border-neutral-200 rounded-lg text-neutral-700 hover:bg-neutral-50 disabled:text-neutral-300 disabled:cursor-not-allowed transition-colors duration-300"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* QR Scanner Modal */}
+      <QrScannerModal
+        open={showQrScanner}
+        onClose={() => setShowQrScanner(false)}
+        onConfirm={handleQrConfirm}
+        onStartConteo={handleQrStartConteo}
+        getOrInfo={getOrInfo}
+      />
+
+      {/* ── Mobile sticky bottom bar ── */}
+      {(canCreate || canScanQr) && (
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-4 pt-3 pb-6 flex flex-col gap-2 z-40">
+          {canCreate && (
+            <Button variant="primary" href="/recepciones/crear" className="w-full h-12" iconLeft={<Plus className="w-4 h-4" />}>
+              Crear recepción
+            </Button>
+          )}
+          {canScanQr && (
+            <Button variant={canCreate ? "secondary" : "primary"} className="w-full h-12" iconLeft={<QrCode className="w-4 h-4" />} onClick={() => setShowQrScanner(true)}>
+              Escanear QR
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* ── Bulk action bar (DS canonical dark) ─────────────────────────── */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <div className="flex items-center gap-3 bg-[#1d1d1f] rounded-2xl px-4 py-2.5 shadow-2xl shadow-black/30 border border-white/10 whitespace-nowrap overflow-x-auto table-scroll">
+            <div className="flex items-center gap-2 pr-3 border-r border-white/15">
+              <SquareCheckBig className="w-4 h-4 text-primary-400 flex-shrink-0" />
+              <span className="text-sm font-semibold text-white tabular-nums">{selectedIds.size}</span>
+              <span className="text-sm text-neutral-400">{selectedIds.size === 1 ? "seleccionada" : "seleccionadas"}</span>
+            </div>
+            <div className="flex items-center gap-0.5">
+              <button title="Exportar selección" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors duration-200 flex-shrink-0 text-neutral-300 hover:bg-white/10 hover:text-white">
+                <Download className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="hidden lg:inline">Exportar</span>
+              </button>
+              <button title="Imprimir etiquetas" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors duration-200 flex-shrink-0 text-neutral-300 hover:bg-white/10 hover:text-white">
+                <Printer className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="hidden lg:inline">Etiquetas</span>
+              </button>
+            </div>
+            <button onClick={() => setSelectedIds(new Set())} className="pl-3 border-l border-white/15 flex-shrink-0" title="Deseleccionar">
+              <X className="w-4 h-4 text-neutral-400 hover:text-white transition-colors" />
             </button>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
